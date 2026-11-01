@@ -1,0 +1,38 @@
+{
+  "base": "K:\\pvz2-lostcity-wsa-main\\PvZ2-reconstruction-multiuser-v11.apk",
+  "patches": [
+    {
+      "entry": "lib/armeabi/libSrc.so",
+      "offset": "0x9970b8",
+      "before": "000094e5",
+      "after": "fbffffea",
+      "role": "Restore earlier delivered v13 victory gate: branch to 0x9970ac"
+    },
+    {
+      "entry": "lib/armeabi/libSrc.so",
+      "offset": "0x9f4080",
+      "before": "8a01000a",
+      "after": "8a0100ea",
+      "role": "Tutorial id 18: take existing completion/cleanup path 0x9f46b0"
+    },
+    {
+      "entry": "lib/armeabi/libHookPVZ2.so",
+      "offset": "0x6afc",
+      "before": "07f0d8f8",
+      "after": "00bf00bf",
+      "role": "Remove forced CardPlay hook on original outro 0x993578"
+    },
+    {
+      "entry": "lib/armeabi/libHookPVZ2.so",
+      "offset": "0x6c02",
+      "before": "07f055f8",
+      "after": "00bf00bf",
+      "role": "Remove associated hook that swallows original UI closure 0x3fe358"
+    }
+  ],
+  "library_sha256": {
+    "lib/armeabi/libSrc.so": "969e4a84d92e7665c5c247ad7fda7f7d042ea1f30336c59e354e8445e3e42d7a",
+    "lib/armeabi/libHookPVZ2.so": "16000447964ff902785335afbc0fe74a0710b9c7e6e7a29fa62a49186efcd42d"
+  },
+  "device_verified": false
+}

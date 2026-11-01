@@ -1,0 +1,159 @@
+{
+  "checks_passed": 24,
+  "scope": "Bounded original tutorial branch and cleanup dispatch with external callees mocked; restored victory branch and removed hook installation calls. Full gameplay not tested.",
+  "cases": [
+    {
+      "test": "tutorial18",
+      "widget": "0x0",
+      "events": [
+        [
+          "0x9e9fec",
+          100663296,
+          0
+        ],
+        [
+          "0x725b38",
+          100675584,
+          18
+        ],
+        [
+          "0x5000000",
+          100663296,
+          4
+        ]
+      ],
+      "input_panel_flag_cleared": true
+    },
+    {
+      "test": "tutorial18",
+      "widget": "0x6000200",
+      "events": [
+        [
+          "0x9e9fec",
+          100663296,
+          0
+        ],
+        [
+          "0x725b38",
+          100675584,
+          18
+        ],
+        [
+          "0x5000000",
+          100663296,
+          4
+        ]
+      ],
+      "input_panel_flag_cleared": true
+    },
+    {
+      "test": "restored_v13_gate",
+      "mode": 0,
+      "continuation": "0x9967a0"
+    },
+    {
+      "test": "restored_v13_gate",
+      "mode": 1,
+      "continuation": "0x9967a0"
+    },
+    {
+      "test": "restored_v13_gate",
+      "mode": 2,
+      "continuation": "0x9967a0"
+    },
+    {
+      "test": "restored_v13_gate",
+      "mode": 3,
+      "continuation": "0x9967a0"
+    },
+    {
+      "test": "restored_v13_gate",
+      "mode": 4,
+      "continuation": "0x9967a0"
+    },
+    {
+      "test": "restored_v13_gate",
+      "mode": 5,
+      "continuation": "0x9967a0"
+    },
+    {
+      "test": "restored_v13_gate",
+      "mode": 6,
+      "continuation": "0x9967a0"
+    },
+    {
+      "test": "restored_v13_gate",
+      "mode": 7,
+      "continuation": "0x9967a0"
+    },
+    {
+      "test": "restored_v13_gate",
+      "mode": 8,
+      "continuation": "0x9967a0"
+    },
+    {
+      "test": "restored_v13_gate",
+      "mode": 9,
+      "continuation": "0x9967a0"
+    },
+    {
+      "test": "restored_v13_gate",
+      "mode": 10,
+      "continuation": "0x9967a0"
+    },
+    {
+      "test": "restored_v13_gate",
+      "mode": 11,
+      "continuation": "0x9967a0"
+    },
+    {
+      "test": "restored_v13_gate",
+      "mode": 12,
+      "continuation": "0x9967a0"
+    },
+    {
+      "test": "restored_v13_gate",
+      "mode": 13,
+      "continuation": "0x9967a0"
+    },
+    {
+      "test": "restored_v13_gate",
+      "mode": 14,
+      "continuation": "0x9967a0"
+    },
+    {
+      "test": "restored_v13_gate",
+      "mode": 15,
+      "continuation": "0x9967a0"
+    },
+    {
+      "test": "restored_v13_gate",
+      "mode": 16,
+      "continuation": "0x9967a0"
+    },
+    {
+      "test": "restored_v13_gate",
+      "mode": 17,
+      "continuation": "0x9967a0"
+    },
+    {
+      "test": "restored_v13_gate",
+      "mode": 18,
+      "continuation": "0x9967a0"
+    },
+    {
+      "test": "restored_v13_gate",
+      "mode": 19,
+      "continuation": "0x9967a0"
+    },
+    {
+      "test": "hook_registration_nopped",
+      "offset": "0x6afc"
+    },
+    {
+      "test": "hook_registration_nopped",
+      "offset": "0x6c02"
+    }
+  ],
+  "device_verified": false
+}
