@@ -1,3 +1,9 @@
+# 最新进度：v20 修复悬停预览战场原点偏移，待验收
+
+v19 用户确认开始跟随但偏移。v20 在悬停坐标转换中补减 Board 原点，保留原缩放和正常拖动。APK：`work/mouse-v20/PvZ2-v20-hover-board-coordinates.apk`。隔离 ARM 坐标检查通过，未做游戏内验收。详情：`docs/recovery/mouse-v20-result.md`。
+
+---
+
 # 最新进度：v19 已定位 WSA 悬停来源过滤错误
 
 WSA 实际发送 source=0x1002 的 ACTION_HOVER_MOVE，v18 仅接受 0x2002，导致丢弃。v19 已放宽为 pointer 类并补充通用移动分发，已覆盖安装成功，日志确认坐标持续变化，游戏内跟随待用户确认。APK：`work/mouse-v19/PvZ2-v19-pointer-hover-diagnostic.apk`。详情：`docs/recovery/mouse-v19-result.md`。

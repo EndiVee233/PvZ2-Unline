@@ -1,0 +1,7 @@
+{
+  "base": "K:\\pvz2-lostcity-wsa-main\\work\\mouse-v19\\PvZ2-v19-pointer-hover-diagnostic.apk",
+  "site": "0x132b660",
+  "stub": "0x1a00ff0",
+  "assembly": "cmp r3,#5\n beq hover\n cmp r3,#4\n b #0x132b664\n hover:\n mov r0,r5\n mov r1,r4\n bl #0x1327d0c\n ldr r0,[r5,#0x44]\n ldr r0,[r0,#0x6bc]\n cmp r0,#0\n beq done\n ldr r2,[r0,#0x2c]\n ldr r3,[r4,#8]\n sub r3,r3,r2\n str r3,[r4,#8]\n ldr r2,[r0,#0x30]\n ldr r3,[r4,#0xc]\n sub r3,r3,r2\n str r3,[r4,#0xc]\n ldr r0,[r0,#0x94c]\n cmp r0,#0\n beq done\n ldrb r2,[r0,#0x1d]\n cmp r2,#0\n bne done\n add r1,r4,#8\n bl #0x1efccc\n done:\n b #0x132b688",
+  "device_verified": false
+}
