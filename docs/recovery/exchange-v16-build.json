@@ -1,0 +1,22 @@
+{
+  "sha256": "d6e7bf298e0cf9da8d63e0c1c620057c0c803d22fa2b787a7da8d6a3e141f24e",
+  "output": "K:\\pvz2-lostcity-wsa-main\\work\\exchange-v16\\PvZ2-v16-currency-exchange.apk",
+  "changed_entries": [
+    "classes8.dex",
+    "lib/armeabi/libSrc.so",
+    "assets/reconstruction/dynamic-original-speed.rsb.smf"
+  ],
+  "exactly_seven_exchange_products_verified": [
+    "MagentoProduct_coin_10000",
+    "MagentoProduct_coin_20000",
+    "MagentoProduct_coin_40000",
+    "MagentoProduct_gem_20",
+    "MagentoProduct_gem_100",
+    "MagentoProduct_gem_200",
+    "MagentoProduct_gem_300"
+  ],
+  "unrelated_products_and_resources_unchanged": true,
+  "dex_integrity_verified": true,
+  "zip_crc_verified": true,
+  "device_verified": false
+}

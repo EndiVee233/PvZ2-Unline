@@ -1,0 +1,100 @@
+{
+  "candidate": true,
+  "device_verified": false,
+  "source": "K:\\pvz2-lostcity-wsa-main\\work\\tutorial-v15\\PvZ2-v15-skip-return-guide.apk",
+  "exchanges": [
+    {
+      "alias": "MagentoProduct_coin_10000",
+      "spend": 10,
+      "spend_currency": "gem",
+      "receive": 9000,
+      "receive_currency": "coin",
+      "fee_percent": 10
+    },
+    {
+      "alias": "MagentoProduct_coin_20000",
+      "spend": 50,
+      "spend_currency": "gem",
+      "receive": 45000,
+      "receive_currency": "coin",
+      "fee_percent": 10
+    },
+    {
+      "alias": "MagentoProduct_coin_40000",
+      "spend": 100,
+      "spend_currency": "gem",
+      "receive": 90000,
+      "receive_currency": "coin",
+      "fee_percent": 10
+    },
+    {
+      "alias": "MagentoProduct_gem_20",
+      "spend": 20000,
+      "spend_currency": "coin",
+      "receive": 18,
+      "receive_currency": "gem",
+      "fee_percent": 10
+    },
+    {
+      "alias": "MagentoProduct_gem_100",
+      "spend": 100000,
+      "spend_currency": "coin",
+      "receive": 90,
+      "receive_currency": "gem",
+      "fee_percent": 10
+    },
+    {
+      "alias": "MagentoProduct_gem_200",
+      "spend": 200000,
+      "spend_currency": "coin",
+      "receive": 180,
+      "receive_currency": "gem",
+      "fee_percent": 10
+    },
+    {
+      "alias": "MagentoProduct_gem_300",
+      "spend": 300000,
+      "spend_currency": "coin",
+      "receive": 270,
+      "receive_currency": "gem",
+      "fee_percent": 10
+    }
+  ],
+  "native_patches": [
+    {
+      "offset": "0x93619c",
+      "before": "2302001a",
+      "after": "46ffffea",
+      "target": "0x935ebc",
+      "role": "Omit restore-purchase card and child label creation"
+    },
+    {
+      "offset": "0x936dd0",
+      "before": "5900001a",
+      "after": "5f0000ea",
+      "target": "0x936f54",
+      "role": "Omit cumulative recharge panel for Gems"
+    },
+    {
+      "offset": "0x936f50",
+      "before": "9fffff0a",
+      "after": "ffffffea",
+      "target": "0x936f54",
+      "role": "Omit cumulative recharge panel for GemsFor360"
+    },
+    {
+      "offset": "0x9312b8",
+      "before": "7d9822eb0510a0e15ba3e2eb8c259fe5",
+      "after": "0800a0e10510a0e1e0fcffeb490000ea",
+      "role": "Coin-funded Gems page uses generic local grant routine, then returns through original epilogue"
+    }
+  ],
+  "old_resource_sha256": "0aae11cf23e05377026323816f6e458264bdc193b312177bca6824589fa1d29f",
+  "new_resource_sha256": "ad0c2fd6b6fa7f1dbac0efbc2be653772e5a78f5d68a4c588ccba34318d7a25a",
+  "marker": ".exchange-shop-v16-xxxx",
+  "changed_payloads": {
+    "assets/reconstruction/dynamic-original-speed.rsb.smf": "ad0c2fd6b6fa7f1dbac0efbc2be653772e5a78f5d68a4c588ccba34318d7a25a",
+    "classes8.dex": "3a662603cfbc2e53fa49f86cb3fa772a9f5a311c8730aff2938bb69c032e4684",
+    "lib/armeabi/libSrc.so": "e5dbfd61678d6e8b40d8a38e5bd83b0a02fb220828f30d78571da0fb21846dda"
+  }
+}

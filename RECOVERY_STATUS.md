@@ -1,3 +1,13 @@
+# 最新进度：v16 商店改造候选已生成
+
+用户确认v15的通关抽奖和教程软锁均修复成功，源码与APK已上传GitHub v1.7.5-v15。
+本轮按确认规则完成v16双向兑换候选，并移除充值区域、寻物卡和赠送文案。
+最新包：`work/exchange-v16/PvZ2-v16-currency-exchange.apk`。
+SHA256：`d6e7bf298e0cf9da8d63e0c1c620057c0c803d22fa2b787a7da8d6a3e141f24e`。
+同签名覆盖v15，冷启动时更新资源；没有在设备安装或操作，等待用户实机验收。
+实现细节、验证范围、待测项见 `docs/recovery/exchange-v16-result.md`；不要将有界检查通过当作完整交易/存档验收。
+
+---
 用户最新验收：v15 教程软锁修复成功，通关抽奖修复成功。用户已授权将两项修复上传 GitHub。
 
 # 当前进度更新 — v15（2026-11-01）
@@ -80,5 +90,6 @@ python scripts/verify_restored_v14_apk.py
 验证记录：`docs/recovery/restored-v14-{patches,validation,build}.json`。
 
 下一步等待用户对这一个明确文件的实机反馈。若抽奖仍出现，应在真实运行路径中继续定位 `0x9967a0` 以及其他开窗调用，不应再次仅用分支仿真宣称行为修复。
+
 
 

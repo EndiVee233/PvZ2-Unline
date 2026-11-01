@@ -1,0 +1,681 @@
+{
+  "arm_wallet_cases_passed": 84,
+  "gems_page_local_grant_routing_verified": true,
+  "only_listed_native_bytes_changed": true,
+  "scope": "Original input balance guards, encrypted deduction and payout arithmetic executed. Profile lookup, product handle/string resolution and dirty prelude are controlled boundaries. Real UI, event listeners, disk persistence and full store click sequence require device testing.",
+  "device_verified": false,
+  "cases": [
+    {
+      "alias": "MagentoProduct_coin_10000",
+      "salt": 0,
+      "available": 9,
+      "spend": 10,
+      "receive": 9000,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_coin_10000",
+      "salt": 0,
+      "available": 10,
+      "spend": 10,
+      "receive": 9000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_10000",
+      "salt": 0,
+      "available": 1244,
+      "spend": 10,
+      "receive": 9000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_10000",
+      "salt": 1,
+      "available": 9,
+      "spend": 10,
+      "receive": 9000,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_coin_10000",
+      "salt": 1,
+      "available": 10,
+      "spend": 10,
+      "receive": 9000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_10000",
+      "salt": 1,
+      "available": 1244,
+      "spend": 10,
+      "receive": 9000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_10000",
+      "salt": 5533,
+      "available": 9,
+      "spend": 10,
+      "receive": 9000,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_coin_10000",
+      "salt": 5533,
+      "available": 10,
+      "spend": 10,
+      "receive": 9000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_10000",
+      "salt": 5533,
+      "available": 1244,
+      "spend": 10,
+      "receive": 9000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_10000",
+      "salt": 2171744607,
+      "available": 9,
+      "spend": 10,
+      "receive": 9000,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_coin_10000",
+      "salt": 2171744607,
+      "available": 10,
+      "spend": 10,
+      "receive": 9000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_10000",
+      "salt": 2171744607,
+      "available": 1244,
+      "spend": 10,
+      "receive": 9000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_20000",
+      "salt": 0,
+      "available": 49,
+      "spend": 50,
+      "receive": 45000,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_coin_20000",
+      "salt": 0,
+      "available": 50,
+      "spend": 50,
+      "receive": 45000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_20000",
+      "salt": 0,
+      "available": 1284,
+      "spend": 50,
+      "receive": 45000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_20000",
+      "salt": 1,
+      "available": 49,
+      "spend": 50,
+      "receive": 45000,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_coin_20000",
+      "salt": 1,
+      "available": 50,
+      "spend": 50,
+      "receive": 45000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_20000",
+      "salt": 1,
+      "available": 1284,
+      "spend": 50,
+      "receive": 45000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_20000",
+      "salt": 5533,
+      "available": 49,
+      "spend": 50,
+      "receive": 45000,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_coin_20000",
+      "salt": 5533,
+      "available": 50,
+      "spend": 50,
+      "receive": 45000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_20000",
+      "salt": 5533,
+      "available": 1284,
+      "spend": 50,
+      "receive": 45000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_20000",
+      "salt": 2171744607,
+      "available": 49,
+      "spend": 50,
+      "receive": 45000,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_coin_20000",
+      "salt": 2171744607,
+      "available": 50,
+      "spend": 50,
+      "receive": 45000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_20000",
+      "salt": 2171744607,
+      "available": 1284,
+      "spend": 50,
+      "receive": 45000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_40000",
+      "salt": 0,
+      "available": 99,
+      "spend": 100,
+      "receive": 90000,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_coin_40000",
+      "salt": 0,
+      "available": 100,
+      "spend": 100,
+      "receive": 90000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_40000",
+      "salt": 0,
+      "available": 1334,
+      "spend": 100,
+      "receive": 90000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_40000",
+      "salt": 1,
+      "available": 99,
+      "spend": 100,
+      "receive": 90000,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_coin_40000",
+      "salt": 1,
+      "available": 100,
+      "spend": 100,
+      "receive": 90000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_40000",
+      "salt": 1,
+      "available": 1334,
+      "spend": 100,
+      "receive": 90000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_40000",
+      "salt": 5533,
+      "available": 99,
+      "spend": 100,
+      "receive": 90000,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_coin_40000",
+      "salt": 5533,
+      "available": 100,
+      "spend": 100,
+      "receive": 90000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_40000",
+      "salt": 5533,
+      "available": 1334,
+      "spend": 100,
+      "receive": 90000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_40000",
+      "salt": 2171744607,
+      "available": 99,
+      "spend": 100,
+      "receive": 90000,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_coin_40000",
+      "salt": 2171744607,
+      "available": 100,
+      "spend": 100,
+      "receive": 90000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_coin_40000",
+      "salt": 2171744607,
+      "available": 1334,
+      "spend": 100,
+      "receive": 90000,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_20",
+      "salt": 0,
+      "available": 19999,
+      "spend": 20000,
+      "receive": 18,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_gem_20",
+      "salt": 0,
+      "available": 20000,
+      "spend": 20000,
+      "receive": 18,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_20",
+      "salt": 0,
+      "available": 21234,
+      "spend": 20000,
+      "receive": 18,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_20",
+      "salt": 1,
+      "available": 19999,
+      "spend": 20000,
+      "receive": 18,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_gem_20",
+      "salt": 1,
+      "available": 20000,
+      "spend": 20000,
+      "receive": 18,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_20",
+      "salt": 1,
+      "available": 21234,
+      "spend": 20000,
+      "receive": 18,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_20",
+      "salt": 5533,
+      "available": 19999,
+      "spend": 20000,
+      "receive": 18,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_gem_20",
+      "salt": 5533,
+      "available": 20000,
+      "spend": 20000,
+      "receive": 18,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_20",
+      "salt": 5533,
+      "available": 21234,
+      "spend": 20000,
+      "receive": 18,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_20",
+      "salt": 2171744607,
+      "available": 19999,
+      "spend": 20000,
+      "receive": 18,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_gem_20",
+      "salt": 2171744607,
+      "available": 20000,
+      "spend": 20000,
+      "receive": 18,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_20",
+      "salt": 2171744607,
+      "available": 21234,
+      "spend": 20000,
+      "receive": 18,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_100",
+      "salt": 0,
+      "available": 99999,
+      "spend": 100000,
+      "receive": 90,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_gem_100",
+      "salt": 0,
+      "available": 100000,
+      "spend": 100000,
+      "receive": 90,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_100",
+      "salt": 0,
+      "available": 101234,
+      "spend": 100000,
+      "receive": 90,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_100",
+      "salt": 1,
+      "available": 99999,
+      "spend": 100000,
+      "receive": 90,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_gem_100",
+      "salt": 1,
+      "available": 100000,
+      "spend": 100000,
+      "receive": 90,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_100",
+      "salt": 1,
+      "available": 101234,
+      "spend": 100000,
+      "receive": 90,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_100",
+      "salt": 5533,
+      "available": 99999,
+      "spend": 100000,
+      "receive": 90,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_gem_100",
+      "salt": 5533,
+      "available": 100000,
+      "spend": 100000,
+      "receive": 90,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_100",
+      "salt": 5533,
+      "available": 101234,
+      "spend": 100000,
+      "receive": 90,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_100",
+      "salt": 2171744607,
+      "available": 99999,
+      "spend": 100000,
+      "receive": 90,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_gem_100",
+      "salt": 2171744607,
+      "available": 100000,
+      "spend": 100000,
+      "receive": 90,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_100",
+      "salt": 2171744607,
+      "available": 101234,
+      "spend": 100000,
+      "receive": 90,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_200",
+      "salt": 0,
+      "available": 199999,
+      "spend": 200000,
+      "receive": 180,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_gem_200",
+      "salt": 0,
+      "available": 200000,
+      "spend": 200000,
+      "receive": 180,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_200",
+      "salt": 0,
+      "available": 201234,
+      "spend": 200000,
+      "receive": 180,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_200",
+      "salt": 1,
+      "available": 199999,
+      "spend": 200000,
+      "receive": 180,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_gem_200",
+      "salt": 1,
+      "available": 200000,
+      "spend": 200000,
+      "receive": 180,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_200",
+      "salt": 1,
+      "available": 201234,
+      "spend": 200000,
+      "receive": 180,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_200",
+      "salt": 5533,
+      "available": 199999,
+      "spend": 200000,
+      "receive": 180,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_gem_200",
+      "salt": 5533,
+      "available": 200000,
+      "spend": 200000,
+      "receive": 180,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_200",
+      "salt": 5533,
+      "available": 201234,
+      "spend": 200000,
+      "receive": 180,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_200",
+      "salt": 2171744607,
+      "available": 199999,
+      "spend": 200000,
+      "receive": 180,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_gem_200",
+      "salt": 2171744607,
+      "available": 200000,
+      "spend": 200000,
+      "receive": 180,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_200",
+      "salt": 2171744607,
+      "available": 201234,
+      "spend": 200000,
+      "receive": 180,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_300",
+      "salt": 0,
+      "available": 299999,
+      "spend": 300000,
+      "receive": 270,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_gem_300",
+      "salt": 0,
+      "available": 300000,
+      "spend": 300000,
+      "receive": 270,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_300",
+      "salt": 0,
+      "available": 301234,
+      "spend": 300000,
+      "receive": 270,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_300",
+      "salt": 1,
+      "available": 299999,
+      "spend": 300000,
+      "receive": 270,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_gem_300",
+      "salt": 1,
+      "available": 300000,
+      "spend": 300000,
+      "receive": 270,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_300",
+      "salt": 1,
+      "available": 301234,
+      "spend": 300000,
+      "receive": 270,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_300",
+      "salt": 5533,
+      "available": 299999,
+      "spend": 300000,
+      "receive": 270,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_gem_300",
+      "salt": 5533,
+      "available": 300000,
+      "spend": 300000,
+      "receive": 270,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_300",
+      "salt": 5533,
+      "available": 301234,
+      "spend": 300000,
+      "receive": 270,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_300",
+      "salt": 2171744607,
+      "available": 299999,
+      "spend": 300000,
+      "receive": 270,
+      "success": false
+    },
+    {
+      "alias": "MagentoProduct_gem_300",
+      "salt": 2171744607,
+      "available": 300000,
+      "spend": 300000,
+      "receive": 270,
+      "success": true
+    },
+    {
+      "alias": "MagentoProduct_gem_300",
+      "salt": 2171744607,
+      "available": 301234,
+      "spend": 300000,
+      "receive": 270,
+      "success": true
+    }
+  ]
+}
