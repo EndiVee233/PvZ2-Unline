@@ -1,11 +1,12 @@
-# 最新进度：v16 商店改造候选已生成
+# 最新进度：v16r10 已修复启动并完成 WSA 双向兑换自测
 
-用户确认v15的通关抽奖和教程软锁均修复成功，源码与APK已上传GitHub v1.7.5-v15。
-本轮按确认规则完成v16双向兑换候选，并移除充值区域、寻物卡和赠送文案。
-最新包：`work/exchange-v16/PvZ2-v16-currency-exchange.apk`。
-SHA256：`d6e7bf298e0cf9da8d63e0c1c620057c0c803d22fa2b787a7da8d6a3e141f24e`。
-同签名覆盖v15，冷启动时更新资源；没有在设备安装或操作，等待用户实机验收。
-实现细节、验证范围、待测项见 `docs/recovery/exchange-v16-result.md`；不要将有界检查通过当作完整交易/存档验收。
+最终包：`work/launch-fix/PvZ2-v16r10-currency-exchange.apk`。
+SHA256：`53d7806ab8fa7a81596f7ed5b9572eeede5876e0c10ad3838bc2caaca16ed338`。
+原 v16 的 DEX 字符串排序错误导致无法启动，现通过重新组装修复。
+WSA 完整覆盖安装后，进入地图/商店、20000金币换18钻石、10钻石换9000金币、余额不足不扣款均通过；强制结束并重启后153钻石/16570金币保持一致。
+用户原有存档已在测试前备份，测试结束恢复到原有195钻石/2570金币，已在最终地图画面核对一致。
+v15 抽奖与教程修复保留；本轮未重新打关验证。源码在 codex/fix-exchange-startup 分支。旧 v16 与 r2–r9 不可交付。
+详情：`docs/recovery/exchange-v16-result.md`，设备记录：`docs/recovery/exchange-v16-device-validation.json`。
 
 ---
 用户最新验收：v15 教程软锁修复成功，通关抽奖修复成功。用户已授权将两项修复上传 GitHub。

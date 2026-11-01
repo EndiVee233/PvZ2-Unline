@@ -1,0 +1,26 @@
+{
+  "keys": [
+    "V16_gem_9000_T",
+    "V16_gem_9000_S",
+    "V16_gem_9000_D",
+    "V16_gem_45000_T",
+    "V16_gem_45000_S",
+    "V16_gem_45000_D",
+    "V16_gem_90000_T",
+    "V16_gem_90000_S",
+    "V16_gem_90000_D",
+    "V16_coin_18_T",
+    "V16_coin_18_S",
+    "V16_coin_18_D",
+    "V16_coin_90_T",
+    "V16_coin_90_S",
+    "V16_coin_90_D",
+    "V16_coin_180_T",
+    "V16_coin_180_S",
+    "V16_coin_180_D",
+    "V16_coin_270_T",
+    "V16_coin_270_S",
+    "V16_coin_270_D"
+  ],
+  "passed": 21
+}

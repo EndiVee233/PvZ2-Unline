@@ -50,12 +50,14 @@ for spec in record['exchanges']:
     assert calls==[hex(0x7461b4 if gain=='coin' else 0x74527c)]
     assert balance(u,gain)==12345+amount and balance(u,pay)==delta
    cases.append(dict(alias=spec['alias'],salt=salt,available=initial,spend=cost,receive=amount,success=delta>=0))
-# Correct the Gems page's former IAP-only completion to the generic local grant.
-u=machine();reset(u);u.reg_write(UC_ARM_REG_R8,P);u.reg_write(UC_ARM_REG_R5,P+0x2000)
-u.emu_start(0x9312b8,0x930648,count=4);assert reg(u,UC_ARM_REG_R0)==P and reg(u,UC_ARM_REG_R1)==P+0x2000
+# Alternate Gems card completion calls the generic local product-grant function.
+u=machine();reset(u);u.emu_start(0x933844,0x930648,count=1)
+assert reg(u,UC_ARM_REG_PC)==0x930648
 # Every native byte change is in the listed ranges; previous fixes retained.
 with zipfile.ZipFile(root/'work/tutorial-v15/PvZ2-v15-skip-return-guide.apk') as z:
  old=z.read('lib/armeabi/libSrc.so');allowed={int(p['offset'],16)+i for p in record['native_patches'] for i in range(len(bytes.fromhex(p['after'])))}
- assert len(blob)==len(old) and all(x==y or i in allowed for i,(x,y) in enumerate(zip(blob,old)))
+ loc=record['native_patches'][-1];stub=int(loc['stub_offset'],16);assert stub==len(old) and len(blob)==stub+loc['stub_size']
+ allowed.update(range(0xd4+16,0xd4+24))
+ assert all(x==y or i in allowed for i,(x,y) in enumerate(zip(blob,old)))
 result=dict(arm_wallet_cases_passed=len(cases),gems_page_local_grant_routing_verified=True,only_listed_native_bytes_changed=True,scope='Original input balance guards, encrypted deduction and payout arithmetic executed. Profile lookup, product handle/string resolution and dirty prelude are controlled boundaries. Real UI, event listeners, disk persistence and full store click sequence require device testing.',device_verified=False,cases=cases)
 (root/'docs/recovery/exchange-v16-validation.json').write_text(json.dumps(result,indent=2),encoding='utf8');print('PASS',len(cases),'ARM wallet cases and local-grant routing')

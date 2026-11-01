@@ -20,13 +20,13 @@ with zipfile.ZipFile(source) as z:
  assert struct.unpack_from('<I',d,0x10)[0]&2==0
  dataoff=struct.unpack_from('<I',d,0x18)[0];ln,lo=struct.unpack_from('<II',d,0x48);files=rsbtool.read_string_list(d,lo,ln,1)
  name,info=next((n,i) for n,i in files if n.upper().endswith('MAGENTO.RTON'));_,pos,size=info;absolute=start+dataoff+pos
- before=bytes(dynamic[absolute:absolute+size]);j=decode(before);original_json=json.loads(json.dumps(j));changes=[]
+ before=bytes(dynamic[absolute:absolute+size]);j=decode(before);original_json=json.loads(json.dumps(j));changes=[];local_strings={}
  specs={'MagentoProduct_coin_10000':(10,9000,'gem','金币兑换'), 'MagentoProduct_coin_20000':(50,45000,'gem','金币兑换'), 'MagentoProduct_coin_40000':(100,90000,'gem','金币兑换'), 'MagentoProduct_gem_20':(20000,18,'coin','钻石兑换'), 'MagentoProduct_gem_100':(100000,90,'coin','钻石兑换'), 'MagentoProduct_gem_200':(200000,180,'coin','钻石兑换'), 'MagentoProduct_gem_300':(300000,270,'coin','钻石兑换')}
  for o in j['objects']:
   alias=next(iter(o.get('aliases',[])),None)
   if alias in specs:
    price,count,currency,title=specs[alias];p=o['objdata'];p['ObjectCount']=count;p['ObjectPurchaseType']=currency;p['Prices']=[{'Name':'','Price':price}]
-   unit='金币' if currency=='gem' else '钻石';p['Names']=[title]*6;p['Descriptions']=[f'到账{count}{unit}\n手续费10%']*6;p['ShortDescriptions']=[f'{count}{unit}']*6
+   unit='金币' if currency=='gem' else '钻石';tag=f'V16_{currency}_{count}';local_strings[tag+'_T']=title;local_strings[tag+'_S']=f'{count}{unit}';local_strings[tag+'_D']=f'到账{count}{unit}\n手续费10%';p['Names']=['['+tag+'_T]']*6;p['Descriptions']=['['+tag+'_D]']*6;p['ShortDescriptions']=['['+tag+'_S]']*6
    changes.append(dict(alias=alias,spend=price,spend_currency=currency,receive=count,receive_currency=p['ObjectType'],fee_percent=10))
   if o.get('objclass')=='MagentoCategoryProps' and o['objdata'].get('Name') in ['Gems','GemsFor360']:
    o['objdata']['Products']=[f'RTID({a}@Magento)' for a in specs if a.startswith('MagentoProduct_gem_')];o['objdata']['Defaults']=[]
@@ -38,26 +38,26 @@ with zipfile.ZipFile(source) as z:
  dynamic[absolute:absolute+size]=encrypted;new_resource_sha=sha(dynamic)
  (out/'dynamic-exchange.rsb.smf').write_bytes(dynamic)
  # Existing BootActivity overlay updater: change only checksum strings and marker.
- dex=bytearray(z.read('classes8.dex'))
+ from rebuild_bootstrap_dex import rebuild_bootstrap
  import re
  boot=(ROOT/'src/recovered/bootstrap/com/popcap/pvz2cthd/BootActivity.java').read_text(encoding='utf8')
  constants=dict(re.findall(r'(BASE_RESOURCE_SHA|SPEED_RESOURCE_SHA)\s*=\s*"([0-9a-f]{64})"',boot))
- assert constants['SPEED_RESOURCE_SHA']==old_resource_sha,constants
- # Locate both checksum strings before replacement to avoid cascades.
- sites={k:dex.find(v.encode()) for k,v in constants.items()};assert all(x>=0 for x in sites.values())
- for k,new in [('BASE_RESOURCE_SHA',old_resource_sha),('SPEED_RESOURCE_SHA',new_resource_sha)]:dex[sites[k]:sites[k]+64]=new.encode()
- oldmarker=b'.original-speed-57d9c44';newmarker=b'.exchange-shop-v16-'+b'x'*(len(oldmarker)-len(b'.exchange-shop-v16-'));assert dex.count(oldmarker)==1;dex=dex.replace(oldmarker,newmarker)
- dex[12:32]=hashlib.sha1(dex[32:]).digest();struct.pack_into('<I',dex,8,zlib.adler32(dex[12:])&0xffffffff)
+ assert constants['SPEED_RESOURCE_SHA']==old_resource_sha
+ newmarker=b'.exchange-shop-v16-r10'
+ dex=rebuild_bootstrap(z.read('classes8.dex'),out/'bootstrap',{
+  constants['BASE_RESOURCE_SHA']:old_resource_sha,
+  constants['SPEED_RESOURCE_SHA']:new_resource_sha,
+  '.original-speed-57d9c44':newmarker.decode()},ROOT/'tools/apktool.jar')
  lib=bytearray(z.read('lib/armeabi/libSrc.so'));patches=[]
- for a,target,role in [(0x93619c,0x935ebc,'Omit restore-purchase card and child label creation'),(0x936dd0,0x936f54,'Omit cumulative recharge panel for Gems'),(0x936f50,0x936f54,'Omit cumulative recharge panel for GemsFor360')]:
+ for a,target,role in [(0x93619c,0x935ebc,'Omit restore-purchase card and child label creation'),(0x936dd0,0x936f54,'Omit cumulative recharge panel for Gems'),(0x936f50,0x936f54,'Omit cumulative recharge panel for GemsFor360'),(0x92c110,0x92c3b4,'Omit recharge footer rendering including banner and separator')]:
   old=bytes(lib[a:a+4]);assert old[3] in [0x0a,0x1a],(hex(a),old.hex());new=branch(a,target);lib[a:a+4]=new;patches.append(dict(offset=hex(a),before=old.hex(),after=new.hex(),target=hex(target),role=role))
- # Gem-page original grant branch only emits the cash-purchase event. Local
- # coin-funded exchanges must invoke the existing generic grant path instead.
- a=0x9312b8;old=bytes(lib[a:a+16])
- assert old[:4]==struct.pack('<I',0xeb000000|(((0x11d74b4-a-8)//4)&0xffffff))
- call=struct.pack('<I',0xeb000000|(((0x930648-(a+8)-8)//4)&0xffffff))
- new=bytes.fromhex('0800a0e10510a0e1')+call+branch(a+12,0x9313f0)
- lib[a:a+16]=new;patches.append(dict(offset=hex(a),before=old.hex(),after=new.hex(),role='Coin-funded Gems page uses generic local grant routine, then returns through original epilogue'))
+ a=0x92b4a8;old=bytes(lib[a:a+4]);new=bytes.fromhex('00f020e3');lib[a:a+4]=new;patches.append(dict(offset=hex(a),before=old.hex(),after=new.hex(),role='Suppress root store recharge banner draw call'))
+ # Alternate Gems card callback uses the cash completion even for coin payment.
+ a=0x933844;old=bytes(lib[a:a+4]);new=struct.pack('<I',0xeb000000|(((0x930648-a-8)//4)&0xffffff));lib[a:a+4]=new;patches.append(dict(offset=hex(a),before=old.hex(),after=new.hex(),role='Gems card completion invokes generic local grant instead of cash completion'))
+ for a,target in [(0x9323e8,0x9322e4),(0x932e58,0x932e74)]:
+  old=bytes(lib[a:a+4]);new=branch(a,target);lib[a:a+4]=new;patches.append(dict(offset=hex(a),before=old.hex(),after=new.hex(),role='Skip legacy coin-spend transaction notification; retain local product grant and temporary cleanup'))
+ from exchange_localization import add_exchange_localization
+ lib,locpatch=add_exchange_localization(lib,local_strings);patches.append(locpatch)
  (out/'libSrc.so').write_bytes(lib)
  replacements={'assets/reconstruction/dynamic-original-speed.rsb.smf':bytes(dynamic),'classes8.dex':bytes(dex),'lib/armeabi/libSrc.so':bytes(lib)}
  with zipfile.ZipFile(out/'unsigned.apk','w',allowZip64=True) as dst:

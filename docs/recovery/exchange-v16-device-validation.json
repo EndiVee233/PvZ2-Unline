@@ -1,0 +1,62 @@
+{
+  "apk": "work/launch-fix/PvZ2-v16r10-currency-exchange.apk",
+  "sha256": "53d7806ab8fa7a81596f7ed5b9572eeede5876e0c10ad3838bc2caaca16ed338",
+  "package": "com.popcap.pvz2cthd.reconstruction",
+  "date": "2026-11-01",
+  "installed_full_apk": true,
+  "launch_with_user_wsa_client": true,
+  "map_and_store_reached": true,
+  "coin_to_gem": {
+    "before": {
+      "gems": 145,
+      "coins": 27570
+    },
+    "spend_coins": 20000,
+    "receive_gems": 18,
+    "after": {
+      "gems": 163,
+      "coins": 7570
+    }
+  },
+  "insufficient_coin_purchase": {
+    "cost": 100000,
+    "blocked": true,
+    "balance_unchanged": true
+  },
+  "gem_to_coin": {
+    "before": {
+      "gems": 163,
+      "coins": 7570
+    },
+    "spend_gems": 10,
+    "receive_coins": 9000,
+    "after": {
+      "gems": 153,
+      "coins": 16570
+    }
+  },
+  "force_stop_and_cold_launch_persistence": {
+    "gems": 153,
+    "coins": 16570,
+    "verified": true
+  },
+  "chinese_labels_verified": true,
+  "restore_card_recharge_banner_rewards_and_gift_text_absent": true,
+  "prior_lottery_and_tutorial_patches_retained": true,
+  "prior_level_flow_retested": false,
+  "profile_restore": {
+    "requested_original": {
+      "gems": 195,
+      "coins": 2570
+    },
+    "backup": "private work/launch-fix/profile-before-v16r2.tar",
+    "restored": true,
+    "visually_verified": true,
+    "final_balance": {
+      "gems": 195,
+      "coins": 2570
+    }
+  },
+  "scope": "Representative WSA exchanges and insufficient-balance flow; all seven product values covered by resource and bounded ARM checks. Large tiers not individually device-tested.",
+  "device_verified": true
+}

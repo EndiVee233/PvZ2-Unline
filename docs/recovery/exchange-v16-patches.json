@@ -83,18 +83,75 @@
       "role": "Omit cumulative recharge panel for GemsFor360"
     },
     {
-      "offset": "0x9312b8",
-      "before": "7d9822eb0510a0e15ba3e2eb8c259fe5",
-      "after": "0800a0e10510a0e1e0fcffeb490000ea",
-      "role": "Coin-funded Gems page uses generic local grant routine, then returns through original epilogue"
+      "offset": "0x92c110",
+      "before": "a700000a",
+      "after": "a70000ea",
+      "target": "0x92c3b4",
+      "role": "Omit recharge footer rendering including banner and separator"
+    },
+    {
+      "offset": "0x92b4a8",
+      "before": "06f820eb",
+      "after": "00f020e3",
+      "role": "Suppress root store recharge banner draw call"
+    },
+    {
+      "offset": "0x933844",
+      "before": "7ef6ffeb",
+      "after": "7ff3ffeb",
+      "role": "Gems card completion invokes generic local grant instead of cash completion"
+    },
+    {
+      "offset": "0x9323e8",
+      "before": "7c299fe5",
+      "after": "bdffffea",
+      "role": "Skip legacy coin-spend transaction notification; retain local product grant and temporary cleanup"
+    },
+    {
+      "offset": "0x932e58",
+      "before": "80c01be5",
+      "after": "050000ea",
+      "role": "Skip legacy coin-spend transaction notification; retain local product grant and temporary cleanup"
+    },
+    {
+      "offset": "0xd07ae8",
+      "before": "f0482de9",
+      "after": "73e133ea",
+      "stub_offset": "0x18300bc",
+      "stub_va": "0x1a000bc",
+      "stub_size": 3648,
+      "strings": {
+        "V16_gem_9000_T": "金币兑换",
+        "V16_gem_9000_S": "9000金币",
+        "V16_gem_9000_D": "到账9000金币\n手续费10%",
+        "V16_gem_45000_T": "金币兑换",
+        "V16_gem_45000_S": "45000金币",
+        "V16_gem_45000_D": "到账45000金币\n手续费10%",
+        "V16_gem_90000_T": "金币兑换",
+        "V16_gem_90000_S": "90000金币",
+        "V16_gem_90000_D": "到账90000金币\n手续费10%",
+        "V16_coin_18_T": "钻石兑换",
+        "V16_coin_18_S": "18钻石",
+        "V16_coin_18_D": "到账18钻石\n手续费10%",
+        "V16_coin_90_T": "钻石兑换",
+        "V16_coin_90_S": "90钻石",
+        "V16_coin_90_D": "到账90钻石\n手续费10%",
+        "V16_coin_180_T": "钻石兑换",
+        "V16_coin_180_S": "180钻石",
+        "V16_coin_180_D": "到账180钻石\n手续费10%",
+        "V16_coin_270_T": "钻石兑换",
+        "V16_coin_270_S": "270钻石",
+        "V16_coin_270_D": "到账270钻石\n手续费10%"
+      },
+      "role": "Exchange-only localization keys use UTF-32 strings; unrelated localization falls back to original lookup"
     }
   ],
   "old_resource_sha256": "0aae11cf23e05377026323816f6e458264bdc193b312177bca6824589fa1d29f",
-  "new_resource_sha256": "ad0c2fd6b6fa7f1dbac0efbc2be653772e5a78f5d68a4c588ccba34318d7a25a",
-  "marker": ".exchange-shop-v16-xxxx",
+  "new_resource_sha256": "f835e0f3fe60466dbf81a71c4850f2eb086390103c70709f15991b474657219c",
+  "marker": ".exchange-shop-v16-r10",
   "changed_payloads": {
-    "assets/reconstruction/dynamic-original-speed.rsb.smf": "ad0c2fd6b6fa7f1dbac0efbc2be653772e5a78f5d68a4c588ccba34318d7a25a",
-    "classes8.dex": "3a662603cfbc2e53fa49f86cb3fa772a9f5a311c8730aff2938bb69c032e4684",
-    "lib/armeabi/libSrc.so": "e5dbfd61678d6e8b40d8a38e5bd83b0a02fb220828f30d78571da0fb21846dda"
+    "assets/reconstruction/dynamic-original-speed.rsb.smf": "f835e0f3fe60466dbf81a71c4850f2eb086390103c70709f15991b474657219c",
+    "classes8.dex": "1914ad1e001083dbe094e2d4266802effe7cff7736e0100ca780597337816b4a",
+    "lib/armeabi/libSrc.so": "3d5b8d4d59f415ca86cd6c3e06cedc01392e8a8b992a1da3548a53bf365946a4"
   }
 }

@@ -1,6 +1,6 @@
 {
-  "sha256": "d6e7bf298e0cf9da8d63e0c1c620057c0c803d22fa2b787a7da8d6a3e141f24e",
-  "output": "K:\\pvz2-lostcity-wsa-main\\work\\exchange-v16\\PvZ2-v16-currency-exchange.apk",
+  "sha256": "53d7806ab8fa7a81596f7ed5b9572eeede5876e0c10ad3838bc2caaca16ed338",
+  "output": "K:\\pvz2-lostcity-wsa-main\\work\\launch-fix\\PvZ2-v16r10-currency-exchange.apk",
   "changed_entries": [
     "classes8.dex",
     "lib/armeabi/libSrc.so",
