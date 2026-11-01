@@ -1,3 +1,9 @@
+# 最新进度：v19 已定位 WSA 悬停来源过滤错误
+
+WSA 实际发送 source=0x1002 的 ACTION_HOVER_MOVE，v18 仅接受 0x2002，导致丢弃。v19 已放宽为 pointer 类并补充通用移动分发，已覆盖安装成功，日志确认坐标持续变化，游戏内跟随待用户确认。APK：`work/mouse-v19/PvZ2-v19-pointer-hover-diagnostic.apk`。详情：`docs/recovery/mouse-v19-result.md`。
+
+---
+
 # 最新进度：v18 原生等待光标跟随候选，等待用户验收
 
 用户已反馈 v17 鼠标跟随失败。继续反编译发现：单击释放后光标从活动列表移入 Board+0x94c，绑定编号归零，因此旧移动回调既不能更新它，也没有绘制它。
