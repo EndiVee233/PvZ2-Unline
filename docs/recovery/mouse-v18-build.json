@@ -1,0 +1,47 @@
+{
+  "base": "K:\\pvz2-lostcity-wsa-main\\work\\desktop-v17\\PvZ2-v17-background-cache-mouse-hover.apk",
+  "base_sha256": "8f9bbc4b822cf7ee855a0a3f846f6ed6da4b2b0c8ec1ffaaa65406397aa15114",
+  "native_sha256": "cfcb0e936532231ac34a80b66b6edff51dd9f859a90f9f4d868a72771ce71741",
+  "changed_payloads": [
+    "lib/armeabi/libSrc.so"
+  ],
+  "device_verified": false,
+  "patches": [
+    {
+      "site": "0x132b660",
+      "before": "25561bea",
+      "after": "34561bea",
+      "stub_va": "0x1a00f38",
+      "assembly": "cmp r3,#5\n        beq hover\n        cmp r3,#4\n        b #0x132b664\n        hover:\n        mov r0,r5\n        mov r1,r4\n        bl #0x1327d0c\n        ldr r0,[r5,#0x44]\n        ldr r0,[r0,#0x6bc]\n        cmp r0,#0\n        beq done\n        ldr r0,[r0,#0x94c]\n        cmp r0,#0\n        beq done\n        ldrb r2,[r0,#0x1d]\n        cmp r2,#0\n        bne done\n        add r1,r4,#8\n        bl #0x1efccc\n        done:\n        b #0x132b688"
+    },
+    {
+      "site": "0x207678",
+      "before": "407994e5",
+      "after": "42e65fea",
+      "stub_va": "0x1a00f88",
+      "assembly": "add r3,r4,#0x940\n        add r3,r3,#0xc\n        str r3,[fp,#-0x38]\n        ldr r7,[r4,#0x940]\n        b #0x20767c"
+    },
+    {
+      "site": "0x2077d8",
+      "before": "20d04be2",
+      "after": "efe55fea",
+      "stub_va": "0x1a00f9c",
+      "assembly": "ldr r3,[fp,#-0x38]\n        add r2,r3,#4\n        cmp r7,r2\n        beq finish\n        ldr r2,[r3]\n        cmp r2,#0\n        beq finish\n        mov r7,r3\n        add r8,r7,#4\n        b #0x207698\n        finish:\n        sub sp,fp,#0x20\n        b #0x2077dc"
+    },
+    {
+      "site": "0x20f534",
+      "before": "146a94e5",
+      "after": "a4c65fea",
+      "stub_va": "0x1a00fcc",
+      "assembly": "ldr r0,[r4,#0x94c]\n        cmp r0,#0\n        beq resume\n        ldrb r3,[r0,#0x1d]\n        cmp r3,#0\n        bne resume\n        bl #0x1ef90c\n        resume:\n        ldr r6,[r4,#0xa14]\n        b #0x20f538"
+    }
+  ],
+  "frame_reservation": {
+    "site": "0x20761c",
+    "before": "14d04de2",
+    "after": "1cd04de2"
+  },
+  "apk": "work\\mouse-v18\\PvZ2-v18-pending-cursor-follow.apk",
+  "apk_sha256": "a631bac08fccdaea2bab483a780a7ce79b2d10b6a8abc863e59cea63db656da3",
+  "isolated_arm_checks": "passed"
+}

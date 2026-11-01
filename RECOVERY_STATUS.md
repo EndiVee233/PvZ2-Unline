@@ -1,4 +1,15 @@
-# 最新进度：v17 后台解码与鼠标跟随候选，等待用户验收
+# 最新进度：v18 原生等待光标跟随候选，等待用户验收
+
+用户已反馈 v17 鼠标跟随失败。继续反编译发现：单击释放后光标从活动列表移入 Board+0x94c，绑定编号归零，因此旧移动回调既不能更新它，也没有绘制它。
+
+v18 同时补上等待光标的位置更新、每帧更新和预览绘制，保留下一次点击的原始使用逻辑。APK：`work/mouse-v18/PvZ2-v18-pending-cursor-follow.apk`。
+SHA256：`a631bac08fccdaea2bab483a780a7ce79b2d10b6a8abc863e59cea63db656da3`。
+仅 libSrc.so 改变，v17 后台解码、商店、既有抽奖和教程修复保留。隔离 ARM 控制流检查、签名及对齐通过，未启动 WSA，未改用户存档，不能标记游戏内验收通过。
+详情：`docs/recovery/mouse-v18-result.md`。源码分支：`codex/mouse-v18`。
+
+---
+
+# v17 历史候选：鼠标跟随已被用户确认失败
 
 最终包：`work/desktop-v17/PvZ2-v17-background-cache-mouse-hover.apk`。
 SHA256：`8f9bbc4b822cf7ee855a0a3f846f6ed6da4b2b0c8ec1ffaaa65406397aa15114`。
