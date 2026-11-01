@@ -1,0 +1,7 @@
+{
+  "base": "K:\\pvz2-lostcity-wsa-main\\work\\mouse-v20\\PvZ2-v20-hover-board-coordinates.apk",
+  "site": "0x209894",
+  "stub_va": "0x1a01060",
+  "assembly": "ldr r3,[fp,#-0x44]\n add r3,r3,#0x940\n add r3,r3,#0xc\n add r2,r3,#4\n cmp r4,r2\n beq finish\n ldr r2,[r3]\n cmp r2,#0\n beq finish\n ldrb r1,[r2,#0x1d]\n cmp r1,#0\n bne finish\n mov r4,r3\n add r6,r4,#4\n b #0x2096c4\n finish:\n sub sp,fp,#0x20\n b #0x209898",
+  "device_verified": false
+}

@@ -1,3 +1,9 @@
+# 最新进度：v21 鼠标跟随十字种植提示候选
+
+新增等待选择的原生种植提示绘制迭代，保留 v20 坐标修正与既有改动。APK：`work/mouse-v21/PvZ2-v21-hover-planting-cross.apk`。隔离 ARM 检查通过，未做游戏内验收。详情：`docs/recovery/mouse-v21-result.md`。
+
+---
+
 # 最新进度：v20 修复悬停预览战场原点偏移，待验收
 
 v19 用户确认开始跟随但偏移。v20 在悬停坐标转换中补减 Board 原点，保留原缩放和正常拖动。APK：`work/mouse-v20/PvZ2-v20-hover-board-coordinates.apk`。隔离 ARM 坐标检查通过，未做游戏内验收。详情：`docs/recovery/mouse-v20-result.md`。
