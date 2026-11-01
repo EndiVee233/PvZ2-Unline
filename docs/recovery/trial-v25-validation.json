@@ -1,0 +1,15 @@
+{
+  "scheduler_cases": [
+    {
+      "base": "0x0",
+      "completed_action_removed_by_original_scheduler": true
+    },
+    {
+      "base": "0x20000000",
+      "completed_action_removed_by_original_scheduler": true
+    }
+  ],
+  "alternate_offer_open_cases": 6,
+  "device_verified": false,
+  "limitations": "Native bounded checks; post-Egypt-4 transition requires in-game acceptance."
+}

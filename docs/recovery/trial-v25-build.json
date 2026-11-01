@@ -1,0 +1,28 @@
+{
+  "base": "K:\\pvz2-lostcity-wsa-main\\work\\adventure-v24\\PvZ2-v24-offline-adventure-no-lucky-treasure.apk",
+  "patches": [
+    {
+      "va": "0xa13804",
+      "offset": 10565636,
+      "before": "f04f2de934739fe534339fe5",
+      "after": "0130a0e30530c0e51eff2fe1",
+      "role": "ActionShowPlantTrial: set completed byte and return without opening/waiting"
+    },
+    {
+      "va": "0x40c9c4",
+      "offset": 4245956,
+      "before": "f0482de94a5da0e3",
+      "after": "0000a0e31eff2fe1",
+      "role": "LawnApp PlantTrial offer show: return before allocation and modal setup"
+    }
+  ],
+  "native_sha256": "929be93e65a3546ecf7bb8ed1129c74a8511aa5f0af7766443ac6253dea92832",
+  "device_verified": false,
+  "scope": "Skip purchase offer; preserve trial plants, level rewards and offline adventures",
+  "apk": "work\\trial-v25\\PvZ2-v25-no-plant-trial-offer.apk",
+  "apk_sha256": "8f0155872072b16b54037da4bd23e08c18bd43203ee75e0f3ec885e1540bf817",
+  "apk_size": 1412472220,
+  "changed_payloads": [
+    "lib/armeabi/libSrc.so"
+  ]
+}

@@ -1,4 +1,14 @@
-# 最新进度：v24 幸运宝藏移除与离线植物探险候选，待游戏内验收
+# 最新进度：v25 跳过试用植物关卡后的植物奇遇购买推荐，待验收
+
+此前仅隐藏地图入口，仍有独立自动推荐流程。v25 将 ActionShowPlantTrial 标记完成并由原队列结束，另关闭推荐窗口的创建入口，避免等待不存在的关闭事件。保留试用植物关卡与 v24 修改。
+
+APK：`work/trial-v25/PvZ2-v25-no-plant-trial-offer.apk`。
+SHA256：`8f0155872072b16b54037da4bd23e08c18bd43203ee75e0f3ec885e1540bf817`。
+原生动作队列隔离检查、签名及对齐检查通过；尚未游戏内验收。详情：`docs/recovery/trial-v25-result.md`。
+
+---
+
+# v24 幸运宝藏移除与离线植物探险候选，待游戏内验收
 
 现有 v23 源码已推送，APK 已发布：https://github.com/EndiVee233/pvz2-lostcity-wsa/releases/tag/v1.7.5-v23 。
 
