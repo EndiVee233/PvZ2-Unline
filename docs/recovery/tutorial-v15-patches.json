@@ -1,0 +1,16 @@
+{
+  "source_apk": "K:\\pvz2-lostcity-wsa-main\\work\\restored-v14\\PvZ2-v14-restored-lottery-tutorial.apk",
+  "source_native_sha256": "969e4a84d92e7665c5c247ad7fda7f7d042ea1f30336c59e354e8445e3e42d7a",
+  "patched_native_sha256": "b143ba3404efa608af2caec2a6ec7d91c9d7edaee9381dd001c44b0d84af39ea",
+  "entry": "0x709808",
+  "before": "04b02de5",
+  "after": "26da4bea",
+  "stub_va": "0x1a000a8",
+  "stub_offset": "0x18300a8",
+  "stub_code": "120051e30100a0031eff2f0104b02de5d325b4ea",
+  "program_header_offset": "0xd4",
+  "old_segment_size": 168,
+  "new_segment_size": 188,
+  "user_verified_v14_lottery": true,
+  "device_verified_v15_tutorial": false
+}

@@ -1,0 +1,9 @@
+{
+  "changed_entries_from_v14": [
+    "lib/armeabi/libSrc.so"
+  ],
+  "all_other_payloads_identical": true,
+  "sha256": "c2e83e2c80e75b6c18672739285b8b8b1e7a9085e1a9ce983f6578578cf575e9",
+  "output": "K:\\pvz2-lostcity-wsa-main\\work\\tutorial-v15\\PvZ2-v15-skip-return-guide.apk",
+  "device_verified": false
+}
