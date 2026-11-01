@@ -1,0 +1,15 @@
+{
+  "base": "K:\\pvz2-lostcity-wsa-main\\work\\mouse-v21\\PvZ2-v21-hover-planting-cross.apk",
+  "native_entry": "0x1a010a4",
+  "stub": "0x1a01b2c",
+  "prior_stub": "0x1a00ff0",
+  "assembly": "cmp r3,#6\n beq command\n cmp r3,#5\n beq hover\n b #27267056\n command:\n mov r1,r5\n mov r2,r4\n mov r3,#6\n adr r0,basepoint\n ldr ip,baseoffset\n sub r0,r0,ip\n bl #27267236\n b #0x132b688\n hover:\n mov r0,r5\n mov r1,r4\n bl #0x1327d0c\n ldr r0,[r5,#0x44]\n ldr r0,[r0,#0x6bc]\n cmp r0,#0\n beq done\n ldr r2,[r0,#0x2c]\n ldr r3,[r4,#8]\n sub r3,r3,r2\n str r3,[r4,#8]\n ldr r2,[r0,#0x30]\n ldr r3,[r4,#0xc]\n sub r3,r3,r2\n str r3,[r4,#0xc]\n mov r1,r5\n mov r2,r4\n mov r3,#5\n adr r0,basepoint\n ldr ip,baseoffset\n sub r0,r0,ip\n bl #27267236\n ldr r0,[r5,#0x44]\n ldr r0,[r0,#0x6bc]\n cmp r0,#0\n beq done\n ldr r0,[r0,#0x94c]\n cmp r0,#0\n beq done\n ldrb r2,[r0,#0x1d]\n cmp r2,#0\n bne done\n add r1,r4,#8\n bl #0x1efccc\n done:\n b #0x132b688\n basepoint:\n nop\n baseoffset:\n .word 0",
+  "device_verified": false,
+  "apk": "work\\input-v22\\PvZ2-v22-keyboard-hover-collect.apk",
+  "apk_sha256": "a534079f9822d98d554325f659397d376bee1e0e37f4c24fddd245382208c5fa",
+  "changed_payloads": [
+    "classes.dex",
+    "lib/armeabi/libSrc.so"
+  ],
+  "isolated_arm_checks": "passed at base 0 and 0x20000000"
+}

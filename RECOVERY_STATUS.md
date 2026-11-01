@@ -1,4 +1,13 @@
-# 最新进度：v21 鼠标跟随十字种植提示候选
+# 最新进度：v22 键鼠快捷操作与划过收集候选，待实机验收
+
+APK：`work/input-v22/PvZ2-v22-keyboard-hover-collect.apk`。
+SHA256：`a534079f9822d98d554325f659397d376bee1e0e37f4c24fddd245382208c5fa`。
+新增 1–4/QWER 卡槽、F 能量豆、D 铲子、空格暂停/继续、V 加速、M 黄瓜、A 一次收集、右键取消等待选择；鼠标划过收集物调用原有命中与收集逻辑。原控件和关卡可用性判断保留，试用卡不映射。
+隔离 ARM 检查、签名、对齐、载荷范围检查通过，未安装或运行 v22，未改用户存档。完整键鼠效果不能标为已验证。详情：`docs/recovery/input-v22-result.md`。分支沿用 `codex/mouse-v18`。
+
+---
+
+# v21 鼠标跟随十字种植提示候选
 
 新增等待选择的原生种植提示绘制迭代，保留 v20 坐标修正与既有改动。APK：`work/mouse-v21/PvZ2-v21-hover-planting-cross.apk`。隔离 ARM 检查通过，未做游戏内验收。详情：`docs/recovery/mouse-v21-result.md`。
 
