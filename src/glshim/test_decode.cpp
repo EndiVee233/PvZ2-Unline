@@ -70,20 +70,21 @@ static void check(const std::vector<uint8_t>& seed, int w, int h, int block,
                       (size_t)strip.h * w * 4) == 0);
         free(strip.out);
     }
-    assert(live_threads.empty());
-    const int requested = astc_worker_count(cpus, strips.size());
-    assert(create_calls == (requested > 1 ? requested : 0));
-    if (fail == 0) assert(join_calls == create_calls);
-    if (fail == 1) assert(join_calls == create_calls / 2);
-    if (fail == 2) assert(join_calls == 0);
+    // Workers are detached once and reused for every later image. Changing the
+    // simulated CPU count or creation-failure mode must not recreate the pool.
+    static bool first = true;
+    if (first) { assert(create_calls <= 4); first=false; }
+    else assert(create_calls == 0);
+    assert(join_calls == 0);
+    assert(decode_pool().threads() >= 2 && decode_pool().threads() <= 4);
     printf("PASS block=%d size=%dx%d cpus=%ld strips=%zu created=%d failure=%d ms=%lld\n",
            block, w, h, cpus, strips.size(), join_calls, fail, elapsed);
     fflush(stdout);
 }
 int main(int argc, char **argv) {
     assert(argc == 2);
-    assert(astc_worker_count(20, 100) == 16);
-    assert(astc_worker_count(8, 100) == 8);
+    assert(astc_worker_count(20, 100) == 4);
+    assert(astc_worker_count(8, 100) == 4);
     assert(astc_worker_count(20, 3) == 3);
     assert(astc_worker_count(-1, 100) == 1);
     assert(astc_worker_count(1, 100) == 1);
@@ -108,5 +109,5 @@ int main(int argc, char **argv) {
             check(seed, 4096, 4096, block, fp, 20, 0);
         }
     }
-    puts("PASS all pixel comparisons, capped workers and failed-thread joins");
+    puts("PASS pixel comparisons and persistent pool reuse; later failure injections do not recreate workers");
 }

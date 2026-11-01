@@ -176,6 +176,17 @@ public class AndroidSurfaceView extends GLSurfaceView {
         return this.mUIEventManager.HandleTouchEvent(InEvent);
     }
 
+    @Override
+    public boolean onHoverEvent(MotionEvent event) {
+        if ((event.getSource() & 0x2002) != 0x2002) return super.onHoverEvent(event);
+        int action = event.getActionMasked();
+        if (action == MotionEvent.ACTION_HOVER_EXIT) return true;
+        if (action != MotionEvent.ACTION_HOVER_MOVE && action != MotionEvent.ACTION_HOVER_ENTER)
+            return super.onHoverEvent(event);
+        if (SexyAppFrameworkActivity.instance().SplashScreenShowing()) return false;
+        return this.mUIEventManager.HandleHoverEvent(event);
+    }
+
     @Override // android.view.SurfaceView, android.view.View
     protected void dispatchDraw(Canvas canvas) {
         super.dispatchDraw(canvas);

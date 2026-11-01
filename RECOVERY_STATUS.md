@@ -1,3 +1,13 @@
+# 最新进度：v17 后台解码与鼠标跟随候选，等待用户验收
+
+最终包：`work/desktop-v17/PvZ2-v17-background-cache-mouse-hover.apk`。
+SHA256：`8f9bbc4b822cf7ee855a0a3f846f6ed6da4b2b0c8ec1ffaaa65406397aa15114`。
+基于v16r10：2–4条常驻解码线程，754张ASTC图集后台预缓存，加载请求优先；商店文案“获得X 金币/钻石”，隐藏手续费说明但保留原扣费；鼠标悬停经Java事件队列和原生phase5移动回调，尝试支持选中植物、能量豆、铲子后跟随鼠标。
+按用户要求未安装或运行WSA，未进行游戏/鼠标/性能验证。不得称v17已验收。上轮v16r10的实测结论保留在下方。
+源码分支：`codex/desktop-v17`。详情和复现步骤：`docs/recovery/desktop-v17-result.md`；构建记录：`docs/recovery/desktop-v17-build.json`。
+
+---
+
 # 最新进度：v16r10 已修复启动并完成 WSA 双向兑换自测
 
 最终包：`work/launch-fix/PvZ2-v16r10-currency-exchange.apk`。

@@ -23,7 +23,7 @@
 #define PVZ2_GL_CACHE_ROOT "/data/data/com.popcap.pvz2cthd/cache"
 #endif
 #ifndef PVZ2_ASTC_MAX_THREADS
-#define PVZ2_ASTC_MAX_THREADS 16
+#define PVZ2_ASTC_MAX_THREADS 4
 #endif
 static_assert(PVZ2_ASTC_MAX_THREADS >= 1 && PVZ2_ASTC_MAX_THREADS <= 16,
               "ASTC worker limit must be between 1 and 16");
@@ -303,35 +303,41 @@ static uint8_t *cache_read_rgba(const char *path, int *w, int *h) {
 }
 
 static void cache_write_rgba(const char *path, int w, int h, const std::vector<AstcStrip> &strips) {
-    FILE *f = fopen(path, "wb");
+    static std::atomic<unsigned> sequence{0};
+    char temporary[320];
+    snprintf(temporary,sizeof(temporary),"%s.tmp.%d.%u",path,getpid(),sequence.fetch_add(1));
+    FILE *f = fopen(temporary, "wb");
     if (!f) return;
     uint32_t hdr[2] = {(uint32_t)w, (uint32_t)h};
-    fwrite(hdr, sizeof(uint32_t), 2, f);
+    bool ok = fwrite(hdr, sizeof(uint32_t), 2, f) == 2;
     for (size_t i = 0; i < strips.size(); i++) {
         const AstcStrip &s = strips[i];
-        if (!s.out) continue;
+        if (!s.out) { ok=false; break; }
         long off = 8 + (long)s.y * w * 4;
         if (fseek(f, off, SEEK_SET) == 0) {
-            fwrite(s.out, 1, (size_t)w * s.h * 4, f);
-        }
+            size_t bytes=(size_t)w*s.h*4;
+            if (fwrite(s.out, 1, bytes, f) != bytes) ok=false;
+        } else ok=false;
     }
-    fclose(f);
+    if (fclose(f) != 0) ok=false;
+    if (!ok || rename(temporary,path) != 0) unlink(temporary);
+}
+
+#include "decode_pool.inc"
+
+static void decode_one_strip(AstcStripCtx *ctx, size_t i) {
+    AstcStrip &s = (*ctx->strips)[i];
+    size_t outsz = (size_t)ctx->width * s.h * 4;
+    s.out = (uint8_t *)malloc(outsz);
+    s.ok = s.out && astc_codec::ASTCDecompressToRGBA(
+        ctx->data+s.off,s.size,ctx->width,s.h,ctx->fp,s.out,outsz,(size_t)ctx->width*4);
 }
 
 static void *astc_strip_worker(void *arg) {
     AstcStripCtx *ctx = (AstcStripCtx *)arg;
     int i;
     while ((i = ctx->next->fetch_add(1)) < (int)ctx->strips->size()) {
-        AstcStrip &s = (*ctx->strips)[i];
-        size_t outsz = (size_t)ctx->width * s.h * 4;
-        s.out = (uint8_t *)malloc(outsz);
-        if (!s.out) {
-            s.ok = false;
-            continue;
-        }
-        s.ok = astc_codec::ASTCDecompressToRGBA(
-                ctx->data + s.off, s.size, (size_t)ctx->width, (size_t)s.h,
-                ctx->fp, s.out, outsz, (size_t)ctx->width * 4);
+        decode_one_strip(ctx,i);
     }
     return nullptr;
 }
@@ -364,7 +370,7 @@ static bool astc_decode_parallel(const uint8_t *data, size_t imageSize,
                                  astc_codec::FootprintType fp,
                                  std::vector<AstcStrip> &strips) {
     const int maxThreads = PVZ2_ASTC_MAX_THREADS;
-    const int nthreads = astc_worker_count(sysconf(_SC_NPROCESSORS_ONLN), strips.size());
+    const int nthreads = decode_pool().threads();
 
     std::atomic<int> next(0);
     AstcStripCtx ctx;
@@ -377,21 +383,17 @@ static bool astc_decode_parallel(const uint8_t *data, size_t imageSize,
     ctx.strips = &strips;
     ctx.next = &next;
 
-    pthread_t tids[maxThreads];
-    int started = 0;
-    for (int i = 0; nthreads > 1 && i < nthreads; i++) {
-        // Failed creations must not leave holes in the list passed to join.
-        if (pthread_create(&tids[started], nullptr, astc_strip_worker, &ctx) == 0) {
-            started++;
-        }
-    }
-    if (started == 0) {
+    if (nthreads == 0) {
         astc_strip_worker(&ctx);
     } else {
-        for (int i = 0; i < started; i++) pthread_join(tids[i], nullptr);
+        auto fence=std::make_shared<DecodeFence>(strips.size());
+        for (size_t i=0;i<strips.size();++i) {
+            decode_pool().submit(true,0,[&ctx,i,fence]{decode_one_strip(&ctx,i);fence->finish();});
+        }
+        fence->wait();
     }
     LOGI("ASTC workers limit=%d selected=%d started=%d strips=%zu",
-         maxThreads, nthreads, started, strips.size());
+         maxThreads, nthreads, nthreads, strips.size());
 
     bool ok = true;
     for (size_t i = 0; i < strips.size(); i++) {
@@ -456,13 +458,15 @@ extern "C" void glCompressedTexImage2D(GLenum target, GLint level, GLenum intern
             cpath[0] = 0;
             uint64_t hash = astc_hash((const uint8_t *)data, (size_t)imageSize,
                                       width, height, (int)internalformat, imageSize);
-            if (level == 0 && (long long)width * height >= 1024 * 1024) {
+            if (level == 0) {
                 ensure_astc_cache_dir();
                 snprintf(cpath, sizeof(cpath),
                          PVZ2_GL_CACHE_ROOT "/glcache/%016llx.rgba",
                          (unsigned long long)hash);
                 int cw = 0, ch = 0;
                 uint8_t *cb = cache_read_rgba(cpath, &cw, &ch);
+                if (!cb && join_prefetch(hash)) cb=cache_read_rgba(cpath,&cw,&ch);
+                if (cb && (cw!=width || ch!=height)) {free(cb);cb=nullptr;}
                 if (cb) {
                     LOGI("ASTC cache hit %dx%d", cw, ch);
                     real_tex(target, level, GL_RGBA, cw, ch, border, GL_RGBA, GL_UNSIGNED_BYTE, cb);
@@ -487,17 +491,9 @@ extern "C" void glCompressedTexImage2D(GLenum target, GLint level, GLenum intern
                 strips.push_back(s);
             }
             bool ok = false;
-            if (strips.size() >= 2) {
+            if (!strips.empty()) {
                 ok = astc_decode_parallel((const uint8_t *)data, (size_t)imageSize,
                                           width, height, bx, by, fp, strips);
-            } else if (!strips.empty()) {
-                AstcStrip &s = strips[0];
-                size_t outsz = (size_t)width * s.h * 4;
-                s.out = (uint8_t *)malloc(outsz);
-                s.ok = s.out && astc_codec::ASTCDecompressToRGBA(
-                        (const uint8_t *)data + s.off, s.size, (size_t)width, (size_t)s.h,
-                        fp, s.out, outsz, (size_t)width * 4);
-                ok = s.ok;
             }
             if (ok) {
                 real_tex(target, level, GL_RGBA, width, height, border, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
@@ -542,6 +538,7 @@ __attribute__((constructor)) static void init_shim() {
     patch_got(mi, "glTexImage2D", (void *)glTexImage2D);
     patch_got(mi, "glTexSubImage2D", (void *)glTexSubImage2D);
     patch_got(mi, "glCompressedTexImage2D", (void *)glCompressedTexImage2D);
+    start_texture_prefetch();
     LOGI("done patching");
 }
 

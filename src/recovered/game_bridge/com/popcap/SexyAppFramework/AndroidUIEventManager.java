@@ -35,6 +35,7 @@ public class AndroidUIEventManager implements GestureDetector.OnGestureListener,
     boolean mbAppHasFocus = false;
     Map<Integer, UITouchTracker> mTouches = new TreeMap();
     LinkedList<UIEvent> mEvents = new LinkedList<>();
+    private UITouchTracker mMouseHoverTracker;
 
     static {
         $assertionsDisabled = !AndroidUIEventManager.class.desiredAssertionStatus();
@@ -282,6 +283,7 @@ public class AndroidUIEventManager implements GestureDetector.OnGestureListener,
 
     public void HandleLostFocus() {
         this.mbAppHasFocus = false;
+        this.mMouseHoverTracker = null;
         for (UITouchTracker tracker : this.mTouches.values()) {
             tracker.MarkAsCancelled();
             EnqueueEvent(new UITouchEvent(tracker));
@@ -347,6 +349,23 @@ public class AndroidUIEventManager implements GestureDetector.OnGestureListener,
                 }
                 break;
         }
+        return true;
+    }
+
+    /** Desktop pointer movement without inventing a touch-down or holding a button. */
+    public boolean HandleHoverEvent(MotionEvent event) {
+        if (!this.mbAppHasFocus) return false;
+        UITouchTracker hover = this.mMouseHoverTracker;
+        // Native phase 5 is the desktop hover extension; it never enters mTouches.
+        if (hover == null) {
+            hover = new UITouchTracker();
+            hover.InitializeFromMotionEvent(event, event.getPointerId(0), 5, 0);
+            this.mMouseHoverTracker = hover;
+        } else {
+            hover.UpdateFromMotionEvent(event, 5, 0);
+        }
+        hover.mPointerId = event.getPointerId(0);
+        EnqueueEvent(new UITouchEvent(hover));
         return true;
     }
 

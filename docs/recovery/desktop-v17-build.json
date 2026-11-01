@@ -1,0 +1,176 @@
+{
+  "base": "K:\\pvz2-lostcity-wsa-main\\work\\launch-fix\\PvZ2-v16r10-currency-exchange.apk",
+  "candidate": true,
+  "device_verified": false,
+  "user_requested_no_runtime_verification": true,
+  "changed_payloads": {
+    "classes.dex": "bd237b7013004249f0f812af1cba5fa6a4b7d2b023fe03bcb0b9803e328ed025",
+    "lib/armeabi/libSrc.so": "6dae08f1f67313d55e797f9aeba78ea358b6335549be54aba950e9be3b195f47",
+    "lib/armeabi/libRestart.so": "06793158b4f1575e55bb30888940ebd7cac5e5582ac7be2da6abd111c2532d8b"
+  },
+  "fee_calculation_retained_percent": 10,
+  "shop_text": [
+    {
+      "key": "V16_gem_9000_D",
+      "offset": "0x1830804",
+      "before": "到账9000金币\n手续费10%",
+      "after": "获得9000 金币"
+    },
+    {
+      "key": "V16_gem_45000_D",
+      "offset": "0x1830938",
+      "before": "到账45000金币\n手续费10%",
+      "after": "获得45000 金币"
+    },
+    {
+      "key": "V16_gem_90000_D",
+      "offset": "0x1830a70",
+      "before": "到账90000金币\n手续费10%",
+      "after": "获得90000 金币"
+    },
+    {
+      "key": "V16_coin_18_D",
+      "offset": "0x1830b84",
+      "before": "到账18钻石\n手续费10%",
+      "after": "获得18 钻石"
+    },
+    {
+      "key": "V16_coin_90_D",
+      "offset": "0x1830c8c",
+      "before": "到账90钻石\n手续费10%",
+      "after": "获得90 钻石"
+    },
+    {
+      "key": "V16_coin_180_D",
+      "offset": "0x1830da4",
+      "before": "到账180钻石\n手续费10%",
+      "after": "获得180 钻石"
+    },
+    {
+      "key": "V16_coin_270_D",
+      "offset": "0x1830ec0",
+      "before": "到账270钻石\n手续费10%",
+      "after": "获得270 钻石"
+    }
+  ],
+  "native_hover": {
+    "site": "0x132b660",
+    "before": "040053e3",
+    "after": "25561bea",
+    "stub_offset": "0x1830efc",
+    "stub_va": "0x1a00efc",
+    "stub_size": 60,
+    "hover_phase": 5,
+    "button_events_synthesized": false,
+    "device_verified": false
+  },
+  "prefetch": {
+    "source": "work/launch-fix/PvZ2-v16r10-currency-exchange.apk",
+    "files": [
+      [
+        "init.rsb.smf",
+        429072384
+      ],
+      [
+        "uicommon.rsb.smf",
+        191627264
+      ],
+      [
+        "dynamic.rsb.smf",
+        23453696
+      ],
+      [
+        "egypt.rsb.smf",
+        89919488
+      ],
+      [
+        "beach.rsb.smf",
+        78405632
+      ],
+      [
+        "cowboy.rsb.smf",
+        47316992
+      ],
+      [
+        "dark.rsb.smf",
+        71196672
+      ],
+      [
+        "future.rsb.smf",
+        77180928
+      ],
+      [
+        "iceage.rsb.smf",
+        71241728
+      ],
+      [
+        "kongfu.rsb.smf",
+        73547776
+      ],
+      [
+        "lostcity.rsb.smf",
+        51163136
+      ],
+      [
+        "pirate.rsb.smf",
+        46407680
+      ],
+      [
+        "plant1.rsb.smf",
+        172781568
+      ],
+      [
+        "plant2.rsb.smf",
+        248590336
+      ],
+      [
+        "skycity.rsb.smf",
+        95997952
+      ],
+      [
+        "uiactive.rsb.smf",
+        558354432
+      ],
+      [
+        "zombie1.rsb.smf",
+        116465664
+      ],
+      [
+        "zombie2.rsb.smf",
+        119021568
+      ],
+      [
+        "zombie3.rsb.smf",
+        183615488
+      ]
+    ],
+    "format_counts": {
+      "161": 466,
+      "147": 5,
+      "152": 2,
+      "162": 288
+    },
+    "texture_count": 754
+  },
+  "worker_pool": {
+    "min_threads": 2,
+    "max_threads": 4,
+    "lifetime": "process",
+    "priority": "demand before background",
+    "same_texture_prefetch_promoted": true,
+    "background_inflight_textures": 1,
+    "low_disk_reserve_bytes": 268435456
+  },
+  "source_hashes": {
+    "src/glshim/glshim.cpp": "90b404017c055d16a1326966dbe3c1bd10a2f163ecdce4facbb8cb97891893a5",
+    "src/glshim/decode_pool.inc": "def8fae722db4ba01e8b54d9ee1514fcbd6c1d07958b5c3a9fbc7be5dfe168db",
+    "scripts/build_desktop_hover.py": "4edfde46088b9d7e0605909dda37cf273e170899fad57361ac1e4ab2a819a614",
+    "scripts/index_texture_prefetch.py": "1c20649cf8f65a0ff3958945e849febed587c0d0607f8dd5a955db67bb2c013b"
+  },
+  "prefetch_index_sha256": "f8139307a4315bcbc8fb6ce660f2857a23b7d1e2ea0893400a448325bd69b072",
+  "apk": "work/desktop-v17/PvZ2-v17-background-cache-mouse-hover.apk",
+  "apk_sha256": "8f9bbc4b822cf7ee855a0a3f846f6ed6da4b2b0c8ec1ffaaa65406397aa15114",
+  "apk_bytes": 1412468124,
+  "branch": "codex/desktop-v17",
+  "status": "candidate awaiting user acceptance; compiled and signed, no WSA installation or runtime tests"
+}
