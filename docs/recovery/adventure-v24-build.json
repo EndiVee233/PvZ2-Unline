@@ -1,0 +1,192 @@
+{
+  "base": "K:\\pvz2-lostcity-wsa-main\\work\\input-v23\\PvZ2-v23-shortcut-crash-pause-fix.apk",
+  "patches": [
+    {
+      "site": "0x709808",
+      "before": "26da4bea",
+      "after": "06e14bea",
+      "role": "Lucky Treasure tutorial 15 completed query"
+    },
+    {
+      "site": "0xa36000",
+      "before": "33ff2fe1",
+      "after": "0c2f3fea",
+      "role": "hide and disable Lucky sub-button; retire its drawer guide"
+    },
+    {
+      "site": "0x6d9818",
+      "before": "bb6e22eb",
+      "after": "18a14ceb",
+      "role": "adventure local clock"
+    },
+    {
+      "site": "0x6dcffc",
+      "before": "c26022eb",
+      "after": "1f934ceb",
+      "role": "adventure local clock"
+    },
+    {
+      "site": "0x6e81c0",
+      "before": "513422eb",
+      "after": "ae664ceb",
+      "role": "adventure local clock"
+    },
+    {
+      "site": "0x6ed390",
+      "before": "dd1f22eb",
+      "after": "3a524ceb",
+      "role": "adventure local clock"
+    },
+    {
+      "site": "0x6f3d38",
+      "before": "730522eb",
+      "after": "d0374ceb",
+      "role": "adventure local clock"
+    },
+    {
+      "site": "0xf93d98",
+      "before": "5b85ffeb",
+      "after": "b8b729eb",
+      "role": "adventure local clock"
+    },
+    {
+      "site": "0xf93e30",
+      "before": "3585ffeb",
+      "after": "92b729eb",
+      "role": "adventure local clock"
+    },
+    {
+      "site": "0xf93e84",
+      "before": "2085ffeb",
+      "after": "7db729eb",
+      "role": "adventure local clock"
+    },
+    {
+      "site": "0xf93f70",
+      "before": "e584ffeb",
+      "after": "42b729eb",
+      "role": "adventure local clock"
+    },
+    {
+      "site": "0xf94408",
+      "before": "bf83ffeb",
+      "after": "1cb629eb",
+      "role": "adventure local clock"
+    },
+    {
+      "site": "0xf944f4",
+      "before": "8483ffeb",
+      "after": "e1b529eb",
+      "role": "adventure local clock"
+    },
+    {
+      "site": "0xf94be8",
+      "before": "c781ffeb",
+      "after": "24b429eb",
+      "role": "adventure local clock"
+    },
+    {
+      "site": "0xf95808",
+      "before": "bf7effeb",
+      "after": "1cb129eb",
+      "role": "adventure local clock"
+    },
+    {
+      "site": "0xf95a34",
+      "before": "347effeb",
+      "after": "91b029eb",
+      "role": "adventure local clock"
+    },
+    {
+      "site": "0xf95f68",
+      "before": "e77cffeb",
+      "after": "44af29eb",
+      "role": "adventure local clock"
+    },
+    {
+      "site": "0xf96588",
+      "before": "5f7bffeb",
+      "after": "bcad29eb",
+      "role": "adventure local clock"
+    },
+    {
+      "site": "0x71f3f8",
+      "before": "c35721eb",
+      "after": "208a4beb",
+      "role": "adventure local clock"
+    },
+    {
+      "site": "0x6f3960",
+      "before": "e046f4eb",
+      "after": "0100a0e3",
+      "role": "adventure local backend is available"
+    },
+    {
+      "site": "0x6f4234",
+      "before": "ab44f4eb",
+      "after": "0100a0e3",
+      "role": "adventure local backend is available"
+    },
+    {
+      "site": "0x6f4290",
+      "before": "9444f4eb",
+      "after": "0100a0e3",
+      "role": "adventure local backend is available"
+    },
+    {
+      "site": "0x6f4a0c",
+      "before": "b542f4eb",
+      "after": "0100a0e3",
+      "role": "adventure local backend is available"
+    },
+    {
+      "site": "0x6f6468",
+      "before": "1e3cf4eb",
+      "after": "0100a0e3",
+      "role": "adventure local backend is available"
+    }
+  ],
+  "tutorial_stub": "0x1a01c28",
+  "prior_tutorial_stub": "0x1a000a8",
+  "hide_stub": "0x1a01c38",
+  "clock_stub": "0x1a01c80",
+  "clock_assembly": "push {r4,lr}\n sub sp,sp,#8\n mov r0,sp\n mov r1,#0\n bl #0x147974\n cmp r0,#0\n ldreq r0,[sp]\n movne r0,#0\n add sp,sp,#8\n pop {r4,pc}",
+  "hide_assembly": "blx r3\n ldr r0,[r4,#0xa8]\n cmp r0,#0\n beq done\n mov r1,#0\n ldr r3,[r0]\n ldr r3,[r3,#0x8c]\n blx r3\n ldr r0,[r4,#0xa8]\n mov r1,#1\n ldr r3,[r0]\n ldr r3,[r3,#0xa4]\n blx r3\n done:\n ldr r3,[r4,#0xbc]\n cmp r3,#4\n moveq r3,#0\n streq r3,[r4,#0xbc]\n b #0xa36004",
+  "clock_sites": [
+    "0x6d9818",
+    "0x6dcffc",
+    "0x6e81c0",
+    "0x6ed390",
+    "0x6f3d38",
+    "0xf93d98",
+    "0xf93e30",
+    "0xf93e84",
+    "0xf93f70",
+    "0xf94408",
+    "0xf944f4",
+    "0xf94be8",
+    "0xf95808",
+    "0xf95a34",
+    "0xf95f68",
+    "0xf96588",
+    "0x71f3f8"
+  ],
+  "device_verified": false,
+  "reused_native_backend": {
+    "list": "0xf93d8c",
+    "dispatch": "0xf94bcc",
+    "start_ack": "0xf957f4",
+    "skip": "0xf95a1c",
+    "claim": "0xf95f54",
+    "surprise": "0xf96574"
+  },
+  "native_sha256": "affd4cb67240f60a693250225f2405720958418c9fdd64b7c4de54070b94563e",
+  "apk": "work\\adventure-v24\\PvZ2-v24-offline-adventure-no-lucky-treasure.apk",
+  "apk_sha256": "3dbc4d5abb2d8a39942d40a28b1b60f14fb632b4d7f68797e49f3bc936e83d5d",
+  "apk_size": 1412472220,
+  "changed_payloads": [
+    "lib/armeabi/libSrc.so"
+  ],
+  "signature_verified": true,
+  "alignment_verified": true
+}

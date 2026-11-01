@@ -1,0 +1,44 @@
+{
+  "tutorial_differential_cases": 512,
+  "overlay_bypass_ids": [
+    15,
+    18
+  ],
+  "drawer_cases": 6,
+  "clock_cases": 3,
+  "maturation_cases": [
+    {
+      "now": 1793548800,
+      "changes": [],
+      "saved": false
+    },
+    {
+      "now": 1793548920,
+      "changes": [
+        [
+          10401,
+          3,
+          4294967295
+        ]
+      ],
+      "saved": true
+    },
+    {
+      "now": 1793549000,
+      "changes": [
+        [
+          10401,
+          3,
+          4294967295
+        ]
+      ],
+      "saved": true
+    }
+  ],
+  "native_list_success_events": [
+    1,
+    1
+  ],
+  "device_verified": false,
+  "limitations": "Bounded native execution only; dispatch, reward claim and full UI require in-game acceptance."
+}

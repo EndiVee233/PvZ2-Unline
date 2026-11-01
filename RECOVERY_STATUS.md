@@ -1,4 +1,16 @@
-# 最新进度：v23 修正按 1 崩溃及空格绕过教程暂停，待实机验收
+# 最新进度：v24 幸运宝藏移除与离线植物探险候选，待游戏内验收
+
+现有 v23 源码已推送，APK 已发布：https://github.com/EndiVee233/pvz2-lostcity-wsa/releases/tag/v1.7.5-v23 。
+
+v24 移除幸运宝藏子入口及教程 ID 15，保留宝物菜单其他功能；植物探险复用原生本地派遣和奖励逻辑，专用计时改为设备时间，解除探险界面的联网可用性阻拦。
+
+APK：`work/adventure-v24/PvZ2-v24-offline-adventure-no-lucky-treasure.apk`。
+SHA256：`3dbc4d5abb2d8a39942d40a28b1b60f14fb632b4d7f68797e49f3bc936e83d5d`。
+隔离 ARM 检查、签名、对齐及载荷范围检查通过。未安装、运行 v24，未改用户存档。完整派遣、领奖及界面衔接待实机验收。详情：`docs/recovery/adventure-v24-result.md`。
+
+---
+
+# v23 修正按 1 崩溃及空格绕过教程暂停，待实机验收
 
 用户报告 v22 按 1 崩溃，教程对话时空格仍可暂停；其它功能未完成验收。日志确认原生类型判定返回 bool 被当作指针，v23 改为判定成功后保留原对象；空格改走 UIPauseButton 的原按下/释放输入路径，不再直接暂停。
 APK：`work/input-v23/PvZ2-v23-shortcut-crash-pause-fix.apk`。
