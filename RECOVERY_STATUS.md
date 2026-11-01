@@ -1,4 +1,13 @@
-# 最新进度：v22 键鼠快捷操作与划过收集候选，待实机验收
+# 最新进度：v23 修正按 1 崩溃及空格绕过教程暂停，待实机验收
+
+用户报告 v22 按 1 崩溃，教程对话时空格仍可暂停；其它功能未完成验收。日志确认原生类型判定返回 bool 被当作指针，v23 改为判定成功后保留原对象；空格改走 UIPauseButton 的原按下/释放输入路径，不再直接暂停。
+APK：`work/input-v23/PvZ2-v23-shortcut-crash-pause-fix.apk`。
+SHA256：`ba8bf7aa978b83b6a0b9ec5959da9fb9c0bcdc5fdba4564a9698e43c71604bfc`。
+隔离检查已使用布尔返回值 1，签名及对齐通过；仅 libSrc.so 相对 v22 改变。未安装或运行 v23。详情：`docs/recovery/input-v23-result.md`。
+
+---
+
+# v22 历史候选：用户已确认快捷键崩溃与教程暂停限制失效
 
 APK：`work/input-v22/PvZ2-v22-keyboard-hover-collect.apk`。
 SHA256：`a534079f9822d98d554325f659397d376bee1e0e37f4c24fddd245382208c5fa`。

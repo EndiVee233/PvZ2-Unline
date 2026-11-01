@@ -7,7 +7,8 @@ struct Touch {U id,pad;int x,y,px,py,taps,pad2;U time[2];U phase;};
 struct Weak {U a,b;};
 static P resolve(U b,Weak *w){if(!(w->a|w->b))return nullptr;return call<P>(b,0x1da034,call<P>(b,0x11d74b4),w);}
 static void weak(U b,Weak *w,U a=0,U c=0){call<void>(b,0x1d9bb4,w,0,a,c);}
-static P cast(U b,P p,U type){return p?virt<P>(p,0x10,call<P>(b,type)):nullptr;}
+// RtObject::IsType returns bool, not an adjusted object pointer.
+static P cast(U b,P p,U type){return p&&virt<int>(p,0x10,call<P>(b,type))?p:nullptr;}
 static P widget(U b,const char *name){
  P s=nullptr;char alloc=0;
  call<void>(b,0x14ed0e1,&s,name,&alloc);
@@ -66,12 +67,13 @@ extern "C" __attribute__((section(".text.entry"))) void desktopInput(U b,P drive
  P app=at<P>(driver,0x44);if(!app)return;P board=at<P>(app,0x6bc);if(!board)return;
  if(mode==5){collect(b,app,board,event,false);return;}
  int key=event->x;
- // Space uses the original pause entry, and the matching native resume path.
+ // Pause must pass through ordinary input routing, including tutorial locks.
  if(key==62){
   if(at<unsigned char>(board,0x8d5)){
-   if(at<U>(app,0x1378))call<void>(b,0x4021b0,app);
-   if(!modal(app))virt<void>(board,0x58,0);
-  }else if(playable(board)&&!modal(app))call<int>(b,0x20c5e8,board);
+   if(at<U>(app,0x1378)&&!modal(app)){
+    call<void>(b,0x4021b0,app);virt<void>(board,0x58,0);
+   }
+  }else if(playable(board)&&!modal(app))click(b,app,board,widget(b,"UIPauseButton"),event);
   return;
  }
  if(!playable(board)||modal(app))return;
