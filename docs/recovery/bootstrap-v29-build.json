@@ -1,0 +1,17 @@
+{
+  "base": "K:\\pvz2-lostcity-wsa-main\\work\\pvp-v28\\PvZ2-v28-offline-npc-practice.apk",
+  "accepted_predecessors": [
+    "f835e0f3fe60466dbf81a71c4850f2eb086390103c70709f15991b474657219c",
+    "0aae11cf23e05377026323816f6e458264bdc193b312177bca6824589fa1d29f",
+    "12af3e81260ee7ad2a438a9175506839474a1ec4b7aa39b61ed9bda7fdda5835"
+  ],
+  "installed_resource_before_upgrade": "f835e0f3fe60466dbf81a71c4850f2eb086390103c70709f15991b474657219c",
+  "target_resource_sha256": "cd4626cfc3afe0148962b14564c4bd27f185063c4d1bf9dd4a8c7d705d303bf5",
+  "target_checksum_verification_preserved": true,
+  "game_verified": false,
+  "changed_payloads": [
+    "classes8.dex"
+  ],
+  "apk": "work\\bootstrap-v29\\PvZ2-v29-resource-upgrade-fix.apk",
+  "apk_sha256": "9eff94ac5c90f04c1201cae480bab281179aff23c957ad9d3d95b5a152894a2d"
+}

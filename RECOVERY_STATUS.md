@@ -1,4 +1,14 @@
-# 最新进度：v28 离线 NPC 练习候选，未运行验收
+# 最新进度：v29 修正 NPC 候选升级时的资源版本阻拦
+
+用户确认 v28 无法启动。只读日志显示 Unexpected resource version：v27 正常资源散列未进入 v28 升级器的允许列表。
+
+v29 新增已发布资源版本兼容列表，保留完整更新校验；仅 classes8.dex 改变。APK：`work/bootstrap-v29/PvZ2-v29-resource-upgrade-fix.apk`。
+SHA256：`9eff94ac5c90f04c1201cae480bab281179aff23c957ad9d3d95b5a152894a2d`。
+直接覆盖安装，不清理存档。未运行 v29 或验收 NPC 战斗。详情：`docs/recovery/bootstrap-v29-result.md`。
+
+---
+
+# v28 历史候选：用户确认资源更新失败，NPC 战斗未能验收
 
 用户选择先恢复本地 NPC 战斗，沿用无需游戏验证。v28 将地图对战入口改为原生 arena_battle_attack_tutorial NPC 练习战场，绕过云同步/在线登录；使用固定僵尸卡，保留原生教学和战斗，结束或相关退出请求返回地图。不包含完整在线经营、军队训练和排行榜。
 
