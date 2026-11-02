@@ -1,0 +1,12 @@
+{
+  "apk": "K:\\pvz2-lostcity-wsa-main\\work\\pvp-v31\\PvZ2-v31-offline-pvp-map.apk",
+  "sha256": "5c23a50870ddcf3844514424d4ba05cc5f386fc3d71c25359592d66885e6b385",
+  "changed": [
+    "lib/armeabi/libSrc.so"
+  ],
+  "full_assets": true,
+  "v30_cache_retained": true,
+  "lobby_scene": 28,
+  "map_scene": 25,
+  "native_sha256": "ff5747788c0d8daa8cec23e2d45ec51d27b71d063da9c26eedc19dd8f05ca80e"
+}

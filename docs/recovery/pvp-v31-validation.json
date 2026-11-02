@@ -1,0 +1,28 @@
+{
+  "signature_schemes": [
+    "v1",
+    "v2",
+    "v3"
+  ],
+  "full_apk_install": "success",
+  "profile": "WSA USER",
+  "final_runtime_validation": "passed",
+  "scope": "Native PvP lobby and map navigation only; no battle backend restoration",
+  "checks": [
+    "WSA USER selected at title screen",
+    "Campaign map to native PvP lobby",
+    "Lobby to garden-war map",
+    "Map drag changes viewport",
+    "Map returns to lobby",
+    "Lobby returns to campaign map successfully",
+    "No old PvP endpoint request in captured final-run logs",
+    "No fatal signal or Java fatal exception in final-run logs"
+  ],
+  "not_tested": [
+    "Enemy base population",
+    "Training and laboratory actions",
+    "PvP currency production or persistence",
+    "Match start, battle resolution, ranking"
+  ],
+  "evidence": "work/pvp-v31/map-verified.png"
+}
