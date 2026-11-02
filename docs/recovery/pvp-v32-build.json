@@ -1,0 +1,36 @@
+{
+  "base": "work\\pvp-v31\\PvZ2-v31-offline-pvp-map.apk",
+  "base_sha256": "5c23a50870ddcf3844514424d4ba05cc5f386fc3d71c25359592d66885e6b385",
+  "apk": "work\\pvp-v32\\PvZ2-v32-first-pvp-tutorial-skills.apk",
+  "apk_sha256": "c5b79b048941dd39d8844492b430e2de7d0cb2aa288847bbfd1e823f3aa21c90",
+  "native_sha256": "2f76f7eaeadd4a6b7cac8913fbba799668a59d674a153708e5e20e93796baea4",
+  "resource_sha256": "cd51b7af0697f1f8bc0b9dfa550e3b9ff1da79eaa516f54206a5018653d795c4",
+  "legacy_input_sha256": "0c6abf1b07cf6c0f32d3cc0b1ceda30a793174dd4bfc706275aaf12af6264995",
+  "imported_groups": [
+    "ZombiePVPSkillAidGroup_640",
+    "ZombiePVPSkillAidGroup_Common",
+    "ZombiePVPSkillBombGroup_640",
+    "ZombiePVPSkillBombGroup_Common",
+    "ZombiePVPSkillInvisibleGroup_640",
+    "ZombiePVPSkillInvisibleGroup_Common",
+    "ZombiePVPSkillSleepGroup_640",
+    "ZombiePVPSkillSleepGroup_Common",
+    "ZombiePVPSkillZombieFoodGroup_640",
+    "ZombiePVPSkillZombieFoodGroup_Common"
+  ],
+  "thin": false,
+  "patches": [
+    "native tutorial entry and completion transitions",
+    "initial plant lab level",
+    "native owned tutorial skill record",
+    "local map navigation",
+    "PVP network-fault dialog suppression",
+    "retain PVP animation group"
+  ],
+  "diagnostics_included": false,
+  "changed_payloads": [
+    "lib/armeabi/libSrc.so",
+    "classes8.dex",
+    "assets/reconstruction/zombie2-pvp.rsb.smf"
+  ]
+}

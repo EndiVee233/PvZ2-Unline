@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "native_trie_lookups": 440,
+  "resource_groups": 148,
+  "all_resource_pools_sufficient": true,
+  "full_resource_parts": 3,
+  "diagnostics_removed": true,
+  "apk_sha256": "c5b79b048941dd39d8844492b430e2de7d0cb2aa288847bbfd1e823f3aa21c90"
+}
