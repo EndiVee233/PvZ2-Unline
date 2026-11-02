@@ -1,0 +1,106 @@
+{
+  "post_level_cases": [
+    {
+      "base": "0x0",
+      "path": "normal_return",
+      "variant": "v24 offer eligible",
+      "target": 19
+    },
+    {
+      "base": "0x0",
+      "path": "normal_return",
+      "variant": "v24 no offer",
+      "target": 7
+    },
+    {
+      "base": "0x0",
+      "path": "normal_return",
+      "variant": "v26 offer eligible",
+      "target": 7
+    },
+    {
+      "base": "0x0",
+      "path": "normal_return",
+      "variant": "v26 no offer",
+      "target": 7
+    },
+    {
+      "base": "0x0",
+      "path": "alternate_completion",
+      "variant": "v24 offer eligible",
+      "target": 19
+    },
+    {
+      "base": "0x0",
+      "path": "alternate_completion",
+      "variant": "v24 no offer",
+      "target": 7
+    },
+    {
+      "base": "0x0",
+      "path": "alternate_completion",
+      "variant": "v26 offer eligible",
+      "target": 7
+    },
+    {
+      "base": "0x0",
+      "path": "alternate_completion",
+      "variant": "v26 no offer",
+      "target": 7
+    },
+    {
+      "base": "0x20000000",
+      "path": "normal_return",
+      "variant": "v24 offer eligible",
+      "target": 19
+    },
+    {
+      "base": "0x20000000",
+      "path": "normal_return",
+      "variant": "v24 no offer",
+      "target": 7
+    },
+    {
+      "base": "0x20000000",
+      "path": "normal_return",
+      "variant": "v26 offer eligible",
+      "target": 7
+    },
+    {
+      "base": "0x20000000",
+      "path": "normal_return",
+      "variant": "v26 no offer",
+      "target": 7
+    },
+    {
+      "base": "0x20000000",
+      "path": "alternate_completion",
+      "variant": "v24 offer eligible",
+      "target": 19
+    },
+    {
+      "base": "0x20000000",
+      "path": "alternate_completion",
+      "variant": "v24 no offer",
+      "target": 7
+    },
+    {
+      "base": "0x20000000",
+      "path": "alternate_completion",
+      "variant": "v26 offer eligible",
+      "target": 7
+    },
+    {
+      "base": "0x20000000",
+      "path": "alternate_completion",
+      "variant": "v26 no offer",
+      "target": 7
+    }
+  ],
+  "original_map_state_lifecycle_checked": true,
+  "map_action_scheduler_cases": 2,
+  "fallback_offer_window_restored": true,
+  "offer_callbacks_not_registered_on_no_offer_branch": true,
+  "device_verified": false,
+  "limitations": "Native routing and transition callbacks checked; full game UI needs acceptance."
+}

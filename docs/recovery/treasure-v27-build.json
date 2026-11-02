@@ -1,0 +1,39 @@
+{
+  "base": "K:\\pvz2-lostcity-wsa-main\\work\\trial-v26\\PvZ2-v26-trial-offer-transition-fix.apk",
+  "patches": [
+    {
+      "va": "0x709808",
+      "before": "06e14bea",
+      "after": "26e14bea",
+      "role": "retire tutorials 21 and 23 before map overlay/input-lock state is written; retain previous 15/18 hook"
+    },
+    {
+      "va": "0xa38844",
+      "before": "0430a003",
+      "after": "0030a003",
+      "role": "drawer tutorial 15: select no-guide mode instead of mode 4"
+    },
+    {
+      "va": "0xa38864",
+      "before": "0630a003",
+      "after": "0030a003",
+      "role": "drawer tutorial 21: select no-guide mode instead of mode 6"
+    },
+    {
+      "va": "0xa38874",
+      "before": "0730a003",
+      "after": "0030a003",
+      "role": "drawer tutorial 23: select no-guide mode instead of mode 7"
+    }
+  ],
+  "previous_tutorial_hook": "0x1a01c28",
+  "tutorial_hook": "0x1a01ca8",
+  "assembly": "cmp r1,#21\n    moveq r0,#1\n    bxeq lr\n    cmp r1,#23\n    moveq r0,#1\n    bxeq lr\n    b #27270184",
+  "native_sha256": "07767c75e11566dcf346428ea6cecab178fc447e49215ebb9e87d2552ecf09db",
+  "device_verified": false,
+  "game_validation_skipped_per_user": true,
+  "inherited_trial_offer_transition_fix": true,
+  "apk": "work\\treasure-v27\\PvZ2-v27-trial-transition-lucky-guide-fix.apk",
+  "apk_sha256": "d84f7ef9bd8aa92c4ff5c34d18de709cdba0b03c9ff91ff29f0272c203e87325",
+  "apk_size": 1412472220
+}

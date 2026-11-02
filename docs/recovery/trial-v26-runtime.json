@@ -1,0 +1,10 @@
+{
+  "installed_v26_native_matches": true,
+  "native_sha256": "01d4c3b786a24c6b55eba64107b11c39be99901eb619f3b88a754bf7e17b5610",
+  "adb_install_success": true,
+  "save_backup_created_locally": true,
+  "startup_fatal_lines": [],
+  "full_post_level_acceptance": false,
+  "start_screen_observed": true,
+  "existing_profile_map_loaded": true
+}

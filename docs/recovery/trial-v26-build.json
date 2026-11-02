@@ -1,0 +1,38 @@
+{
+  "base": "K:\\pvz2-lostcity-wsa-main\\work\\adventure-v24\\PvZ2-v24-offline-adventure-no-lucky-treasure.apk",
+  "patches": [
+    {
+      "va": "0x353d28",
+      "offset": 3489064,
+      "before": "613ad3e5",
+      "after": "0030a0e3",
+      "role": "ignore trial-offer eligibility only at the post-level routing decision"
+    },
+    {
+      "va": "0x354e9c",
+      "offset": 3493532,
+      "before": "613ad3e5",
+      "after": "0030a0e3",
+      "role": "ignore trial-offer eligibility only at the post-level routing decision"
+    },
+    {
+      "va": "0xa13804",
+      "offset": 10565636,
+      "before": "f04f2de934739fe534339fe5",
+      "after": "0130a0e30530c0e51eff2fe1",
+      "role": "complete ActionShowPlantTrial without changing scenes or waiting for close"
+    }
+  ],
+  "native_sha256": "01d4c3b786a24c6b55eba64107b11c39be99901eb619f3b88a754bf7e17b5610",
+  "fallback_offer_window_restored": true,
+  "device_verified": false,
+  "scope": "Post-level no-offer routing and map action completion; trial plants/rewards unchanged",
+  "apk": "work\\trial-v26\\PvZ2-v26-trial-offer-transition-fix.apk",
+  "apk_sha256": "7ba9869bda759650ddcfbc4762023672498c2b5a46fe7fc7c34b23ec23726dcc",
+  "apk_size": 1412472220,
+  "changed_payloads": [
+    "lib/armeabi/libSrc.so"
+  ],
+  "signature_verified": true,
+  "alignment_verified": true
+}
