@@ -1,0 +1,50 @@
+{
+  "base": "K:\\pvz2-lostcity-wsa-main\\work\\treasure-v27\\PvZ2-v27-trial-transition-lucky-guide-fix.apk",
+  "patches": [
+    {
+      "va": "0x1021f4c",
+      "before": "f0482de9",
+      "after": "5c7f27ea",
+      "role": "map PvP click enters native offline NPC practice without cloud/login"
+    },
+    {
+      "va": "0x352a7c",
+      "before": "04b02de5",
+      "after": "c2bc5aea",
+      "role": "arena tutorial-mode requests for online PvP scene 28 return to map instead"
+    },
+    {
+      "va": "0x10a9714",
+      "before": "1910a0e3",
+      "after": "0710a0e3",
+      "role": "native NPC result returns to map"
+    },
+    {
+      "va": "0x10a9784",
+      "before": "1c10a0e3",
+      "after": "0710a0e3",
+      "role": "native NPC result returns to map"
+    },
+    {
+      "va": "0x10a96f4",
+      "before": "5c378005",
+      "after": "0000a0e1",
+      "role": "practice does not advance online PvP tutorial progress"
+    },
+    {
+      "va": "0x10a9ae4",
+      "before": "5c3785e5",
+      "after": "0000a0e1",
+      "role": "practice does not advance online PvP tutorial progress"
+    }
+  ],
+  "entry": "0x1a01cc4",
+  "entry_assembly": "push {r4,r5,r6,r7,r8,lr}\n sub sp,sp,#24\n bl #0x7fa754\n mov r3,#1\n str r3,[r0,#4]\n str r3,[r0,#0xa8]\n mov r3,#0\n strb r3,[r0,#0x100]\n adr r4,app_delta\n ldr r3,[r4]\n add r4,r4,r3\n ldr r4,[r4]\n ldr r4,[r4]\n add r4,r4,#0x1200\n mov r3,#3\n str r3,[r4,#0x18]\n add r0,sp,#8\n adr r1,level_name\n add r2,sp,#16\n blx #0x14ed0e0\n adr r0,manager_delta\n ldr r3,[r0]\n add r0,r0,r3\n ldr r0,[r0]\n adr r1,functor_delta\n ldr r3,[r1]\n add r1,r1,r3\n add r2,sp,#8\n mvn r3,#0\n mov r4,#1\n str r4,[sp]\n str r4,[sp,#4]\n bl #0x354360\n ldr r0,[sp,#8]\n sub r0,r0,#12\n add r1,sp,#12\n blx #0x14ebf58\n add sp,sp,#24\n pop {r4,r5,r6,r7,r8,pc}\n app_delta: .word 0x11223344\n manager_delta: .word 0x22334455\n functor_delta: .word 0x33445566\n level_name: .asciz \"arena_battle_attack_tutorial\"\n ",
+  "native_sha256": "96385704c52c29ee6dfb302ec494db3203d77cdd4bf850b1df7f7dd0123eda25",
+  "scope": "Native offline NPC practice battle, not the online PvP management system",
+  "game_verified": false,
+  "validation_skipped_per_user": true,
+  "apk": "work\\pvp-v28\\PvZ2-v28-offline-npc-practice.apk",
+  "apk_sha256": "f6770a24872e08178c46c0e65a0985e4d641aee75fb4f6d8a773169800c0e776",
+  "apk_size": 1412472220
+}
