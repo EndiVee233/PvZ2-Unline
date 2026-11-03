@@ -1,0 +1,11 @@
+{
+  "apk": "work\\pvp-v35\\PvZ2-v35-defense-card-return.apk",
+  "sha256": "a2f9fb8280849e87c86bf5258bc6463e59e8fa95a4ef936b61d45b924fc3f538",
+  "native_unchanged": true,
+  "changed_payloads": [
+    "classes8.dex",
+    "assets/reconstruction/dynamic-original-speed.rsb.smf"
+  ],
+  "resource_sha256": "9dc318662c0d9ff7d4fc8116befc82fad81ee0f9aecf53ecafa518799cb03d81",
+  "runtime_verified": false
+}

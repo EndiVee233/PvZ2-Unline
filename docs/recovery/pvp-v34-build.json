@@ -1,0 +1,13 @@
+{
+  "apk": "work\\pvp-v34\\PvZ2-v34-defense-flags-network.apk",
+  "sha256": "c2d4ebc2c363c48e9cb4f01e5aafe09849788a6cec8a3a8e960858e189a10499",
+  "patch_site": "0x1093d40",
+  "only_four_native_bytes_changed": true,
+  "changed_payloads": [
+    "lib/armeabi/libSrc.so",
+    "classes8.dex",
+    "assets/reconstruction/dynamic-original-speed.rsb.smf"
+  ],
+  "resource_sha256": "0b9fce0df6a190018cd6710726643bcd75b8b47aedcda93cdf63e4389526e140",
+  "runtime_verified": false
+}
