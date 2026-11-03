@@ -1,0 +1,46 @@
+{
+  "apk": "work\\pvp-v37\\PvZ2-v37-offline-neighbor-candidate.apk",
+  "sha256": "38fc583d69be4b0d83e8e05e9219b755285049f817ef8642f6251a1a0da1fd88",
+  "patches": [
+    {
+      "site": "0x107bf08",
+      "symbol": "offlineGarden",
+      "before": "921826eb",
+      "after": "322026eb"
+    },
+    {
+      "site": "0x100b4c0",
+      "symbol": "offlineOwn",
+      "before": "c44ce1eb",
+      "after": "cbe227eb"
+    },
+    {
+      "site": "0x1042f78",
+      "symbol": "offlineSave",
+      "before": "5113fdeb",
+      "after": "240427eb"
+    },
+    {
+      "site": "0x1043028",
+      "symbol": "offlineInfo",
+      "before": "f0482de9",
+      "after": "060427ea"
+    },
+    {
+      "site": "0x1042fe8",
+      "symbol": "offlineAttack",
+      "before": "f0482de9",
+      "after": "240427ea"
+    }
+  ],
+  "entry": "0x1a02284",
+  "symbols": {
+    "offline.cpp": "0x0",
+    "offlineGarden": "0x1a02288",
+    "offlineOwn": "0x1a026e0",
+    "offlineSave": "0x1a02af8",
+    "offlineInfo": "0x1a02f2c",
+    "offlineAttack": "0x1a03160"
+  },
+  "runtime_verified": false
+}

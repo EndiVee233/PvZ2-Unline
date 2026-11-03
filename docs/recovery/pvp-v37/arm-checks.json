@@ -1,0 +1,10 @@
+{
+  "arm_backend_checks": true,
+  "neighbor_count": 6,
+  "tutorial_gating": true,
+  "persistence_roundtrip": true,
+  "corrupt_store_rejected": true,
+  "failed_write_keeps_editor": true,
+  "npc_does_not_overwrite_own_defense": true,
+  "runtime_game_verified": false
+}

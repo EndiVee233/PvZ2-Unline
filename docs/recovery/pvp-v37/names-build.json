@@ -1,0 +1,9 @@
+{
+  "source": "PROPERTIES/RANDOMSTRINGS.TXT",
+  "source_sha256": "c6556d97a7babf92926ffa4903a5456ff8665f76dcb6a67a78d18a93946072e8",
+  "prefix_count": 30,
+  "suffix_count": 60,
+  "neighbors": 6,
+  "unique_slots": true,
+  "unique_names": true
+}
