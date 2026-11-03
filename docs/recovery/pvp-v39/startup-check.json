@@ -1,0 +1,12 @@
+{
+  "apk_sha256": "81d34001194d8eb39b87cd828685439c835522629b861333d44d8a034a173150",
+  "wsa_install": "success",
+  "native_startup_process_alive": true,
+  "native_startup_fatal_entries": 0,
+  "gl_resource_loading_observed": true,
+  "startup_batch_restored": true,
+  "restored_files_verified": 32,
+  "user_gameplay_acceptance": "pending",
+  "admin_redemption_acceptance": "pending",
+  "starcoin_training_acceptance": "pending"
+}

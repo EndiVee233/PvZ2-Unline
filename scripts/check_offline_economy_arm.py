@@ -2,9 +2,9 @@
 import check_offline_pvp_arm as core
 from check_offline_pvp_arm import BASE,M,PM,PROFILE,END,Engine
 from pathlib import Path
-import struct,json
+import struct,json,sys
 from unicorn.arm_const import *
-core.OUT=Path(__file__).resolve().parents[1]/'work/pvp-v38'
+core.OUT=Path(sys.argv[1]) if len(sys.argv)>1 else Path(__file__).resolve().parents[1]/'work/pvp-v38'
 class EconomyEngine(Engine):
  def __init__(self):
   self.now=10000;self.notices=[];self.refunds=[];self.notified=0;self.products={}

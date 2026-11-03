@@ -22,6 +22,7 @@ static void starter(U b,P m,const char*name,U count,bool skill){
  release(b,key);
 }
 #include "economy.h"
+#include "redeem.h"
 static void neighbors(U b,P m){
  if(!regular(b))return;
  for(U i=0;i<NPC_COUNT;++i){const NpcPreset& n=NPCS[i];
