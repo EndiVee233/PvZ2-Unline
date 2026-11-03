@@ -136,4 +136,4 @@ extern "C" void offlineTraining(U b,P camp,P name,U action){
  ++next.sequence;if(!saveEconomy(b,next)){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return;}
  r.state=next;applyEconomy(b,m);notifyTraining(b,m);log(b,"training-updated",index,action);
 }
-extern "C" void offlineTrainingTick(U b,P camp){P m=manager(b);if(ensureEconomy(b,m))settleTraining(b,m);call<void>(b,0x104c894,camp);}
+extern "C" void offlineTrainingTick(U b,P camp){P m=manager(b);if(ensureEconomy(b,m))settleTraining(b,m);call<void>(b,0x104c894,camp);inspectArena(b);}

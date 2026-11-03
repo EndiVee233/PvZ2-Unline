@@ -47,28 +47,29 @@ def count(e):return (e.get(M+0x88)-e.get(M+0x84))//12
 
 def main():
  e=SceneEngine();e.run('offlineGarden');assert len(e.records)==6 and len(e.special)==1
- rec=e.special[0];assert struct.unpack_from('<III',rec,28)==(1,2,4)
+ rec=e.special[0];assert struct.unpack_from('<III',rec,28)==(1,1,4)
  assert bytes(e.u.mem_read(struct.unpack_from('<I',rec,8)[0],20)).decode('utf-32-le')=='邪恶戴夫\0'
  slots=[struct.unpack_from('<II',r,48) for r in e.records]+[struct.unpack_from('<II',r,28) for r in e.special]
- assert len(set(slots))==7 and (1,1) not in slots
+ assert len(set(slots))==7 and (1,2) not in slots
  e.run('offlineGarden');assert len(e.records)==6 and len(e.special)==1
  # Exercise native pre-load notification dispatch as well as board finish.
  # The former debug helper omitted both during repeated attack requests.
- e.stub(0x1043028,M,0,0x70000001,2);assert e.loads==[('arena_plant_test',1)] and count(e)==5
+ e.stub(0x1042fe8,M,0x70000001,3,0);assert e.loads==[('arena_plant_test',1)] and count(e)==5
  e.u.mem_write(M+0x17d,b'\1');e.put(APP+0x6bc,M+0xb000);e.put(M+0xb000+0xc0,5)
- e.stub(0x1042fe8,M,0x70000001,3,0)
+ e.stub(0x1042fe8,M,0x70000001,2,0)
  assert e.events==1 and e.ends==1 and e.loads[-1]==('arena_battle_test',0) and count(e)==5
- before=e.get(M+0x84);e.stub(0x1042fe8,M,0x70000001,3,0)
+ e.put(GM+0x984,6);e.put(GM+0xa24,0xffffffff);e.string(GM+0xa40,'');e.put(APP+0x6bc,M+0xc000);e.string(M+0xc000+0xc4,'arena_battle_test')
+ before=e.get(M+0x84);e.stub(0x1042fe8,M,0x70000001,2,0)
  assert len(e.loads)==2 and e.events==1 and e.get(M+0x84)==before,'duplicate attack mutated scene/formation'
  # Map scouting does not set the friend-popup flag (+17d). The running
  # board still needs native finish before the battle success callback loads.
  plain=SceneEngine();plain.stub(0x1043028,M,0,0x70000001,2)
  plain.put(APP+0x6bc,M+0xb000);plain.put(M+0xb000+0xc0,5)
- plain.stub(0x1042fe8,M,0x70000001,3,0)
+ plain.stub(0x1042fe8,M,0x70000001,2,0)
  assert plain.ends==1 and plain.events==0 and plain.loads[-1]==('arena_battle_test',0)
  assert plain.get(M+0xb000+0x7f4)==8
  # Special-house attacks use the native zero-player-id / reason-4 convention.
- boss=SceneEngine();boss.put(M+0x104,0x70000007);boss.put(M+0xfc,1);boss.put(M+0xf8,2)
+ boss=SceneEngine();boss.put(M+0x104,0x70000007);boss.put(M+0xfc,1);boss.put(M+0xf8,1)
  boss.stub(0x1042fe8,M,0,4,0);assert boss.loads==[('arena_battle_test',0)] and count(boss)==7
  assert boss.events==0,'map attack emitted an unrelated scout event'
  early=SceneEngine();early.put(PROFILE+0x75c,7);early.run('offlineGarden');assert not early.records and not early.special

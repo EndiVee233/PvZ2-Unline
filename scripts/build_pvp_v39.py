@@ -8,7 +8,7 @@ from rebuild_bootstrap_dex import rebuild_bootstrap
 from elftools.elf.elffile import ELFFile
 from keystone import Ks,KS_ARCH_ARM,KS_MODE_ARM
 from prepare_offline_neighbors import generate
-ROOT=Path(__file__).resolve().parents[1];VERSION=43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
+ROOT=Path(__file__).resolve().parents[1];VERSION=44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
 OUT=ROOT/f'work/pvp-v{VERSION}';OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -73,7 +73,7 @@ def append_stub(symbol,shift=False):
 def patch(site,symbol,expected=None,shift=False):
  before=bytes(b[site:site+4])
  if expected is not None:assert before==expected,(hex(site),before.hex())
- target=append_stub(symbol,shift);b[site:site+4]=bl(site,target) if symbol in ('offlineGarden','offlineOwn','offlineSave') else struct.pack('<I',0xea000000|(((target-site-8)//4)&0xffffff))
+ target=append_stub(symbol,shift);b[site:site+4]=bl(site,target) if symbol in ('offlineGarden','offlineOwn','offlineSave','offlineBoardLoad') else struct.pack('<I',0xea000000|(((target-site-8)//4)&0xffffff))
  patches.append(dict(site=hex(site),symbol=symbol,before=before.hex(),after=bytes(b[site:site+4]).hex()))
 assert struct.unpack_from('<I',b,0x107bf08)[0]>>24==0xeb
 patch(0x107bf08,'offlineGarden')
@@ -81,6 +81,7 @@ patch(0x100b4c0,'offlineOwn',bl(0x100b4c0,0x85e7d8))
 patch(0x1042f78,'offlineSave',bl(0x1042f78,0xf87cc4),True)
 patch(0x1043028,'offlineInfo',bytes.fromhex('f0482de9'),True)
 patch(0x1042fe8,'offlineAttack',bytes.fromhex('f0482de9'),True)
+if VERSION>=44:patch(0x350570,'offlineBoardLoad',bl(0x350570,0x2258d8),True)
 # Replace only the server queue request and its native update tail call.
 original=(ROOT/'work/libSrc_orig.so').read_bytes()
 patch(0x104b8a8,'offlineTraining',original[0x104b8a8:0x104b8ac],True)
@@ -149,7 +150,9 @@ subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_redeem_arm.py'),s
 if VERSION>=41:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_coin_click_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=43:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_scenes_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if '--native-only' in sys.argv:raise SystemExit(0)
-unsigned=OUT/'unsigned.apk';aligned=OUT/'aligned.apk';final=OUT/(f'PvZ2-v{VERSION}-pvp-scene-candidate.apk' if VERSION>=43 else f'PvZ2-v{VERSION}-startup-admin-candidate.apk')
+scratch=Path(sys.argv[sys.argv.index('--intermediate-dir')+1]).resolve() if '--intermediate-dir' in sys.argv else OUT
+scratch.mkdir(parents=True,exist_ok=True)
+unsigned=scratch/'unsigned.apk';aligned=scratch/'aligned.apk';final=OUT/(f'PvZ2-v{VERSION}-pvp-scene-candidate.apk' if VERSION>=43 else f'PvZ2-v{VERSION}-startup-admin-candidate.apk')
 with zipfile.ZipFile(BASE) as src,zipfile.ZipFile(unsigned,'w',allowZip64=True) as dst:
  for item in src.infolist():
   if item.filename.startswith('META-INF/'):continue

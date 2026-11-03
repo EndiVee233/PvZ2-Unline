@@ -19,7 +19,7 @@ def generate(out):
  text=['struct NpcPreset { unsigned id,zone,position,level,count,evil; unsigned name[40]; unsigned plants[16][3]; };','static const NpcPreset NPCS[] = {']
  names=set();slots=set()
  for index,npc in enumerate(config['neighbors']):
-  key=(npc['zone'],npc['position']);assert key not in slots and key!=(1,1);slots.add(key)
+  key=(npc['zone'],npc['position']);assert key not in slots and key!=(1,2);slots.add(key)
   assert 1<=npc['zone']<=6 and 1<=npc['position']<=(5 if npc['zone']==1 else 3)
   assert len(npc['plants'])<=16
   assert len({(p[1],p[2]) for p in npc['plants']})==len(npc['plants'])

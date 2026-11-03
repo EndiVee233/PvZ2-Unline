@@ -21,6 +21,7 @@ static void starter(U b,P m,const char*name,U count,bool skill){
  }
  release(b,key);
 }
+static void inspectArena(U b);
 #include "economy.h"
 #include "redeem.h"
 static void neighbors(U b,P m){
@@ -129,7 +130,10 @@ static bool sameText(P text,const char* expected){
 static bool arenaPending(U b,const char*level,U mode){
  P g=at<P>(reinterpret_cast<P>(b),0x1835eec);
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
- return at<U>(g,0xa24)==6&&at<U>(app,0x1218)==mode&&sameText(at<P>(g,0xa40),level);
+ if(at<U>(app,0x1218)!=mode)return false;
+ P board=at<P>(app,0x6bc);
+ return (at<U>(g,0xa24)==6&&sameText(at<P>(g,0xa40),level))||
+        (at<U>(g,0x984)==6&&board&&sameText(at<P>(board,0xc4),level));
 }
 static void loadArena(U b,P m,const char*level,U mode){
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
@@ -163,10 +167,36 @@ extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
  const NpcPreset*n=npc(id);
  // Native special houses send a zero player id and put the house id in +104.
  if(!n&&id==0&&reason==4){const NpcPreset* selected=npc(at<U>(m,0x104));if(selected&&selected->evil&&selected->zone==at<U>(m,0xfc)&&selected->position==at<U>(m,0xf8))n=selected;}
- if(n&&regular(b)){if(arenaPending(b,"arena_battle_test",0)){log(b,"attack-duplicate",id);return;}log(b,"attack-neighbor",id,n->count);preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;}
+ if(n&&regular(b)){
+  log(b,"attack-request-reason",id,reason);
+  // Native map scouting uses reason 3 with +100 set. The in-board attack
+  // button clears +100 and sends reason 2. They require different levels.
+  if(reason==3){
+   if(arenaPending(b,"arena_plant_test",1)){log(b,"view-duplicate",id);return;}
+   preset(b,m,*n);loadArena(b,m,"arena_plant_test",1);return;
+  }
+  if(arenaPending(b,"arena_battle_test",0)){log(b,"attack-duplicate",id);return;}log(b,"attack-neighbor",id,n->count);preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;}
  call<void>(b,0xf79d74);P net=call<P>(b,0xf7a070);call<void>(b,0xf87710,net,id,reason,at<U>(m,0x104),at<U64>(m,0x108));
 }
 extern "C" void __aeabi_memclr4(void* p,U n){volatile unsigned char*d=static_cast<volatile unsigned char*>(p);while(n--)*d++=0;}
 extern "C" void __aeabi_memclr8(void* p,U n){__aeabi_memclr4(p,n);}
 extern "C" void __aeabi_memclr(void* p,U n){__aeabi_memclr4(p,n);}
 extern "C" void __aeabi_memcpy8(void* dst,const void* src,U n){volatile unsigned char*d=static_cast<volatile unsigned char*>(dst);const volatile unsigned char*s=static_cast<const volatile unsigned char*>(src);while(n--)*d++=*s++;}
+
+// Record the actual level passed to Board::Load, beyond the request boundary.
+extern "C" void offlineBoardLoad(U b,P board,P name,U seed){
+ if(regular(b)){
+  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);P m=manager(b);
+  call<I>(b,0x147adc,4,"OfflinePvP","board-load name=%s mode=%u view=%u kind=%u",at<P>(name,0),at<U>(app,0x1218),U(at<unsigned char>(m,0x100)),at<U>(m,0xa8));
+ }
+ call<void>(b,0x2258d8,board,name,seed);
+}
+static P loggedArenaBoard;
+static void inspectArena(U b){
+ P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);P board=at<P>(app,0x6bc);
+ if(!board){loggedArenaBoard=nullptr;return;}if(board==loggedArenaBoard||!regular(b))return;
+ P modules=at<P>(board,0x938);if(!modules)return;
+ P battle=call<P>(b,0x43af38,modules,call<P>(b,0x1094f28));
+ P m=manager(b);call<I>(b,0x147adc,4,"OfflinePvP","board-active level=%s mode=%u state=%u battle_module=%u view=%u",at<P>(board,0xc4),at<U>(app,0x1218),at<U>(board,0xc0),U(battle!=nullptr),U(at<unsigned char>(m,0x100)));
+ loggedArenaBoard=board;
+}
