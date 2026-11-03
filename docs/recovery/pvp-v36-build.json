@@ -1,0 +1,9 @@
+{
+  "apk": "work\\pvp-v36\\PvZ2-v36-defense-return-flash-fix.apk",
+  "sha256": "a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac",
+  "patch_site": "0x10b07f8",
+  "target": "0x8ab228",
+  "only_four_native_bytes_changed": true,
+  "other_payloads_unchanged": true,
+  "runtime_verified": false
+}
