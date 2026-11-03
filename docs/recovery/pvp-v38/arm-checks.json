@@ -1,0 +1,15 @@
+{
+  "arm_checked": true,
+  "localization_chain_aligned": true,
+  "relocated_stubs": true,
+  "failed_purchase_no_award": true,
+  "wallet_restart": true,
+  "training_spend_wait_completion_restart": true,
+  "cancel_refund": true,
+  "capacity_guard": true,
+  "write_failure_gem_refund": true,
+  "corrupt_file_blocks_spending": true,
+  "profile_isolation": true,
+  "early_tutorial_unchanged": true,
+  "runtime_game_verified": false
+}

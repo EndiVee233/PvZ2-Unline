@@ -13,19 +13,6 @@ static void bytes(P d,const unsigned char*s,U n){for(U i=0;i<n;++i)d[i]=s[i];}
 static void narrow(U b,P dst,const char*src){char a=0;call<void>(b,0x14ed0e1,dst,src,&a);}
 static void release(U b,P value,bool wide=false){if(value){char a=0;call<void>(b,wide?0x14ea239:0x14ebf59,value-12,&a);}}
 static void log(U b,const char*what,U a=0,U c=0){call<I>(b,0x147adc,4,"OfflinePvP","%s a=%u b=%u",what,a,c);}
-static void army(U b,P m){
- // The original TrainingCamp constructor owns the vtable and its vector. The
- // research map alone cannot satisfy the native attack button's army check.
- P a=at<P>(m,0x20);
- if(!a){a=call<P>(b,0x14c1a7d,0x1c);call<void>(b,0x104b5d8,a);at<P>(m,0x20)=a;}
- if(at<P>(a,0xc)!=at<P>(a,0x10))return;
- alignas(8) U entry[8]={0,20,0,0xbf800000,0xff800000,0,0,0};
- narrow(b,reinterpret_cast<P>(entry),"tutorial_armor1");
- // Native validated insertion and native string ownership, not a fabricated
- // vector/vtable. Only supply the initial local army when none exists.
- call<void>(b,0x104d6e4,a,entry);release(b,reinterpret_cast<P>(entry[0]));
- log(b,"initial-army",U(at<P>(a,0x10)-at<P>(a,0xc))/32);
-}
 static void starter(U b,P m,const char*name,U count,bool skill){
  P key=nullptr;narrow(b,reinterpret_cast<P>(&key),name);
  if(!call<P>(b,skill?0x1046764:0x104673c,m,&key)){
@@ -34,6 +21,7 @@ static void starter(U b,P m,const char*name,U count,bool skill){
  }
  release(b,key);
 }
+#include "economy.h"
 static void neighbors(U b,P m){
  if(!regular(b))return;
  for(U i=0;i<NPC_COUNT;++i){const NpcPreset& n=NPCS[i];
@@ -47,12 +35,12 @@ static void neighbors(U b,P m){
   call<void>(b,0x1046a04,m,record);
   release(b,reinterpret_cast<P>(record[4]),true);
  }
- starter(b,m,"tutorial_armor1",20,false);
+ starter(b,m,"pvp_change",0,false);
  starter(b,m,"pvpskill_zombiefood",0,true);
  starter(b,m,"pvpskill_aid",0,true);
  starter(b,m,"pvpskill_invisible",0,true);
  starter(b,m,"pvpskill_rage",0,true);
- army(b,m);
+ offlineEconomyInit(b);
  // Server map replies normally supply this result field. -1 suppresses the
  // original Evil Dave introduction altogether. 0 makes the original pending
  // introduction eligible; its callback still records completion itself.
@@ -140,3 +128,4 @@ extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
 extern "C" void __aeabi_memclr4(void* p,U n){volatile unsigned char*d=static_cast<volatile unsigned char*>(p);while(n--)*d++=0;}
 extern "C" void __aeabi_memclr8(void* p,U n){__aeabi_memclr4(p,n);}
 extern "C" void __aeabi_memclr(void* p,U n){__aeabi_memclr4(p,n);}
+extern "C" void __aeabi_memcpy8(void* dst,const void* src,U n){volatile unsigned char*d=static_cast<volatile unsigned char*>(dst);const volatile unsigned char*s=static_cast<const volatile unsigned char*>(src);while(n--)*d++=*s++;}

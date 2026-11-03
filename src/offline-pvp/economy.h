@@ -1,0 +1,106 @@
+// The offline wallet/queue is app-owned state, included by the save snapshot.
+#include "training_presets.h"
+struct LocalTrain {U held,queued,due;};
+struct Economy {U magic,version,user,coins,home,sequence,checksum,reserved;LocalTrain trains[TRAIN_COUNT];};
+struct EconomyRuntime {U user,lastTick;bool loaded,blocked,busy;P camp;Economy state;};
+static EconomyRuntime economyRuntime;
+static bool same(const char*a,const char*b){while(*a&&*a==*b){++a;++b;}return *a==*b;}
+static U checkEconomy(const Economy&s){const unsigned char*p=reinterpret_cast<const unsigned char*>(&s);U h=2166136261u;for(U i=0;i<sizeof(s);++i)if(i<24||i>=28)h=(h^p[i])*16777619u;return h;}
+static bool validEconomy(const Economy&s,U user){
+ if(s.magic!=0x45435650||s.version!=1||s.user!=user||s.coins>2000000000u||!s.home||s.home>15||s.checksum!=checkEconomy(s))return false;
+ U used=0;
+ for(U i=0;i<TRAIN_COUNT;++i){const LocalTrain&t=s.trains[i];if(t.held>40||t.queued>40||(t.queued&&!t.due)||(!t.queued&&t.due))return false;used+=(t.held+t.queued)*TRAIN_SPECS[i].space;}
+ return used<=40;
+}
+static void economyPath(U id,char*out,bool tmp){
+ const char*prefix="/data/data/com.popcap.pvz2cthd.reconstruction/files/userdata/offline-pvp-";U n=0;
+ while(prefix[n]){out[n]=prefix[n];++n;}const char*digits="0123456789abcdef";
+ for(I i=7;i>=0;--i)out[n++]=digits[(id>>(i*4))&15];const char*s=tmp?".eco.tmp":".eco";while(*s)out[n++]=*s++;out[n]=0;
+}
+static bool saveEconomy(U b,Economy&s){
+ s.checksum=checkEconomy(s);if(!validEconomy(s,s.user))return false;
+ char dst[160],tmp[160];economyPath(s.user,dst,false);economyPath(s.user,tmp,true);
+ I fd=call<I>(b,0x148448,tmp,0x241,0600);if(fd<0)return false;U done=0;
+ while(done<sizeof(s)){I n=call<I>(b,0x1485d4,fd,reinterpret_cast<P>(&s)+done,sizeof(s)-done);if(n<=0)break;done+=U(n);}
+ bool ok=done==sizeof(s)&&call<I>(b,0x1485e0,fd)==0;if(call<I>(b,0x147b90,fd))ok=false;
+ if(ok)ok=call<I>(b,0x147e6c,tmp,dst)==0;if(!ok)call<I>(b,0x148424,tmp);return ok;
+}
+static I loadEconomy(U b,Economy&s){
+ char path[160];economyPath(owner(b),path,false);I fd=call<I>(b,0x148448,path,0,0);if(fd<0)return 0;U done=0;
+ while(done<sizeof(s)){I n=call<I>(b,0x148460,fd,reinterpret_cast<P>(&s)+done,sizeof(s)-done);if(n<=0)break;done+=U(n);}
+ char tail;I extra=call<I>(b,0x148460,fd,&tail,1);call<I>(b,0x147b90,fd);
+ return done==sizeof(s)&&extra==0&&validEconomy(s,owner(b))?1:-1;
+}
+static void economyNotice(U b,const char*message){
+ P title=nullptr,body=nullptr;narrow(b,reinterpret_cast<P>(&title),"[V38_NOTICE_TITLE]");narrow(b,reinterpret_cast<P>(&body),message);
+ P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);call<void>(b,0x4045fc,app,&title,&body);release(b,title);release(b,body);
+}
+static U realNow(U b){return call<U>(b,0x147824,0);}
+static void notifyTraining(U b,P m){U response[5]={0,0,0,0,at<U>(m,4)};call<void>(b,0x104a544,m,response);}
+static void applyEconomy(U b,P m){
+ EconomyRuntime&r=economyRuntime;P a=at<P>(m,0x20);
+ if(!a){a=call<P>(b,0x14c1a7d,0x1c);call<void>(b,0x104b5d8,a);at<P>(m,0x20)=a;}
+ call<void>(b,0x104b628,a);at<U>(a,4)=40;at<U>(a,8)=6;U now=realNow(b);P clock=call<P>(b,0x1f7380);float gameTime=at<float>(clock,0x24);
+ for(U i=0;i<TRAIN_COUNT;++i){const LocalTrain&t=r.state.trains[i];if(!t.held&&!t.queued)continue;
+  alignas(8) U entry[8]={0,t.held,t.queued,0xbf800000,0x7f7fffff,0,0,0};narrow(b,reinterpret_cast<P>(entry),TRAIN_SPECS[i].name);
+  if(t.queued){at<float>(reinterpret_cast<P>(entry),12)=float(TRAIN_SPECS[i].seconds);at<float>(reinterpret_cast<P>(entry),16)=gameTime+float(t.due>now?t.due-now:0);}
+  call<void>(b,0x104d6e4,a,entry);release(b,reinterpret_cast<P>(entry[0]));
+ }
+ r.camp=a;call<void>(b,0x1042a5c,m,r.state.coins);
+ // g is the native garden level, distinct from ag (star coins) at manager+4.
+ if(at<U>(m,0x10)<1)at<U>(m,0x10)=r.state.home;
+}
+static bool ensureEconomy(U b,P m){
+ if(!regular(b))return false;EconomyRuntime&r=economyRuntime;U user=owner(b);
+ if(!r.loaded||r.user!=user){r.loaded=true;r.user=user;r.lastTick=0;r.camp=nullptr;r.blocked=false;r.state=Economy{};
+  I found=loadEconomy(b,r.state);
+  if(found<0){r.blocked=true;log(b,"economy-invalid");return false;}
+  if(!found){r.state.magic=0x45435650;r.state.version=1;r.state.user=user;r.state.coins=at<U>(m,4);r.state.home=at<U>(m,0x10);if(!r.state.home||r.state.home>15)r.state.home=1;}
+  log(b,"economy-loaded",r.state.coins,found==1);
+ }
+ if(r.blocked)return false;
+ if(r.camp!=at<P>(m,0x20)||!r.camp)applyEconomy(b,m);
+ else if(at<U>(m,4)!=r.state.coins)call<void>(b,0x1042a5c,m,r.state.coins);
+ return true;
+}
+static void settleTraining(U b,P m){
+ EconomyRuntime&r=economyRuntime;U now=realNow(b);if(now==r.lastTick||r.busy)return;r.lastTick=now;
+ Economy next=r.state;bool changed=false;
+ for(U i=0;i<TRAIN_COUNT;++i){LocalTrain&t=next.trains[i];while(t.queued&&now>=t.due){--t.queued;++t.held;changed=true;if(t.queued)t.due+=TRAIN_SPECS[i].seconds;else t.due=0;}}
+ if(changed){++next.sequence;if(saveEconomy(b,next)){r.state=next;applyEconomy(b,m);notifyTraining(b,m);log(b,"training-completed");}else log(b,"training-save-failed");}
+}
+extern "C" void offlineEconomyInit(U b){P m=manager(b);if(ensureEconomy(b,m))settleTraining(b,m);}
+// The callback receives success after the original gem-payment validation.
+// Only pvpCoin products are handled here; all other products fall through.
+static U creditStarcoins(U b,P weak,U success){
+ P product=call<P>(b,0x1da034,call<P>(b,0x11d74b4),weak);
+ if(!product||!same(reinterpret_cast<const char*>(at<P>(product,0x44)),"pvpCoin"))return 0;
+ if(!success)return 1;U count=at<U>(product,0x50);U price=count==5000?110:count==20000?440:count==75000?1650:0;
+ P m=manager(b);if(!price){log(b,"coin-product-rejected",count);return 1;}
+ EconomyRuntime&r=economyRuntime;
+ if(!ensureEconomy(b,m)||r.state.coins>2000000000u-count){call<void>(b,0x745220,profile(b),price,1);economyNotice(b,"[V38_PVP_SAVE_ERROR]");return 1;}
+ Economy next=r.state;next.coins+=count;++next.sequence;
+ if(saveEconomy(b,next)){r.state=next;call<void>(b,0x1042a5c,m,next.coins);log(b,"starcoins-purchased",count,price);}
+ else{call<void>(b,0x745220,profile(b),price,1);economyNotice(b,"[V38_PVP_SAVE_ERROR]");log(b,"starcoin-write-refund",price);}
+ return 1;
+}
+extern "C" U offlineCoinComplete(U b,P self,U success){return creditStarcoins(b,self+0xb8,success);}
+extern "C" U offlineCoinGrant(U b,P self,P weak){return creditStarcoins(b,weak,1);}
+extern "C" void offlineTraining(U b,P camp,P name,U action){
+ P m=manager(b);if(!regular(b)){call<void>(b,0xf79d74);P net=call<P>(b,0xf7a070);call<void>(b,0xf8fb18,net,name,action==1?1:action==2?-1:0);return;}
+ if(!ensureEconomy(b,m)){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return;}settleTraining(b,m);
+ U index=TRAIN_COUNT;for(U i=0;i<TRAIN_COUNT;++i)if(same(reinterpret_cast<const char*>(at<P>(name,0)),TRAIN_SPECS[i].name)){index=i;break;}
+ if(index==TRAIN_COUNT){log(b,"unknown-training",action);return;}
+ if(action==3){applyEconomy(b,m);return;}if(action!=1&&action!=2)return;
+ EconomyRuntime&r=economyRuntime;Economy next=r.state;LocalTrain&t=next.trains[index];const TrainSpec&s=TRAIN_SPECS[index];
+ if(action==1){
+  if(s.level>next.home){economyNotice(b,"[V38_PVP_LOCKED]");return;}
+  if(next.coins<s.cost){economyNotice(b,"[PVP_ERROR_PVPCOIN_NOT_ENOUCH]");return;}
+  U used=0,slots=0;for(U i=0;i<TRAIN_COUNT;++i){used+=(next.trains[i].held+next.trains[i].queued)*TRAIN_SPECS[i].space;if(next.trains[i].queued)++slots;}
+  if(used+s.space>40||(!t.queued&&slots>=6)){economyNotice(b,"[V38_PVP_CAPACITY]");return;}
+  next.coins-=s.cost;if(!t.queued)t.due=realNow(b)+s.seconds;++t.queued;
+ }else{if(!t.queued)return;--t.queued;if(!t.queued)t.due=0;next.coins+=s.cost;}
+ ++next.sequence;if(!saveEconomy(b,next)){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return;}
+ r.state=next;applyEconomy(b,m);notifyTraining(b,m);log(b,"training-updated",index,action);
+}
+extern "C" void offlineTrainingTick(U b,P camp){P m=manager(b);if(ensureEconomy(b,m))settleTraining(b,m);call<void>(b,0x104c894,camp);}
