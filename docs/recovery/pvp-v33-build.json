@@ -1,0 +1,9 @@
+{
+  "apk": "work\\pvp-v33\\PvZ2-v33-local-defense-entry.apk",
+  "sha256": "e64043c761cab6d979ea7882a6561f4d54570ad1a210ce6c7d742a9aa07f428c",
+  "patch_site": "0x100b4c0",
+  "target": "0x85e7d8",
+  "only_four_native_bytes_changed": true,
+  "other_payloads_unchanged": true,
+  "runtime_verified": false
+}
