@@ -28,14 +28,21 @@ class Engine:
   p=self.alloc(len(data)+16);self.put(p,len(data)//(4 if wide else 1));self.put(p+4,len(data));self.put(p+8,0);self.u.mem_write(p+12,data+b'\0'*(4 if wide else 1));self.put(addr,p+12)
  def run(self,name,*args):
   regs=[UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3];sp=END+0x1f0000
-  for i,a in enumerate((BASE,*args)):
+  address=name if isinstance(name,int) else self.exports[name]
+  inputs=args if isinstance(name,int) else (BASE,*args)
+  for i,a in enumerate(inputs):
    if i<4:self.u.reg_write(regs[i],a)
    else:self.put(sp+(i-4)*4,a)
   self.u.reg_write(UC_ARM_REG_CPSR,0x10);self.u.reg_write(UC_ARM_REG_SP,sp);self.u.reg_write(UC_ARM_REG_LR,END)
   self.u.reg_write(UC_ARM_REG_C1_C0_2, 0xf << 20);self.u.reg_write(UC_ARM_REG_FPEXC, 0x40000000)
-  try:self.u.emu_start(BASE+self.exports[name],END,count=2000000)
+  try:self.u.emu_start(BASE+address,END,count=2000000)
   except Exception:print("FAULT PC",hex(self.u.reg_read(UC_ARM_REG_PC)));raise
   assert self.u.reg_read(UC_ARM_REG_PC)==END,'backend did not return'
+  assert self.u.reg_read(UC_ARM_REG_SP)==sp,'stack not restored'
+ def stub(self,site,*args):
+  word=self.get(BASE+site);delta=word&0xffffff
+  if delta&0x800000:delta-=1<<24
+  self.run(site+8+4*delta,*args)
  def hook(self,em,a,size,_):
   off=a-BASE
   if off>=0x1a00000 or a==END:return
@@ -90,23 +97,23 @@ class Engine:
   em.reg_write(UC_ARM_REG_R0,result&0xffffffff);em.reg_write(UC_ARM_REG_PC,em.reg_read(UC_ARM_REG_LR)&~1)
 
 def main():
- e=Engine();e.run('offlineGarden');assert len(e.records)==6 and e.scenes==[25] and e.get(M+0x15c)==0
+ e=Engine();e.stub(0x107bf08);assert len(e.records)==6 and e.scenes==[25] and e.get(M+0x15c)==0
  e.run('offlineGarden');assert len(e.records)==6,'duplicate neighbors'
  early=Engine();early.put(PROFILE+0x75c,7);early.run('offlineGarden');assert not early.records and early.get(M+0x15c)==0xffffffff,'tutorial modified early'
  # Real ARM functions and binary persistence: roundtrip a nonempty formation and signature.
  p=e.alloc(12);e.u.mem_write(p,struct.pack('<III',2,3,4));i=e.alloc(16);e.u.mem_write(i,struct.pack('<III',2,1,0));e.string(i+12,'plant-signature')
  for off,value in ((4,p),(8,p+12),(12,p+12),(16,i),(20,i+16),(24,i+16)):e.put(M+0x80+off,value)
- e.run('offlineSave',0,0,1,1);assert len(e.files)==1 and e.scenes[-1]==25
- e.run('offlineOwn');assert e.loaded[-1]==0x85e7d8
+ e.stub(0x1042f78,0,0,1,1);assert len(e.files)==1 and e.scenes[-1]==25
+ e.stub(0x100b4c0);assert e.loaded[-1]==0x85e7d8
  d=M+0x80;assert bytes(e.u.mem_read(e.get(d+4),12))==struct.pack('<III',2,3,4)
  assert e.txt(e.get(e.get(d+16)+12))=='plant-signature'
  # NPC viewing cannot overwrite the saved local defense; reentry reloads own layout.
- e.run('offlineInfo',M,0,0x70000001,2);assert e.loaded[-1]==0x85e874 and (e.get(d+8)-e.get(d+4))//12==5
+ e.stub(0x1043028,M,0,0x70000001,2);assert e.loaded[-1]==0x85e874 and (e.get(d+8)-e.get(d+4))//12==5
  e.run('offlineOwn');assert e.get(e.get(d+4)+4)==3
  # Corruption / cross-profile files are rejected; failed writes never leave the editor.
  path=next(iter(e.files));e.files[path][28]^=1;e.run('offlineOwn');assert e.get(d+4)==e.get(d+8)==0
  e.failwrite=True;scenes=len(e.scenes);e.run('offlineSave',0,0,1,1);assert len(e.scenes)==scenes and all(not x.endswith('.tmp') for x in e.files)
- e.run('offlineAttack',M,0x70000002,3,0);assert e.loaded[-1]==0x85e9a8
- result=dict(arm_backend_checks=True,neighbor_count=6,tutorial_gating=True,persistence_roundtrip=True,corrupt_store_rejected=True,failed_write_keeps_editor=True,npc_does_not_overwrite_own_defense=True,runtime_game_verified=False)
+ e.stub(0x1042fe8,M,0x70000002,3,0);assert e.loaded[-1]==0x85e9a8
+ result=dict(arm_backend_checks=True,embedded_stubs_at_nonzero_base=True,stack_restored=True,neighbor_count=6,tutorial_gating=True,persistence_roundtrip=True,corrupt_store_rejected=True,failed_write_keeps_editor=True,npc_does_not_overwrite_own_defense=True,runtime_game_verified=False)
  (OUT/'arm-checks.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result))
 if __name__=='__main__':main()

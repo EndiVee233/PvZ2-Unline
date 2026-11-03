@@ -1,5 +1,7 @@
 {
   "arm_backend_checks": true,
+  "embedded_stubs_at_nonzero_base": true,
+  "stack_restored": true,
   "neighbor_count": 6,
   "tutorial_gating": true,
   "persistence_roundtrip": true,
