@@ -1,5 +1,6 @@
 {
   "repeat_admin_exact_awards": true,
+  "original_confirm_button_path": true,
   "request_dialog_closed_before_award": true,
   "encoded_currency_guard": true,
   "non_admin_unchanged": true,

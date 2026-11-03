@@ -9,7 +9,8 @@ from elftools.elf.elffile import ELFFile
 
 class RedeemEngine(economy.EconomyEngine):
  def __init__(self):
-  super().__init__();self.awards=[];self.card_calls=[];self.fallbacks=[];self.dismissals=0
+  super().__init__();self.awards=[];self.card_calls=[];self.fallbacks=[];self.dismissals=0;self.waiting=False
+  self.put(BASE+0x183048c,M+0x9000)
   self.put(PROFILE+0x9c,0xa37a1035);self.put(PROFILE+0xa4,0x4598432b)
   self.balance(0x98,1234);self.balance(0xa0,23)
  def balance(self,offset,value=None):
@@ -22,6 +23,7 @@ class RedeemEngine(economy.EconomyEngine):
   ui=self.alloc(0x100);input=self.alloc(0x110);self.put(ui+0xac,input);self.string(input+0xa4,code,True);return ui
  def hook(self,em,a,size,d):
   off=a-BASE;x,y,z=[em.reg_read(r) for r in (UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2)]
+  if off==0x852420 or 0x852bac<=off<0x852da0:return # Original button and patched submit branch.
   if off in (0x852424,0x84adbc):
    # Stop immediately after the real displaced function prologue, before
    # executing its old server request. Check the original UI argument/frame.
@@ -30,7 +32,10 @@ class RedeemEngine(economy.EconomyEngine):
    self.fallbacks.append(x);em.reg_write(UC_ARM_REG_SP,sp+count*4)
    em.reg_write(UC_ARM_REG_PC,self.get(sp+(count-1)*4));return
   if off==0x3feb40:
-   assert x==M+0x7000;self.dismissals+=1
+   assert x==M+0x7000;self.dismissals+=1;self.waiting=False
+  elif off==0x402d4c:
+   assert x==M+0x7000;self.waiting=True
+  elif off==0x1ecd30:pass
   elif off in (0x745220,0x746164):
    assert x==PROFILE
    assert self.dismissals>len(self.awards)//2,'reward preceded request-dialog cleanup'
@@ -48,6 +53,11 @@ def main():
  assert e.balance(0xa0)==223 and e.balance(0x98)==21234
  assert e.awards==[(0x745220,100),(0x746164,10000)]*2
  assert e.notices==['[V39_ADMIN_GRANTED]']*2 and not e.files and e.dismissals==2
+ # The actual original button opens the wait UI and tail-calls 0x852420,
+ # bypassing 0x852a40. This reproduces the route missed by the v39 tests.
+ button=RedeemEngine();button.run(0x852bac,button.dialog('admin'),1001)
+ assert button.balance(0xa0)==123 and button.balance(0x98)==11234
+ assert button.dismissals==1 and not button.waiting and len(button.awards)==2
  for code in ('','Admin','admin1','adm','admin '):
   e.run('offlineRedeem',e.dialog(code));assert e.u.reg_read(UC_ARM_REG_R0)==0
  for site in (0x852420,0x84adb8):
@@ -65,7 +75,7 @@ def main():
  assert [s['p_vaddr'] for s in loads]==sorted(s['p_vaddr'] for s in loads)
  assert loads[-1]['p_flags']==6 and loads[-1]['p_vaddr']==0x1b00000
  assert not any(s['p_type']=='PT_INTERP' for s in library.iter_segments())
- result=dict(repeat_admin_exact_awards=True,request_dialog_closed_before_award=True,encoded_currency_guard=True,non_admin_unchanged=True,
+ result=dict(repeat_admin_exact_awards=True,original_confirm_button_path=True,request_dialog_closed_before_award=True,encoded_currency_guard=True,non_admin_unchanged=True,
   no_used_code_flag=True,lost_items_picture_removed=True,phdr_location_and_count_preserved=True,
   runtime_game_verified=False)
  (economy.core.OUT/'redeem-arm-checks.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result))
