@@ -30,6 +30,14 @@ static void neighbors(U b,P m){
   if(begin&&end>=begin&&U(end-begin)<=64*256){
    for(P p=begin;p<end;p+=64)if(at<U>(p,48)==n.zone&&at<U>(p,52)==n.position){occupied=true;break;}
   }
+  if(n.evil){
+   // Native BigMapInfo type 4 is the special Evil Dave house. Its name is at
+   // +8 and its plot at +1c/+20, unlike player-neighbor records.
+   alignas(8) U special[16]={n.id,0,0,n.level,1000,2000,100,n.zone,n.position,4,0,0,0,0,1,0};
+   char alloc=0;call<void>(b,0x14eb451,reinterpret_cast<P>(special)+8,n.name,&alloc);
+   call<void>(b,0x104678c,m,special);release(b,reinterpret_cast<P>(special[2]),true);
+   continue;
+  }
   if(occupied)continue;
   alignas(8) U record[16]={n.id,0,n.id,0,0,n.level,1000,2000,100,2000,40,20,n.zone,n.position,1,0};
   char alloc=0;call<void>(b,0x14eb451,reinterpret_cast<P>(record)+16,n.name,&alloc);
@@ -112,6 +120,35 @@ static void preset(U b,P m,const NpcPreset&n){
  }
  apply(b,m+0x80,s);
 }
+// Use the successful server-response paths. In particular the attack callback
+// preserves the native pre-load notifications. The debug menu helper skips
+// them. A live scouting board must also be ended before loading a new level.
+static bool sameText(P text,const char* expected){
+ if(!text)return false;U i=0;while(expected[i]){if(text[i]!=U(expected[i]))return false;++i;}return text[i]==0;
+}
+static bool arenaPending(U b,const char*level,U mode){
+ P g=at<P>(reinterpret_cast<P>(b),0x1835eec);
+ P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
+ return at<U>(g,0xa24)==6&&at<U>(app,0x1218)==mode&&sameText(at<P>(g,0xa40),level);
+}
+static void loadArena(U b,P m,const char*level,U mode){
+ P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
+ const U offset=mode==1?0xa0:0xa4;
+ P name=nullptr;narrow(b,reinterpret_cast<P>(&name),level);
+ P previous=at<P>(m,offset);at<P>(m,offset)=name;release(b,previous);
+ // Keep the previous mode until the native attack callback runs its notifications.
+ if(mode==1){at<U>(app,0x1218)=1;call<void>(b,0x1046360);}
+ else {
+  P board=at<P>(app,0x6bc);
+  // Same board-finish sequence used by the native scout response when it
+  // replaces a running board; otherwise Scene 6 can reuse the scout modules.
+  if(at<U>(app,0x1218)==1&&board&&at<U>(board,0xc0)==5){
+   call<void>(b,0x226770,board);P current=at<P>(app,0x6bc);if(current)at<U>(current,0x7f4)=8;
+  }
+  call<void>(b,0x104810c,m,1,0);
+ }
+ log(b,"arena-load",mode,at<unsigned char>(m,0x17d));
+}
 extern "C" __attribute__((section(".text.entry"))) void offlineGarden(U b){neighbors(b,manager(b));scene(b,25);}
 extern "C" void offlineOwn(U b){P m=manager(b);Store s{};if(readStore(b,s)){apply(b,m+0x80,s);log(b,"defense-loaded",s.positions,s.infos);}else{clear(b,m+0x80);log(b,"defense-new");}call<void>(b,0x85e7d8);}
 extern "C" void offlineSave(U b,P network,P json,U zone,U type){
@@ -119,11 +156,14 @@ extern "C" void offlineSave(U b,P network,P json,U zone,U type){
  Store s{};if(capture(b,manager(b)+0x80,s)&&writeStore(b,s)){log(b,"defense-saved",s.positions,s.infos);scene(b,25);}else log(b,"defense-save-failed");
 }
 extern "C" void offlineInfo(U b,P m,U a,U id,U kind){
- const NpcPreset*n=npc(id);if(n&&kind==2&&regular(b)){log(b,"view-neighbor",id,n->count);preset(b,m,*n);call<void>(b,0x85e874);return;}
+ const NpcPreset*n=npc(id);if(n&&kind==2&&regular(b)){if(arenaPending(b,"arena_plant_test",1)){log(b,"view-duplicate",id);return;}log(b,"view-neighbor",id,n->count);preset(b,m,*n);loadArena(b,m,"arena_plant_test",1);return;}
  call<void>(b,0xf79d74);P net=call<P>(b,0xf7a070);call<void>(b,0xf87154,net,a,id,kind);
 }
 extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
- const NpcPreset*n=npc(id);if(n&&regular(b)){log(b,"attack-neighbor",id,n->count);preset(b,m,*n);call<void>(b,0x85e9a8);return;}
+ const NpcPreset*n=npc(id);
+ // Native special houses send a zero player id and put the house id in +104.
+ if(!n&&id==0&&reason==4){const NpcPreset* selected=npc(at<U>(m,0x104));if(selected&&selected->evil&&selected->zone==at<U>(m,0xfc)&&selected->position==at<U>(m,0xf8))n=selected;}
+ if(n&&regular(b)){if(arenaPending(b,"arena_battle_test",0)){log(b,"attack-duplicate",id);return;}log(b,"attack-neighbor",id,n->count);preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;}
  call<void>(b,0xf79d74);P net=call<P>(b,0xf7a070);call<void>(b,0xf87710,net,id,reason,at<U>(m,0x104),at<U64>(m,0x108));
 }
 extern "C" void __aeabi_memclr4(void* p,U n){volatile unsigned char*d=static_cast<volatile unsigned char*>(p);while(n--)*d++=0;}

@@ -16,7 +16,7 @@ def generate(out):
  assert len(lines)==2
  prefixes,suffixes=[s.split(',') for s in lines]
  config=json.loads((ROOT/'src/offline-pvp/neighbors.json').read_text(encoding='utf8'))
- text=['struct NpcPreset { unsigned id,zone,position,level,count; unsigned name[40]; unsigned plants[16][3]; };','static const NpcPreset NPCS[] = {']
+ text=['struct NpcPreset { unsigned id,zone,position,level,count,evil; unsigned name[40]; unsigned plants[16][3]; };','static const NpcPreset NPCS[] = {']
  names=set();slots=set()
  for index,npc in enumerate(config['neighbors']):
   key=(npc['zone'],npc['position']);assert key not in slots and key!=(1,1);slots.add(key)
@@ -25,15 +25,15 @@ def generate(out):
   assert len({(p[1],p[2]) for p in npc['plants']})==len(npc['plants'])
   assert all(0<=r<5 and 0<=c<9 and t in (2,3,6) for t,r,c in npc['plants'])
   seed=(npc['id']*2654435761)&0xffffffff
-  name=prefixes[seed%len(prefixes)]+suffixes[(seed//len(prefixes))%len(suffixes)]
+  name='邪恶戴夫' if npc.get('evil_dave') else prefixes[seed%len(prefixes)]+suffixes[(seed//len(prefixes))%len(suffixes)]
   assert name not in names and len(name)<40;names.add(name)
   chars=','.join(str(ord(c)) for c in name)+',0'
   plants=','.join('{'+','.join(map(str,p))+'}' for p in npc['plants'])
-  text.append('{%d,%d,%d,%d,%d,{%s},{%s}},'%(npc['id'],*key,npc['level'],len(npc['plants']),chars,plants))
+  text.append('{%d,%d,%d,%d,%d,%d,{%s},{%s}},'%(npc['id'],*key,npc['level'],len(npc['plants']),int(npc.get('evil_dave',False)),chars,plants))
  text+=['};','static constexpr unsigned NPC_COUNT=sizeof(NPCS)/sizeof(NPCS[0]);']
  out=Path(out);out.mkdir(parents=True,exist_ok=True)
  (out/'npc_presets.h').write_text('\n'.join(text)+'\n',encoding='utf8')
- record=dict(source='PROPERTIES/RANDOMSTRINGS.TXT',source_sha256=hashlib.sha256(raw).hexdigest(),prefix_count=len(prefixes),suffix_count=len(suffixes),neighbors=len(names),unique_slots=True,unique_names=True)
+ record=dict(source='PROPERTIES/RANDOMSTRINGS.TXT',source_sha256=hashlib.sha256(raw).hexdigest(),prefix_count=len(prefixes),suffix_count=len(suffixes),neighbors=len(names),random_neighbors=sum(not n.get('evil_dave') for n in config['neighbors']),evil_dave_houses=sum(bool(n.get('evil_dave')) for n in config['neighbors']),unique_slots=True,unique_names=True)
  (out/'names-build.json').write_text(json.dumps(record,indent=2)+'\n',encoding='utf8')
  return record
 if __name__=='__main__':print(json.dumps(generate(ROOT/'work/pvp-v37/generated')))

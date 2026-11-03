@@ -8,19 +8,27 @@ from rebuild_bootstrap_dex import rebuild_bootstrap
 from elftools.elf.elffile import ELFFile
 from keystone import Ks,KS_ARCH_ARM,KS_MODE_ARM
 from prepare_offline_neighbors import generate
-ROOT=Path(__file__).resolve().parents[1];VERSION=42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
+ROOT=Path(__file__).resolve().parents[1];VERSION=43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
 OUT=ROOT/f'work/pvp-v{VERSION}';OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
 generate(OUT/'generated')
 resource,strings,economy_record=prepare(BASE,OUT/'generated')
+if VERSION>=43:
+ from prepare_offline_pvp_scenes import prepare as prepare_scenes
+ resource,scene_record=prepare_scenes(resource,OUT/'generated')
+ economy_record['scenes']=scene_record
 with zipfile.ZipFile(BASE) as src:
  b=bytearray(src.read('lib/armeabi/libSrc.so'))
  old_resource=src.read('assets/reconstruction/dynamic-original-speed.rsb.smf')
  oldsha=hashlib.sha256(old_resource).hexdigest();newsha=hashlib.sha256(resource).hexdigest()
  method='.method private static isSupportedResourcePredecessor(Ljava/lang/String;)Z\n    .registers 2'
  extra=f'\n\n    const-string v0, "{oldsha}"\n    invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z\n    move-result v0\n    if-eqz v0, :v38_older_versions\n    const/4 v0, 0x1\n    return v0\n    :v38_older_versions'
- dex=rebuild_bootstrap(src.read('classes8.dex'),OUT/'bootstrap',{oldsha:newsha,method:method+extra,'.offline-defense-v35':'.offline-economy-v38',hex(len(old_resource)):hex(len(resource))},ROOT/'tools/apktool.jar')
+ if VERSION>=43:
+  previous=economy_record['scenes']['predecessor_sha256']
+  extra=extra.replace('    :v38_older_versions', f'    :v38_older_versions\n\n    const-string v0, \"{previous}\"\n    invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z\n    move-result v0\n    if-eqz v0, :v43_older_versions\n    const/4 v0, 0x1\n    return v0\n    :v43_older_versions')
+ marker='.offline-pvp-v43' if VERSION>=43 else '.offline-economy-v38'
+ dex=rebuild_bootstrap(src.read('classes8.dex'),OUT/'bootstrap',{oldsha:newsha,method:method+extra,'.offline-defense-v35':marker,hex(len(old_resource)):hex(len(resource))},ROOT/'tools/apktool.jar')
 strings.update(V39_ADMIN_GRANTED='获得100钻石和10000金币，可再次输入 admin 领取',
  V39_ADMIN_LIMIT='金币或钻石已接近上限，暂时无法领取',
  GEMS_RESTORE_TITLE='兑换码',GEMS_RESTORE_TIP='请输入兑换码',
@@ -139,8 +147,9 @@ assert struct.unpack_from('<I',b,28)[0]==52 and struct.unpack_from('<H',b,44)[0]
 subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_economy_arm.py'),str(OUT)],cwd=ROOT,check=True)
 subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_redeem_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=41:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_coin_click_arm.py'),str(OUT)],cwd=ROOT,check=True)
+if VERSION>=43:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_scenes_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if '--native-only' in sys.argv:raise SystemExit(0)
-unsigned=OUT/'unsigned.apk';aligned=OUT/'aligned.apk';final=OUT/f'PvZ2-v{VERSION}-startup-admin-candidate.apk'
+unsigned=OUT/'unsigned.apk';aligned=OUT/'aligned.apk';final=OUT/(f'PvZ2-v{VERSION}-pvp-scene-candidate.apk' if VERSION>=43 else f'PvZ2-v{VERSION}-startup-admin-candidate.apk')
 with zipfile.ZipFile(BASE) as src,zipfile.ZipFile(unsigned,'w',allowZip64=True) as dst:
  for item in src.infolist():
   if item.filename.startswith('META-INF/'):continue
