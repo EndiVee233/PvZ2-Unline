@@ -8,7 +8,8 @@ from rebuild_bootstrap_dex import rebuild_bootstrap
 from elftools.elf.elffile import ELFFile
 from keystone import Ks,KS_ARCH_ARM,KS_MODE_ARM
 from prepare_offline_neighbors import generate
-ROOT=Path(__file__).resolve().parents[1];OUT=ROOT/'work/pvp-v39';OUT.mkdir(exist_ok=True)
+ROOT=Path(__file__).resolve().parents[1];VERSION=40 if '--v40' in sys.argv else 39
+OUT=ROOT/f'work/pvp-v{VERSION}';OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
 generate(OUT/'generated')
@@ -91,7 +92,7 @@ grant_stub=custom_stub('push {r0-r4,lr}\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl 
 redirect(site,grant_stub)
 
 # Intercept the original submit methods before throttling or server requests.
-for site in (0x852a40,0x84adb8):
+for site in (0x852420,0x84adb8):
  first=struct.unpack_from('<I',b,site)[0];assert first>>16==0xe92d
  target=custom_stub('push {r0-r4,lr}\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlineRedeem"]}\ncmp r0,#0\npop {{r0-r4,lr}}\nbne handled\n.word {first}\nb #{site+4}\nhandled: bx lr')
  redirect(site,target)
@@ -125,7 +126,7 @@ assert struct.unpack_from('<I',b,28)[0]==52 and struct.unpack_from('<H',b,44)[0]
 subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_economy_arm.py'),str(OUT)],cwd=ROOT,check=True)
 subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_redeem_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if '--native-only' in sys.argv:raise SystemExit(0)
-unsigned=OUT/'unsigned.apk';aligned=OUT/'aligned.apk';final=OUT/'PvZ2-v39-startup-admin-candidate.apk'
+unsigned=OUT/'unsigned.apk';aligned=OUT/'aligned.apk';final=OUT/f'PvZ2-v{VERSION}-startup-admin-candidate.apk'
 with zipfile.ZipFile(BASE) as src,zipfile.ZipFile(unsigned,'w',allowZip64=True) as dst:
  for item in src.infolist():
   if item.filename.startswith('META-INF/'):continue

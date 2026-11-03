@@ -6,6 +6,10 @@ extern "C" U offlineRedeem(U b,P ui){
  P code=at<P>(input,0xa4);if(!code||at<U>(code-12,0)!=5)return 0;
  const U*text=reinterpret_cast<const U*>(code);
  if(text[0]!='a'||text[1]!='d'||text[2]!='m'||text[3]!='i'||text[4]!='n'||text[5])return 0;
+ // The confirm button opens App+0x1344 before invoking the submit method.
+ // Match the real OnRequestFinished cleanup even though no request is sent.
+ P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
+ call<void>(b,0x3feb40,app);
  P p=profile(b);if(!p)return 1;
  // Reject both awards together at the native signed currency limit.
  U coinKey=at<U>(p,0x9c),gemKey=at<U>(p,0xa4);

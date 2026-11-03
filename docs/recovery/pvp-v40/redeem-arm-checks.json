@@ -1,0 +1,10 @@
+{
+  "repeat_admin_exact_awards": true,
+  "request_dialog_closed_before_award": true,
+  "encoded_currency_guard": true,
+  "non_admin_unchanged": true,
+  "no_used_code_flag": true,
+  "lost_items_picture_removed": true,
+  "phdr_location_and_count_preserved": true,
+  "runtime_game_verified": false
+}
