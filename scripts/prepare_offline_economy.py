@@ -27,6 +27,8 @@ def prepare(source,out):
      p=o['objdata'];assert p['ObjectType']=='zombie'
      specs.append((p['TypeName'],p['CostPVPCoin'],p['SpaceSize'],int(p['TrainingTime']),p['NeedHomeLevel']))
     continue
+   categories=[o['objdata'] for o in j['objects'] if o.get('objclass')=='MagentoCategoryProps' and o['objdata'].get('Name')=='pvpCoins']
+   assert len(categories)==1 and categories[0]['Products']==[f'RTID(MagentoProduct_pvp_coin_bag{i}@Magento)' for i in (1,2,3)] and not categories[0].get('Defaults'), 'dedicated bank index order changed'
    for o in j['objects']:
     if not o.get('aliases',[''])[0].startswith('MagentoProduct_pvp_coin_bag'):continue
     p=o['objdata'];count=p['ObjectCount'];assert count in (5000,20000,75000)

@@ -72,10 +72,9 @@ static void settleTraining(U b,P m){
 extern "C" void offlineEconomyInit(U b){P m=manager(b);if(ensureEconomy(b,m))settleTraining(b,m);}
 // The callback receives success after the original gem-payment validation.
 // Only pvpCoin products are handled here; all other products fall through.
-static U creditStarcoins(U b,P weak,U success){
- P product=call<P>(b,0x1da034,call<P>(b,0x11d74b4),weak);
- if(!product||!same(reinterpret_cast<const char*>(at<P>(product,0x44)),"pvpCoin"))return 0;
- if(!success)return 1;U count=at<U>(product,0x50);U price=count==5000?110:count==20000?440:count==75000?1650:0;
+static U starPrice(U count){return count==5000?110:count==20000?440:count==75000?1650:0;}
+static U creditStarcoinCount(U b,U count,U success){
+ if(!success)return 1;U price=starPrice(count);
  P m=manager(b);if(!price){log(b,"coin-product-rejected",count);return 1;}
  EconomyRuntime&r=economyRuntime;
  if(!ensureEconomy(b,m)||r.state.coins>2000000000u-count){call<void>(b,0x745220,profile(b),price,1);economyNotice(b,"[V38_PVP_SAVE_ERROR]");return 1;}
@@ -84,8 +83,28 @@ static U creditStarcoins(U b,P weak,U success){
  else{call<void>(b,0x745220,profile(b),price,1);economyNotice(b,"[V38_PVP_SAVE_ERROR]");log(b,"starcoin-write-refund",price);}
  return 1;
 }
+static U creditStarcoins(U b,P weak,U success){
+ P product=call<P>(b,0x1da034,call<P>(b,0x11d74b4),weak);
+ if(!product||!same(reinterpret_cast<const char*>(at<P>(product,0x44)),"pvpCoin"))return 0;
+ return creditStarcoinCount(b,at<U>(product,0x50),success);
+}
+static U buyStarcoins(U b,U count){
+ U price=starPrice(count);P m=manager(b);
+ if(!price||!ensureEconomy(b,m)||economyRuntime.state.coins>2000000000u-count){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return 1;}
+ if(call<I>(b,0x747d00,profile(b),price)<0){economyNotice(b,"[V41_GEMS_REQUIRED]");log(b,"starcoin-insufficient-gems",count,price);return 1;}
+ return creditStarcoinCount(b,count,1);
+}
 extern "C" U offlineCoinComplete(U b,P self,U success){return creditStarcoins(b,self+0xb8,success);}
 extern "C" U offlineCoinGrant(U b,P self,P weak){return creditStarcoins(b,weak,1);}
+// The dedicated PvP bank (App::ShowPVPCoinBank, 0x40b154) uses a category
+// weak reference, not either generic bank's card vector. Its real button ends
+// at this request with the zero-based product index; no gem debit precedes it.
+extern "C" void offlineCoinRequest(U b,P m,U index){
+ if(!regular(b)){call<void>(b,0xf79d74);call<void>(b,0xf8cee4,call<P>(b,0xf7a070),index);return;}
+ log(b,"pvp-bank-request",index);
+ if(index>=3){log(b,"pvp-bank-index-rejected",index);return;}
+ const U amounts[3]={5000,20000,75000};buyStarcoins(b,amounts[index]);
+}
 // Currency-bank dialogs dispatch purchases by their native bank mode, even
 // when Magento displays a gem price. Intercept the actual product click before
 // that cash/server branch. The two existing banks use different card vectors.
@@ -96,13 +115,9 @@ extern "C" U offlineCoinClick(U b,P ui,U index,U vectorOffset){
  P card=at<P>(first,index*4);if(!card)return 0;
  P product=call<P>(b,0x1da034,call<P>(b,0x11d74b4),card+0xa0);
  if(!product||!same(reinterpret_cast<const char*>(at<P>(product,0x44)),"pvpCoin"))return 0;
- U count=at<U>(product,0x50),price=count==5000?110:count==20000?440:count==75000?1650:0;
- P m=manager(b);
- if(!price||!ensureEconomy(b,m)||economyRuntime.state.coins>2000000000u-count){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return 1;}
  // Use the original balance check, encrypted wallet update, UI notifications
  // and persistence. Only a successful debit can reach the local credit path.
- if(call<I>(b,0x747d00,profile(b),price)<0){economyNotice(b,"[V41_GEMS_REQUIRED]");log(b,"starcoin-insufficient-gems",count,price);return 1;}
- return creditStarcoins(b,card+0xa0,1);
+ return buyStarcoins(b,at<U>(product,0x50));
 }
 extern "C" void offlineTraining(U b,P camp,P name,U action){
  P m=manager(b);if(!regular(b)){call<void>(b,0xf79d74);P net=call<P>(b,0xf7a070);call<void>(b,0xf8fb18,net,name,action==1?1:action==2?-1:0);return;}

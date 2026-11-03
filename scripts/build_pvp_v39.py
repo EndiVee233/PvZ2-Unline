@@ -8,7 +8,7 @@ from rebuild_bootstrap_dex import rebuild_bootstrap
 from elftools.elf.elffile import ELFFile
 from keystone import Ks,KS_ARCH_ARM,KS_MODE_ARM
 from prepare_offline_neighbors import generate
-ROOT=Path(__file__).resolve().parents[1];VERSION=41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
+ROOT=Path(__file__).resolve().parents[1];VERSION=42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
 OUT=ROOT/f'work/pvp-v{VERSION}';OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -114,6 +114,8 @@ if VERSION>=41:
  # balance. Its constructor explicitly hides only the gem background parent.
  site=0x10526d0;before=bytes(b[site:site+4]);assert before==bytes.fromhex('0010a0e3')
  b[site:site+4]=bytes.fromhex('0110a0e3');patches.append(dict(site=hex(site),before=before.hex(),after=bytes(b[site:site+4]).hex(),role='Show native live PvP diamond balance'))
+if VERSION>=42:
+ patch(0x104309c,'offlineCoinRequest',original[0x104309c:0x10430a0],True)
 
 site=0x1021f4c;word=struct.unpack_from('<I',b,site)[0];assert word>>24==0xea
 delta=word&0xffffff
