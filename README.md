@@ -1,5 +1,3 @@
-离线挑战补丁（v10）已在本地 WSA 载入邪恶入侵、巨人危机、暴走雪人的普通难度，恢复设备日期驱动的每日次数与原生奖励随机记录，并处理挑战子菜单的首次引导锁定。162 个 ARM 检查通过；完整通关后的领奖、困难及传奇难度尚未完成实机验证。详见[离线挑战恢复结果](docs/recovery/离线挑战模式恢复结果.md)。此处记录本地验证进展，不代表 Releases 已更新。
-
 > **基于《植物大战僵尸2》中文版 1.7.5（失落之城，包名 `com.popcap.pvz2cthd`）制作。**
 > 启动器/资源方案来自 [DreamMoonCai/Pvz2Tool](https://github.com/DreamMoonCai/Pvz2Tool)；
 > ASTC 解码基于 [google/astc-codec](https://github.com/google/astc-codec)。
