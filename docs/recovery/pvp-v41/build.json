@@ -1,0 +1,157 @@
+{
+  "apk": "work\\pvp-v41\\PvZ2-v41-startup-admin-candidate.apk",
+  "sha256": "6dc31d476d20b95f8cdad51e0d55f2ff9aa47fe78c2feb1ad65c0e7874d0ad03",
+  "patches": [
+    {
+      "site": "0x107bf08",
+      "symbol": "offlineGarden",
+      "before": "921826eb",
+      "after": "3e2926eb"
+    },
+    {
+      "site": "0x100b4c0",
+      "symbol": "offlineOwn",
+      "before": "c44ce1eb",
+      "after": "d7eb27eb"
+    },
+    {
+      "site": "0x1042f78",
+      "symbol": "offlineSave",
+      "before": "5113fdeb",
+      "after": "300d27eb"
+    },
+    {
+      "site": "0x1043028",
+      "symbol": "offlineInfo",
+      "before": "f0482de9",
+      "after": "120d27ea"
+    },
+    {
+      "site": "0x1042fe8",
+      "symbol": "offlineAttack",
+      "before": "f0482de9",
+      "after": "300d27ea"
+    },
+    {
+      "site": "0x104b8a8",
+      "symbol": "offlineTraining",
+      "before": "10482de9",
+      "after": "0eeb26ea"
+    },
+    {
+      "site": "0x1046490",
+      "symbol": "offlineTrainingTick",
+      "before": "ff1800ea",
+      "after": "220027ea"
+    },
+    {
+      "site": "0x9344a4",
+      "before": "f04b2de9",
+      "after": "2b4843ea"
+    },
+    {
+      "site": "0x930648",
+      "before": "f04f2de9",
+      "after": "d05743ea"
+    },
+    {
+      "site": "0x852420",
+      "before": "f04f2de9",
+      "after": "68d046ea"
+    },
+    {
+      "site": "0x84adb8",
+      "before": "f04f2de9",
+      "after": "0fee46ea"
+    },
+    {
+      "site": "0x936234",
+      "before": "a800a0e3",
+      "after": "280000ea"
+    },
+    {
+      "site": "0x931da8",
+      "before": "f04f2de9",
+      "after": "2e5243ea"
+    },
+    {
+      "site": "0x9333bc",
+      "before": "f04f2de9",
+      "after": "b84c43ea"
+    },
+    {
+      "site": "0x10526d0",
+      "before": "0010a0e3",
+      "after": "0110a0e3",
+      "role": "Show native live PvP diamond balance"
+    },
+    {
+      "site": "0x1021f4c",
+      "before": "3e8027ea",
+      "after": "e39127ea"
+    }
+  ],
+  "economy": {
+    "prices": [
+      {
+        "receive_starcoins": 5000,
+        "spend_diamonds": 110
+      },
+      {
+        "receive_starcoins": 20000,
+        "spend_diamonds": 440
+      },
+      {
+        "receive_starcoins": 75000,
+        "spend_diamonds": 1650
+      }
+    ],
+    "training_types": 12,
+    "old_resource_sha256": "9dc318662c0d9ff7d4fc8116befc82fad81ee0f9aecf53ecafa518799cb03d81",
+    "resource_sha256": "14cbc80c4505424c069aa5d7965435b95a6d9fae37b818fd857073157bbd4791",
+    "resource_size": 23646208
+  },
+  "localization": {
+    "offset": "0xd07ae8",
+    "before": "73e133ea",
+    "after": "e5e933ea",
+    "stub_offset": "0x1832284",
+    "stub_va": "0x1a02284",
+    "stub_size": 2676,
+    "strings": {
+      "V38_PVP_5000": "\u83b7\u5f975000\u661f\u5e01",
+      "V38_PVP_20000": "\u83b7\u5f9720000\u661f\u5e01",
+      "V38_PVP_75000": "\u83b7\u5f9775000\u661f\u5e01",
+      "V38_NOTICE_TITLE": "\u7cfb\u7edf\u63d0\u793a",
+      "V38_PVP_SAVE_ERROR": "\u672c\u5730\u6570\u636e\u4fdd\u5b58\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5",
+      "V38_PVP_CAPACITY": "\u8bad\u7ec3\u5bb9\u91cf\u5df2\u6ee1",
+      "V38_PVP_LOCKED": "\u57fa\u5730\u7b49\u7ea7\u4e0d\u8db3\uff0c\u5c1a\u672a\u89e3\u9501\u8be5\u50f5\u5c38",
+      "V39_ADMIN_GRANTED": "\u83b7\u5f97100\u94bb\u77f3\u548c10000\u91d1\u5e01\uff0c\u53ef\u518d\u6b21\u8f93\u5165 admin \u9886\u53d6",
+      "V39_ADMIN_LIMIT": "\u91d1\u5e01\u6216\u94bb\u77f3\u5df2\u63a5\u8fd1\u4e0a\u9650\uff0c\u6682\u65f6\u65e0\u6cd5\u9886\u53d6",
+      "GEMS_RESTORE_TITLE": "\u5151\u6362\u7801",
+      "GEMS_RESTORE_TIP": "\u8bf7\u8f93\u5165\u5151\u6362\u7801",
+      "GEMS_RESTORE_DES": "\u8f93\u5165\u5151\u6362\u7801\u9886\u53d6\u5956\u52b1",
+      "GEMS_RESTORE_BUTTON_TITLE": "\u5151\u6362",
+      "V41_GEMS_REQUIRED": "\u94bb\u77f3\u4e0d\u8db3\uff0c\u8bf7\u5148\u5151\u6362\u94bb\u77f3"
+    },
+    "role": "Exchange-only localization keys use UTF-32 strings; unrelated localization falls back to original lookup"
+  },
+  "entry": "0x1a02cf8",
+  "symbols": {
+    "offline.cpp": "0x0",
+    "offlineEconomyInit": "0x1a03020",
+    "offlineCoinComplete": "0x1a03518",
+    "offlineCoinGrant": "0x1a0381c",
+    "offlineCoinClick": "0x1a03828",
+    "offlineTraining": "0x1a03b54",
+    "offlineTrainingTick": "0x1a042f0",
+    "offlineRedeem": "0x1a0434c",
+    "offlineCodeCard": "0x1a044f0",
+    "offlineGarden": "0x1a02cf8",
+    "offlineOwn": "0x1a04534",
+    "offlineSave": "0x1a0494c",
+    "offlineInfo": "0x1a04d80",
+    "offlineAttack": "0x1a04fb4"
+  },
+  "runtime_verified": false
+}

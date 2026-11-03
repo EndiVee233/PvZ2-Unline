@@ -8,7 +8,7 @@ from rebuild_bootstrap_dex import rebuild_bootstrap
 from elftools.elf.elffile import ELFFile
 from keystone import Ks,KS_ARCH_ARM,KS_MODE_ARM
 from prepare_offline_neighbors import generate
-ROOT=Path(__file__).resolve().parents[1];VERSION=40 if '--v40' in sys.argv else 39
+ROOT=Path(__file__).resolve().parents[1];VERSION=41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
 OUT=ROOT/f'work/pvp-v{VERSION}';OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -24,7 +24,8 @@ with zipfile.ZipFile(BASE) as src:
 strings.update(V39_ADMIN_GRANTED='获得100钻石和10000金币，可再次输入 admin 领取',
  V39_ADMIN_LIMIT='金币或钻石已接近上限，暂时无法领取',
  GEMS_RESTORE_TITLE='兑换码',GEMS_RESTORE_TIP='请输入兑换码',
- GEMS_RESTORE_DES='输入兑换码领取奖励',GEMS_RESTORE_BUTTON_TITLE='兑换')
+ GEMS_RESTORE_DES='输入兑换码领取奖励',GEMS_RESTORE_BUTTON_TITLE='兑换',
+ V41_GEMS_REQUIRED='钻石不足，请先兑换钻石')
 b,localization=add_exchange_localization(b,strings)
 e=ELFFile(BytesIO(b));index,tail=[(i,s) for i,s in enumerate(e.iter_segments()) if s['p_type']=='PT_LOAD'][-1]
 old=len(b);assert tail['p_offset']+tail['p_filesz']==old
@@ -104,6 +105,16 @@ b[site:site+4]=original[site:site+4]
 target=append_stub('offlineCodeCard',True);b[0x9361b4:0x9361b8]=bl(0x9361b4,target)
 redirect(0x936234,0x9362dc)
 
+if VERSION>=41:
+ for site,vector_offset in ((0x931da8,0xa8),(0x9333bc,0xb8)):
+  first=struct.unpack_from('<I',b,site)[0];assert first==0xe92d4ff0
+  target=custom_stub('push {r0-r4,lr}\nmov r2,r1\nmov r1,r0\n'+f'mov r3,#{vector_offset}\n'+baseasm()+f'bl #{symbols["offlineCoinClick"]}\ncmp r0,#0\npop {{r0-r4,lr}}\nbne handled\n.word {first}\nb #{site+4}\nhandled: bx lr')
+  redirect(site,target)
+ # The native currency bar already binds and refreshes the player's gem
+ # balance. Its constructor explicitly hides only the gem background parent.
+ site=0x10526d0;before=bytes(b[site:site+4]);assert before==bytes.fromhex('0010a0e3')
+ b[site:site+4]=bytes.fromhex('0110a0e3');patches.append(dict(site=hex(site),before=before.hex(),after=bytes(b[site:site+4]).hex(),role='Show native live PvP diamond balance'))
+
 site=0x1021f4c;word=struct.unpack_from('<I',b,site)[0];assert word>>24==0xea
 delta=word&0xffffff
 if delta&0x800000:delta-=1<<24
@@ -125,6 +136,7 @@ assert struct.unpack_from('<I',b,28)[0]==52 and struct.unpack_from('<H',b,44)[0]
 (OUT/'libSrc.so').write_bytes(b)
 subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_economy_arm.py'),str(OUT)],cwd=ROOT,check=True)
 subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_redeem_arm.py'),str(OUT)],cwd=ROOT,check=True)
+if VERSION>=41:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_coin_click_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if '--native-only' in sys.argv:raise SystemExit(0)
 unsigned=OUT/'unsigned.apk';aligned=OUT/'aligned.apk';final=OUT/f'PvZ2-v{VERSION}-startup-admin-candidate.apk'
 with zipfile.ZipFile(BASE) as src,zipfile.ZipFile(unsigned,'w',allowZip64=True) as dst:

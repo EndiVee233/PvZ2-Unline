@@ -1,0 +1,10 @@
+{
+  "actual_bank_click_entries": true,
+  "three_gem_prices": true,
+  "insufficient_no_debit_or_credit": true,
+  "failed_save_full_refund": true,
+  "balance_limit_before_debit": true,
+  "other_products_and_special_buttons_preserved": true,
+  "native_gem_parent_visible": true,
+  "runtime_game_verified": false
+}

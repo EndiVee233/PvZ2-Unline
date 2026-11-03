@@ -86,6 +86,24 @@ static U creditStarcoins(U b,P weak,U success){
 }
 extern "C" U offlineCoinComplete(U b,P self,U success){return creditStarcoins(b,self+0xb8,success);}
 extern "C" U offlineCoinGrant(U b,P self,P weak){return creditStarcoins(b,weak,1);}
+// Currency-bank dialogs dispatch purchases by their native bank mode, even
+// when Magento displays a gem price. Intercept the actual product click before
+// that cash/server branch. The two existing banks use different card vectors.
+extern "C" U offlineCoinClick(U b,P ui,U index,U vectorOffset){
+ if(!ui||index>=64||(vectorOffset!=0xa8&&vectorOffset!=0xb8))return 0;
+ P first=at<P>(ui,vectorOffset),last=at<P>(ui,vectorOffset+4);
+ if(!first||last<first||U(last-first)>64*4||U(last-first)%4||index>=U(last-first)/4)return 0;
+ P card=at<P>(first,index*4);if(!card)return 0;
+ P product=call<P>(b,0x1da034,call<P>(b,0x11d74b4),card+0xa0);
+ if(!product||!same(reinterpret_cast<const char*>(at<P>(product,0x44)),"pvpCoin"))return 0;
+ U count=at<U>(product,0x50),price=count==5000?110:count==20000?440:count==75000?1650:0;
+ P m=manager(b);
+ if(!price||!ensureEconomy(b,m)||economyRuntime.state.coins>2000000000u-count){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return 1;}
+ // Use the original balance check, encrypted wallet update, UI notifications
+ // and persistence. Only a successful debit can reach the local credit path.
+ if(call<I>(b,0x747d00,profile(b),price)<0){economyNotice(b,"[V41_GEMS_REQUIRED]");log(b,"starcoin-insufficient-gems",count,price);return 1;}
+ return creditStarcoins(b,card+0xa0,1);
+}
 extern "C" void offlineTraining(U b,P camp,P name,U action){
  P m=manager(b);if(!regular(b)){call<void>(b,0xf79d74);P net=call<P>(b,0xf7a070);call<void>(b,0xf8fb18,net,name,action==1?1:action==2?-1:0);return;}
  if(!ensureEconomy(b,m)){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return;}settleTraining(b,m);
