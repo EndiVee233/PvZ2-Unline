@@ -1,0 +1,10 @@
+{
+  "apk_sha256": "a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac",
+  "user_acceptance": "功能均正常 无任何贴图残留",
+  "tested": ["local defense entry", "blue flags", "no recurring network modal", "plant placement", "shovel", "return-card flight", "sun refund", "plant-count refund", "no persistent flash", "exit without saving"],
+  "save_restored": true,
+  "restored_files_verified": 32,
+  "game_stopped_after_restore": true,
+  "untested_or_unimplemented": ["save defense locally", "reload saved defense", "occupation tutorial", "complete offline PvP backend"],
+  "diagnostic_hooks_included": false
+}
