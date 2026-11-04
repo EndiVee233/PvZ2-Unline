@@ -1,0 +1,11 @@
+{
+  "comparison": "v52 accepted APK to v53 candidate",
+  "native_change_words": [
+    "0x102e664",
+    "0x102f858"
+  ],
+  "changed_bytes": 8,
+  "other_payloads_unchanged": 1735,
+  "resources_and_dex_unchanged": true,
+  "runtime_game_verified": false
+}

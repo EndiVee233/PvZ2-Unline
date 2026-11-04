@@ -8,7 +8,7 @@ from rebuild_bootstrap_dex import rebuild_bootstrap
 from elftools.elf.elffile import ELFFile
 from keystone import Ks,KS_ARCH_ARM,KS_MODE_ARM
 from prepare_offline_neighbors import generate
-ROOT=Path(__file__).resolve().parents[1];VERSION=52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
+ROOT=Path(__file__).resolve().parents[1];VERSION=53 if '--v53' in sys.argv else 52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
 OUT=ROOT/f'work/pvp-v{VERSION}';OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -167,6 +167,20 @@ if VERSION>=52:
  site=0x100c6ec;first=struct.unpack_from('<I',b,site)[0];assert first==0xe92d4ff0
  target=custom_stub('push {r4,lr}\nmov r4,r0\nmov r1,r4\n'+baseasm()+f'bl #{symbols["offlineMapArmyPrepare"]}\nmov r0,r4\nbl map_original\nmov r1,r4\n'+baseasm()+f'bl #{symbols["offlineMapArmyReady"]}\npop {{r4,pc}}\nmap_original: .word {first}\nb #{site+4}')
  redirect(site,target)
+
+if VERSION>=53:
+ # PVPSeedPacket's ready transition has already updated its state and restored
+ # registers at this tail branch. Omit only the standalone card-effect entity.
+ site=0x102e664;before=bytes(b[site:site+4]);assert before==struct.pack('<I',0xea000000|(((0x8ab100-site-8)//4)&0xffffff))
+ b[site:site+4]=struct.pack('<I',0xe12fff1e)
+ patches.append(dict(site=hex(site),before=before.hex(),after=bytes(b[site:site+4]).hex(),role='Omit decorative PvP ready-card flash after state update'))
+ # The skill/counter notification still runs. Its final word-effect spawn is
+ # decorative, like the already omitted defense-return flash from v36.
+ site=0x102f858;before=bytes(b[site:site+4]);assert before==bl(site,0x8ab228)
+ b[site:site+4]=struct.pack('<I',0xe1a00000)
+ patches.append(dict(site=hex(site),before=before.hex(),after=bytes(b[site:site+4]).hex(),role='Omit persistent decorative PvP skill/counter word flash'))
+ for a,z in ((0x102e5c0,0x102e664),(0x102f43c,0x102f858)):
+  assert b[a:z]==original[a:z],'gameplay changed before cosmetic flash'
 
 site=0x1021f4c;word=struct.unpack_from('<I',b,site)[0];assert word>>24==0xea
 delta=word&0xffffff

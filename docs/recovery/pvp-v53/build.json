@@ -1,0 +1,279 @@
+{
+  "apk": "work\\pvp-v53\\PvZ2-v53-pvp-scene-candidate.apk",
+  "sha256": "063586358b66276e4d2b2ff2a3c44cdb40b5dfdf7699b78eab61582a47dcbaff",
+  "patches": [
+    {
+      "site": "0x107bf08",
+      "symbol": "offlineGarden",
+      "before": "921826eb",
+      "after": "c03226eb"
+    },
+    {
+      "site": "0x100b4c0",
+      "symbol": "offlineOwn",
+      "before": "c44ce1eb",
+      "after": "59f527eb"
+    },
+    {
+      "site": "0x1042f78",
+      "symbol": "offlineSave",
+      "before": "5113fdeb",
+      "after": "b21627eb"
+    },
+    {
+      "site": "0x1043028",
+      "symbol": "offlineInfo",
+      "before": "f0482de9",
+      "after": "941627ea"
+    },
+    {
+      "site": "0x1042fe8",
+      "symbol": "offlineAttack",
+      "before": "f0482de9",
+      "after": "b21627ea"
+    },
+    {
+      "site": "0x350570",
+      "symbol": "offlineBoardLoad",
+      "before": "d854fbeb",
+      "after": "5ee15aeb"
+    },
+    {
+      "site": "0x104b8a8",
+      "symbol": "offlineTraining",
+      "before": "10482de9",
+      "after": "9ef426ea"
+    },
+    {
+      "site": "0x1046490",
+      "symbol": "offlineTrainingTick",
+      "before": "ff1800ea",
+      "after": "b20927ea"
+    },
+    {
+      "site": "0x9344a4",
+      "before": "f04b2de9",
+      "after": "bb5143ea"
+    },
+    {
+      "site": "0x930648",
+      "before": "f04f2de9",
+      "after": "606143ea"
+    },
+    {
+      "site": "0x852420",
+      "before": "f04f2de9",
+      "after": "f8d946ea"
+    },
+    {
+      "site": "0x84adb8",
+      "before": "f04f2de9",
+      "after": "9ff746ea"
+    },
+    {
+      "site": "0x936234",
+      "before": "a800a0e3",
+      "after": "280000ea"
+    },
+    {
+      "site": "0x931da8",
+      "before": "f04f2de9",
+      "after": "be5b43ea"
+    },
+    {
+      "site": "0x9333bc",
+      "before": "f04f2de9",
+      "after": "485643ea"
+    },
+    {
+      "site": "0x10526d0",
+      "before": "0010a0e3",
+      "after": "0110a0e3",
+      "role": "Show native live PvP diamond balance"
+    },
+    {
+      "site": "0x104309c",
+      "symbol": "offlineCoinRequest",
+      "before": "18482de9",
+      "after": "1f1727ea"
+    },
+    {
+      "site": "0x10554e8",
+      "symbol": "offlineTrainingFinishPrompt",
+      "before": "a3c700eb",
+      "after": "1ace26eb"
+    },
+    {
+      "site": "0x10873d4",
+      "symbol": "offlineFinishCurrencyText",
+      "before": "1d9011fa",
+      "after": "6d0626eb"
+    },
+    {
+      "site": "0x10870e0",
+      "before": "f0482de9",
+      "after": "380726ea"
+    },
+    {
+      "site": "0x104305c",
+      "symbol": "offlineBattleRequest",
+      "before": "f0482de9",
+      "after": "681727ea"
+    },
+    {
+      "site": "0x10448e8",
+      "before": "f04b2de9",
+      "after": "531127ea"
+    },
+    {
+      "site": "0x1056354",
+      "before": "f04f2de9",
+      "after": "caca26ea"
+    },
+    {
+      "site": "0x1059300",
+      "before": "f04f2de9",
+      "after": "ebbe26ea"
+    },
+    {
+      "site": "0x104fa50",
+      "before": "30482de9",
+      "after": "25e526ea"
+    },
+    {
+      "site": "0x10283e4",
+      "before": "f04f2de9",
+      "after": "ce8227ea"
+    },
+    {
+      "site": "0x100c6ec",
+      "before": "f04f2de9",
+      "after": "18f227ea"
+    },
+    {
+      "site": "0x102e664",
+      "before": "a5f2e1ea",
+      "after": "1eff2fe1",
+      "role": "Omit decorative PvP ready-card flash after state update"
+    },
+    {
+      "site": "0x102f858",
+      "before": "72eee1eb",
+      "after": "0000a0e1",
+      "role": "Omit persistent decorative PvP skill/counter word flash"
+    },
+    {
+      "site": "0x1021f4c",
+      "before": "3e8027ea",
+      "after": "129c27ea"
+    }
+  ],
+  "economy": {
+    "prices": [
+      {
+        "receive_starcoins": 5000,
+        "spend_diamonds": 110
+      },
+      {
+        "receive_starcoins": 20000,
+        "spend_diamonds": 440
+      },
+      {
+        "receive_starcoins": 75000,
+        "spend_diamonds": 1650
+      }
+    ],
+    "training_types": 12,
+    "old_resource_sha256": "9dc318662c0d9ff7d4fc8116befc82fad81ee0f9aecf53ecafa518799cb03d81",
+    "resource_sha256": "14cbc80c4505424c069aa5d7965435b95a6d9fae37b818fd857073157bbd4791",
+    "resource_size": 23646208,
+    "scenes": {
+      "changes": [
+        {
+          "group": 1,
+          "name": "PROPERTIES\\LAWNSTRINGS.TXT",
+          "original_length": 44,
+          "page_lengths": [
+            21,
+            23
+          ],
+          "text_preserved": true
+        }
+      ],
+      "predecessor_sha256": "14cbc80c4505424c069aa5d7965435b95a6d9fae37b818fd857073157bbd4791",
+      "resource_sha256": "5330fec84dfbe645bcd921870b7ec69b165221783544d69f796a749b00d1632f",
+      "resource_size": 24162304
+    },
+    "rig": {
+      "changes": [
+        {
+          "name": "PACKAGES\\ZOMBIETYPES.RTON",
+          "zombie": "pvp_change",
+          "old_rig": "ZombieAnimRig_EgyptBasic",
+          "new_rig": "ZombieAnimRig_IceAgeBasic",
+          "zombie_class_preserved": true
+        }
+      ],
+      "predecessor_sha256": "5330fec84dfbe645bcd921870b7ec69b165221783544d69f796a749b00d1632f",
+      "resource_sha256": "f4bb224f2eda6b0b5000a4445d2de71923504955ffede68807534c0ff8df2ee1",
+      "resource_size": 24207360
+    }
+  },
+  "localization": {
+    "offset": "0xd07ae8",
+    "before": "73e133ea",
+    "after": "e5e933ea",
+    "stub_offset": "0x1832284",
+    "stub_va": "0x1a02284",
+    "stub_size": 2676,
+    "strings": {
+      "V38_PVP_5000": "\u83b7\u5f975000\u661f\u5e01",
+      "V38_PVP_20000": "\u83b7\u5f9720000\u661f\u5e01",
+      "V38_PVP_75000": "\u83b7\u5f9775000\u661f\u5e01",
+      "V38_NOTICE_TITLE": "\u7cfb\u7edf\u63d0\u793a",
+      "V38_PVP_SAVE_ERROR": "\u672c\u5730\u6570\u636e\u4fdd\u5b58\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5",
+      "V38_PVP_CAPACITY": "\u8bad\u7ec3\u5bb9\u91cf\u5df2\u6ee1",
+      "V38_PVP_LOCKED": "\u57fa\u5730\u7b49\u7ea7\u4e0d\u8db3\uff0c\u5c1a\u672a\u89e3\u9501\u8be5\u50f5\u5c38",
+      "V39_ADMIN_GRANTED": "\u83b7\u5f97100\u94bb\u77f3\u548c10000\u91d1\u5e01\uff0c\u53ef\u518d\u6b21\u8f93\u5165 admin \u9886\u53d6",
+      "V39_ADMIN_LIMIT": "\u91d1\u5e01\u6216\u94bb\u77f3\u5df2\u63a5\u8fd1\u4e0a\u9650\uff0c\u6682\u65f6\u65e0\u6cd5\u9886\u53d6",
+      "GEMS_RESTORE_TITLE": "\u5151\u6362\u7801",
+      "GEMS_RESTORE_TIP": "\u8bf7\u8f93\u5165\u5151\u6362\u7801",
+      "GEMS_RESTORE_DES": "\u8f93\u5165\u5151\u6362\u7801\u9886\u53d6\u5956\u52b1",
+      "GEMS_RESTORE_BUTTON_TITLE": "\u5151\u6362",
+      "V41_GEMS_REQUIRED": "\u94bb\u77f3\u4e0d\u8db3\uff0c\u8bf7\u5148\u5151\u6362\u94bb\u77f3"
+    },
+    "role": "Exchange-only localization keys use UTF-32 strings; unrelated localization falls back to original lookup"
+  },
+  "entry": "0x1a02cf8",
+  "symbols": {
+    "offline.cpp": "0x0",
+    "offlineEconomyInit": "0x1a030d8",
+    "offlineCoinComplete": "0x1a035d0",
+    "offlineCoinGrant": "0x1a0368c",
+    "offlineCoinRequest": "0x1a03698",
+    "offlineCoinClick": "0x1a03914",
+    "offlineTraining": "0x1a03a18",
+    "offlineTrainingTick": "0x1a04290",
+    "offlineTrainingDisplay": "0x1a04550",
+    "offlineTrainingClick": "0x1a047e8",
+    "offlineTrainingFinishPrompt": "0x1a048f8",
+    "offlineFinishCurrencyText": "0x1a04978",
+    "offlineTrainingFinish": "0x1a04a10",
+    "offlineTrainingFinishConfirm": "0x1a04c74",
+    "offlineRedeem": "0x1a04d24",
+    "offlineCodeCard": "0x1a04ec8",
+    "offlineBankReady": "0x1a04f0c",
+    "offlineMapArmyPrepare": "0x1a05094",
+    "offlineMapArmyReady": "0x1a0511c",
+    "offlineGarden": "0x1a02cf8",
+    "offlineOwn": "0x1a051d0",
+    "offlineSave": "0x1a055e8",
+    "offlineInfo": "0x1a05a1c",
+    "offlineAttack": "0x1a05f84",
+    "offlineBattleRequest": "0x1a063f8",
+    "offlineBattleResult": "0x1a064e4",
+    "offlineResultContinue": "0x1a0694c",
+    "offlineBoardLoad": "0x1a06c50"
+  },
+  "runtime_verified": false
+}

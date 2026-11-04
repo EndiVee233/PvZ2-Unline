@@ -1,0 +1,14 @@
+{
+  "changes": [
+    {
+      "name": "PACKAGES\\ZOMBIETYPES.RTON",
+      "zombie": "pvp_change",
+      "old_rig": "ZombieAnimRig_EgyptBasic",
+      "new_rig": "ZombieAnimRig_IceAgeBasic",
+      "zombie_class_preserved": true
+    }
+  ],
+  "predecessor_sha256": "5330fec84dfbe645bcd921870b7ec69b165221783544d69f796a749b00d1632f",
+  "resource_sha256": "f4bb224f2eda6b0b5000a4445d2de71923504955ffede68807534c0ff8df2ee1",
+  "resource_size": 24207360
+}

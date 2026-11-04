@@ -1,0 +1,10 @@
+{
+  "native_death_counter_and_serializer_executed": true,
+  "three_with_one_surviving_deployment_returns_three": true,
+  "three_with_one_death_returns_two": true,
+  "native_held_only_filter_and_map_refresh_executed": true,
+  "map_capacity_restored_before_cells_created": true,
+  "map_displays_three_and_empty_cells": true,
+  "previous_continuous_battle_checks": true,
+  "runtime_game_verified": false
+}
