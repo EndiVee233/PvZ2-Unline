@@ -16,6 +16,7 @@ e.stub(0x1042fe8,M,0x70000001,3,0)
 name=e.alloc(4);e.string(name,'arena_battle_test');e.run('offlineBoardLoad',BOARD,name,0xffffffff);e.live()
 # Native PVPZombieSeedPacket setter is the same one used by bank population.
 e.run(0x1030a50,M+0x14300,39)
+e.put(e.get(M+0xd4)+4,1) # original result request reports one dead unit
 e.stub(0x10448e8,M,0,0x70000001,2);e.run('offlineTrainingTick',e.get(M+0x20))
 assert e.held()==39 and e.windows==1,'unplayed units were consumed at result'
 e.stub(0x104fa50,M+0x12000,0)
@@ -24,6 +25,7 @@ e.put(M+0x7000+0x6bc,0)
 e.stub(0x1042fe8,M,0x70000002,3,0);e.run('offlineBoardLoad',BOARD,name,0xffffffff);e.live()
 assert e.army()==[(201,39)]
 e.run(0x1030a50,M+0x14300,39) # no zombie was placed in this battle
+e.put(M+0xd8,e.get(M+0xd4)) # zero deaths
 e.stub(0x10448e8,M,0,0x70000002,2);e.run('offlineTrainingTick',e.get(M+0x20))
 assert e.held()==39,'ending without deploying consumed units'
 result=dict(native_packet_setter_and_getter_executed=True,forty_units_minus_one_is_thirty_nine=True,next_neighbor_bank_gets_thirty_nine=True,no_deployment_no_consumption=True,mid_battle_training_preserved=True,training_display_and_confirm_same_quote=True,runtime_game_verified=False)

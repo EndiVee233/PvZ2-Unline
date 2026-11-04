@@ -28,7 +28,7 @@ static void completeLocalBattle(U b);
 // S2C attack replies normally translate owned aliases into the numeric
 // ArenaZombieInfoData vector at +d4. The native zombie bank reads this vector,
 // not TrainingData. Use the native alias converter and vector assignment.
-static U deployedArmy[TRAIN_COUNT],deployedSlot[TRAIN_COUNT],deployedUser;
+static U deployedArmy[TRAIN_COUNT],deployedSlot[TRAIN_COUNT],deployedType[TRAIN_COUNT],deployedUser;
 static void bindBattleArmy(U b,P m){
  alignas(8) U entries[TRAIN_COUNT][2]{};U count=0,total=0;
  deployedUser=owner(b);for(U i=0;i<TRAIN_COUNT;++i)deployedArmy[i]=0;
@@ -38,6 +38,7 @@ static void bindBattleArmy(U b,P m){
   if(!type[1]){log(b,"army-alias-rejected",i,held);continue;}
   deployedSlot[i]=count;entries[count][0]=type[1];entries[count++][1]=held;total+=held;
   deployedArmy[i]=held;
+  deployedType[i]=type[1];
   starter(b,m,TRAIN_SPECS[i].name,held,false);
  }
  P first=reinterpret_cast<P>(entries);P vector[3]={first,first+count*8,first+sizeof(entries)};
@@ -157,6 +158,14 @@ extern "C" void offlineBankReady(U b,P module){
  if(!regular(b)||arenaUser!=owner(b)||!npc(arenaNpc)||!board||!at<P>(board,0xc4)||!same(reinterpret_cast<const char*>(at<P>(board,0xc4)),"arena_battle_test"))return;
  armyBankModule=module;armyBankBoard=at<P>(app,0x6bc);log(b,"battle-bank-ready");
 }
+extern "C" void offlineMapArmyPrepare(U b,P map){
+ P m=manager(b);if(!regular(b)||!ensureEconomy(b,m))return;
+ settleTraining(b,m);applyEconomy(b,m);
+}
+extern "C" void offlineMapArmyReady(U b,P map){
+ if(!regular(b)||!at<P>(map,0x2d4))return;
+ call<void>(b,0x100918c,map);log(b,"map-army-refreshed");
+}
 static void finishArenaBoard(U b){
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0),board=at<P>(app,0x6bc);
  if(board&&at<P>(board,0xc4)&&same(reinterpret_cast<const char*>(at<P>(board,0xc4)),"arena_battle_test")&&at<U>(board,0xc0)!=9){
@@ -254,6 +263,8 @@ static bool persistBattleArmy(U b,P m){
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
  if(!armyBankModule||armyBankBoard!=at<P>(app,0x6bc))return false;
  P objects=call<P>(b,0x11d74b4),bank=call<P>(b,0x1da034,objects,armyBankModule+0x50);if(!bank)return false;
+ P losses=at<P>(m,0xd4),end=at<P>(m,0xd8);
+ if(end<losses||U(end-losses)>40*8||U(end-losses)%8)return false;
  Economy next=economyRuntime.state;
  for(U i=0;i<TRAIN_COUNT;++i){
   if(!deployedArmy[i])continue;
@@ -261,8 +272,13 @@ static bool persistBattleArmy(U b,P m){
   alignas(8) U weak[2]{};call<void>(b,0x895f0c,weak,bank,deployedSlot[i]);
   P card=call<P>(b,0x1da034,objects,weak);call<void>(b,0x1d9bb4,weak,0,0,0);
   if(!card)return false;U remaining=at<U>(card,0x154);log(b,"battle-card-remaining",i,remaining);
-  if(remaining>deployedArmy[i])return false;U spent=deployedArmy[i]-remaining;
-  if(spent>next.trains[i].held)return false;next.trains[i].held-=spent;
+  if(remaining>deployedArmy[i])return false;U placed=deployedArmy[i]-remaining,dead=0;
+  // ArenaBattle records deaths before Board removes surviving zombies.
+  // Unplayed and surviving deployed units both return to the local army.
+  for(P p=losses;p<end;p+=8)if(at<U>(p,0)==deployedType[i]){U n=at<U>(p,4);if(n>40||dead>40-n)return false;dead+=n;}
+  if(dead>placed||dead>next.trains[i].held)return false;
+  next.trains[i].held-=dead;log(b,"battle-army-deaths",i,dead);
+  if(placed>dead)log(b,"battle-army-recalled",i,placed-dead);
  }
  ++next.sequence;if(!saveEconomy(b,next))return false;economyRuntime.state=next;log(b,"battle-army-saved");return true;
 }

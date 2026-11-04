@@ -91,7 +91,7 @@ e.stub(0x1042fe8,M,0x70000001,2,0);assert e.starts==1
 e.put(M+0x5000+0x18,0x42c80000);e.stub(0x104305c,M,2);assert e.get(MODULE+0x40)==0x42c80000
 # One newly completed unit is not part of this battle's deployed army.
 e.train();e.advance(31);e.run('offlineTrainingTick',e.get(M+0x20));assert e.held()==2
-e.put(M+0xd8,e.get(M+0xd4));e.put(MODULE+0x78,1);e.stub(0x10448e8,M,1,0x70000001,2)
+e.put(e.get(M+0xd4)+4,1);e.put(MODULE+0x78,1);e.stub(0x10448e8,M,1,0x70000001,2)
 assert e.held()==2 and e.windows==0 # apply to engine on the deferred update
 e.run('offlineTrainingTick',e.get(M+0x20));assert e.held()==1 and e.windows==1
 assert e.get(M+0x12000+0xbc)==1,'native response did not attach earned stars'
