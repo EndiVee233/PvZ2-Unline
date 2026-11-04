@@ -8,7 +8,7 @@ from rebuild_bootstrap_dex import rebuild_bootstrap
 from elftools.elf.elffile import ELFFile
 from keystone import Ks,KS_ARCH_ARM,KS_MODE_ARM
 from prepare_offline_neighbors import generate
-ROOT=Path(__file__).resolve().parents[1];VERSION=56 if '--v56' in sys.argv else 55 if '--v55' in sys.argv else 54 if '--v54' in sys.argv else 53 if '--v53' in sys.argv else 52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
+ROOT=Path(__file__).resolve().parents[1];VERSION=57 if '--v57' in sys.argv else 56 if '--v56' in sys.argv else 55 if '--v55' in sys.argv else 54 if '--v54' in sys.argv else 53 if '--v53' in sys.argv else 52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
 OUT=ROOT/f'work/pvp-v{VERSION}';OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -50,6 +50,7 @@ while len(b)%4:b.append(0)
 entry=tail['p_vaddr']+len(b)-tail['p_offset']
 compiler='Y:/Android/Sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/windows-x86_64/bin/clang++.exe'
 flags=['--target=armv7a-linux-androideabi21','-marm','-Os','-fPIC','-ffreestanding','-fno-builtin','-fno-stack-protector','-fno-exceptions','-fno-rtti','-fno-unwind-tables','-fno-asynchronous-unwind-tables','-I'+str(OUT/'generated')]
+if VERSION>=57:flags.append('-DPVP_RECT_SKILLS')
 subprocess.run([compiler,*flags,'-c',str(ROOT/'src/offline-pvp/offline.cpp'),'-o',str(OUT/'offline.o')],check=True)
 # A flat payload has no dynamic relocation table. Absolute pointer constants
 # would work at base zero in analysis and crash after Android relocates the SO.
@@ -203,6 +204,22 @@ if VERSION>=55:
  site=0x10402cc;before=bytes(b[site:site+4]);assert before==original[site:site+4]
  redirect(site,0x10404b4)
 
+if VERSION>=57:
+ def range_call(site,target,expected,name):
+  assert bytes(b[site:site+4])==bl(site,expected),hex(site)
+  b[site:site+4]=bl(site,target);patches.append(dict(site=hex(site),symbol=name))
+ for site,name in [(0x10067f0,'offlineFoodTargets'),(0x1007924,'offlineRageTargets')]:
+  target=custom_stub('push {r4,lr}\nsub sp,sp,#8\nstr r3,[sp]\nmov r3,r2\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl #{symbols[name]}\nadd sp,sp,#8\npop {{r4,pc}}')
+  range_call(site,target,0xbf52c0,name)
+ for site,name in [(0x1001a60,'offlineAidContains'),(0x10060cc,'offlineFogContains')]:patch(site,name,original[site:site+4],True)
+ target=custom_stub('push {r4,lr}\nmov r3,r2\nmov r2,r0\nmov r1,r6\n'+baseasm()+f'bl #{symbols["offlineSkillCursorTargets"]}\npop {{r4,pc}}')
+ range_call(0x105a220,target,0xbf52c0,'offlineSkillCursorTargets')
+ target=custom_stub('push {r4,lr}\nsub sp,sp,#8\nstr r3,[sp]\nstr r5,[sp,#4]\nmov r3,r2\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlineSkillScope"]}\nadd sp,sp,#8\npop {{r4,pc}}')
+ range_call(0x209a90,target,0x207088,'offlineSkillScope')
+ # Three arguments including base; do not use the five-argument shift stub.
+ target=custom_stub('push {r4,lr}\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlineSkillScopeRect"]}\npop {{r4,pc}}')
+ range_call(0x207298,target,0x1167128,'offlineSkillScopeRect')
+
 site=0x1021f4c;word=struct.unpack_from('<I',b,site)[0];assert word>>24==0xea
 delta=word&0xffffff
 if delta&0x800000:delta-=1<<24
@@ -227,6 +244,7 @@ subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_economy_arm.py'),
 subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_redeem_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=41:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_coin_click_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=43:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v56_arm.py' if VERSION>=56 else 'scripts/check_offline_pvp_v55_arm.py' if VERSION>=55 else 'scripts/check_offline_pvp_v54_arm.py' if VERSION>=54 else 'scripts/check_offline_pvp_v52_arm.py' if VERSION>=52 else 'scripts/check_offline_pvp_v51_arm.py' if VERSION>=51 else 'scripts/check_offline_pvp_v50_arm.py' if VERSION>=50 else 'scripts/check_offline_pvp_v48_arm.py' if VERSION>=48 else 'scripts/check_offline_pvp_v47_arm.py' if VERSION>=47 else 'scripts/check_offline_pvp_v46_arm.py' if VERSION>=46 else 'scripts/check_offline_pvp_v45_arm.py' if VERSION>=45 else 'scripts/check_offline_pvp_scenes_arm.py')),str(OUT)],cwd=ROOT,check=True)
+if VERSION>=57:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v57_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if '--native-only' in sys.argv:raise SystemExit(0)
 scratch=Path(sys.argv[sys.argv.index('--intermediate-dir')+1]).resolve() if '--intermediate-dir' in sys.argv else OUT
 scratch.mkdir(parents=True,exist_ok=True)

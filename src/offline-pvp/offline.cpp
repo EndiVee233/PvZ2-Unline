@@ -2,6 +2,9 @@
 using U=unsigned;using P=unsigned char*;using I=int;using U64=unsigned long long;
 template<class T>T& at(P p,U o){return *reinterpret_cast<T*>(p+o);}
 template<class R,class...A>R call(U b,U o,A...a){return reinterpret_cast<R(*)(A...)>(b+o)(a...);}
+#ifdef PVP_RECT_SKILLS
+#include "skill_ranges.h"
+#endif
 #include "npc_presets.h"
 static P manager(U b){return call<P>(b,0x7fa754);}
 static P profile(U b){return call<P>(b,0x7a98dc,call<P>(b,0x1df738));}
