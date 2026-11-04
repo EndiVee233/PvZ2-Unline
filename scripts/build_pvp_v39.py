@@ -8,7 +8,7 @@ from rebuild_bootstrap_dex import rebuild_bootstrap
 from elftools.elf.elffile import ELFFile
 from keystone import Ks,KS_ARCH_ARM,KS_MODE_ARM
 from prepare_offline_neighbors import generate
-ROOT=Path(__file__).resolve().parents[1];VERSION=57 if '--v57' in sys.argv else 56 if '--v56' in sys.argv else 55 if '--v55' in sys.argv else 54 if '--v54' in sys.argv else 53 if '--v53' in sys.argv else 52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
+ROOT=Path(__file__).resolve().parents[1];VERSION=58 if '--v58' in sys.argv else 57 if '--v57' in sys.argv else 56 if '--v56' in sys.argv else 55 if '--v55' in sys.argv else 54 if '--v54' in sys.argv else 53 if '--v53' in sys.argv else 52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
 OUT=ROOT/f'work/pvp-v{VERSION}';OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -38,6 +38,14 @@ with zipfile.ZipFile(BASE) as src:
   extra=extra.replace('    :v43_older_versions', f'    :v43_older_versions\n\n    const-string v0, "{previous}"\n    invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z\n    move-result v0\n    if-eqz v0, :v47_older_versions\n    const/4 v0, 0x1\n    return v0\n    :v47_older_versions')
  marker='.offline-pvp-v47' if VERSION>=47 else '.offline-pvp-v43' if VERSION>=43 else '.offline-economy-v38'
  dex=rebuild_bootstrap(src.read('classes8.dex'),OUT/'bootstrap',{oldsha:newsha,method:method+extra,'.offline-defense-v35':marker,hex(len(old_resource)):hex(len(resource))},ROOT/'tools/apktool.jar')
+if VERSION>=58:
+ from prepare_offline_pvp_skill_art import prepare as prepare_art
+ with zipfile.ZipFile(BASE) as art_src:old_art=art_src.read('assets/reconstruction/zombie2-pvp.rsb.smf')
+ skill_art,art_record=prepare_art(old_art,OUT/'generated');economy_record['skill_art']=art_record
+ old_art_sha=art_record['predecessor_sha256'];new_art_sha=art_record['sha256']
+ art_method='.method private static isPvpResourcePredecessor(Ljava/lang/String;)Z\n    .registers 2'
+ art_extra=f'\n\n    const-string v0, "{old_art_sha}"\n    invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z\n    move-result v0\n    if-eqz v0, :v58_art_predecessors\n    const/4 v0, 0x1\n    return v0\n    :v58_art_predecessors'
+ dex=rebuild_bootstrap(dex,OUT/'bootstrap-art',{old_art_sha:new_art_sha,art_method:art_method+art_extra,'.pvp-skills-v32-'+old_art_sha[:12]:'.pvp-art-v58-'+new_art_sha[:12],hex(len(old_art)):hex(len(skill_art))},ROOT/'tools/apktool.jar')
 strings.update(V39_ADMIN_GRANTED='获得100钻石和10000金币，可再次输入 admin 领取',
  V39_ADMIN_LIMIT='金币或钻石已接近上限，暂时无法领取',
  GEMS_RESTORE_TITLE='兑换码',GEMS_RESTORE_TIP='请输入兑换码',
@@ -253,6 +261,7 @@ with zipfile.ZipFile(BASE) as src,zipfile.ZipFile(unsigned,'w',allowZip64=True) 
  for item in src.infolist():
   if item.filename.startswith('META-INF/'):continue
   if item.filename=='lib/armeabi/libSrc.so':dst.writestr(item,b)
+  elif VERSION>=58 and item.filename=='assets/reconstruction/zombie2-pvp.rsb.smf':dst.writestr(item,skill_art)
   elif item.filename=='classes8.dex':dst.writestr(item,dex)
   elif item.filename=='assets/reconstruction/dynamic-original-speed.rsb.smf':dst.writestr(item,resource)
   else:
@@ -263,7 +272,7 @@ subprocess.run(['java','-jar','K:/pvz2-tools/android-build-tools/android-14/lib/
 subprocess.run(['K:/pvz2-tools/android-build-tools/android-14/zipalign.exe','-c','4',str(final)],check=True)
 with zipfile.ZipFile(BASE) as src,zipfile.ZipFile(final) as dst:
  for item in src.infolist():
-  if item.filename.startswith('META-INF/') or item.filename in ('lib/armeabi/libSrc.so','classes8.dex','assets/reconstruction/dynamic-original-speed.rsb.smf'):continue
+  if item.filename.startswith('META-INF/') or item.filename in ('lib/armeabi/libSrc.so','classes8.dex','assets/reconstruction/dynamic-original-speed.rsb.smf') or (VERSION>=58 and item.filename=='assets/reconstruction/zombie2-pvp.rsb.smf'):continue
   assert dst.getinfo(item.filename).CRC==item.CRC and dst.getinfo(item.filename).file_size==item.file_size,item.filename
 record=dict(apk=str(final.relative_to(ROOT)),sha256=hashlib.file_digest(final.open('rb'),'sha256').hexdigest(),patches=patches,economy=economy_record,localization=localization,entry=hex(entry),symbols={k:hex(v) for k,v in symbols.items() if k.startswith('offline')},runtime_verified=False)
 (OUT/'build.json').write_text(json.dumps(record,indent=2)+'\n',encoding='utf8');print(json.dumps(record))
