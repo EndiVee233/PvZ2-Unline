@@ -20,6 +20,8 @@
 
 ## 下载安装
 
+已验收的离线 PVP 阶段版见 [v56 发布页](https://github.com/EndiVee233/pvz2-lostcity-wsa/releases/tag/v1.7.5-v56)，验证范围见 [v56 记录](docs/recovery/pvp-v56/result.md)。
+
 到 [Releases](../../releases) 下载 `PvZ2-LostCity-1.7.5.apk`：
 
 ```bat

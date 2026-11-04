@@ -1,0 +1,26 @@
+{
+  "version": 56,
+  "user_confirmed": [
+    "Dave scouting stays in preview",
+    "Preview attack starts without crash or duplicate plants",
+    "Zombie deployment",
+    "Energy refund readable without persistent flash",
+    "Zombie card return without persistent flash",
+    "Result and return to map"
+  ],
+  "log_confirmed": [
+    "reason-1 starts current preview without a second level load",
+    "local battle result and native result window",
+    "board finish and return to map"
+  ],
+  "save_restored": true,
+  "verified_save_files": 33,
+  "private_data_uploaded": false,
+  "full_offline_pvp_complete": false,
+  "runtime_untested": [
+    "fresh-account first grant",
+    "building level after cold restart",
+    "Dave win after cold restart"
+  ],
+  "apk_sha256": "0405fecaccf77735aaab6c2f139c5c68b722c3d871e97c5db71106f62c429543"
+}
