@@ -23,7 +23,13 @@ static void starter(U b,P m,const char*name,U count,bool skill){
 }
 static void inspectArena(U b);
 static void completeLocalBattle(U b);
+#include "progression_presets.h"
+static U campCapacity(U level){return CAMP_SPECS[level>=1&&level<=20?level-1:0].capacity;}
+static void applyProgression(U b,P m);
+static void tickProgression(U b);
+static U finishProgressionWithGems(U b,P timer);
 #include "economy.h"
+#include "progression.h"
 #include "redeem.h"
 // S2C attack replies normally translate owned aliases into the numeric
 // ArenaZombieInfoData vector at +d4. The native zombie bank reads this vector,
@@ -228,6 +234,10 @@ extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
  if(!n&&id==0&&reason==4){const NpcPreset* selected=npc(at<U>(m,0x104));if(selected&&selected->evil&&selected->zone==at<U>(m,0xfc)&&selected->position==at<U>(m,0xf8))n=selected;}
  if(n&&regular(b)){
   log(b,"attack-request-reason",id,reason);
+  // The special-house handler sets this server-driven preparation flag.
+  // ArenaBattle then stays in state 1, hiding banks until an online start
+  // response. A local session starts itself, exactly as neighbor battles do.
+  if(n->evil){at<unsigned char>(m,0x102)=0;at<unsigned char>(m,0x103)=0;at<U>(m,0xa8)=1;}
   // Some native preview buttons leave +100 set when sending reason 2.
   // Normalize from the actual request before evaluating the duplicate guard.
   if(reason==3)at<unsigned char>(m,0x100)=1;
@@ -258,7 +268,7 @@ extern "C" void offlineBattleRequest(U b,P m,U action){
  }
  call<void>(b,0xf79d74);P net=call<P>(b,0xf7a070);call<void>(b,0xf8c860,net,at<U>(m,0xe4),at<U>(m,0xf4),at<U>(m,0xa8),action);
 }
-static bool persistBattleArmy(U b,P m){
+static bool persistBattleArmy(U b,P m,bool daveVictory=false){
  if(!ensureEconomy(b,m)||deployedUser!=owner(b))return false;
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
  if(!armyBankModule||armyBankBoard!=at<P>(app,0x6bc))return false;
@@ -275,17 +285,21 @@ static bool persistBattleArmy(U b,P m){
   if(remaining>deployedArmy[i])return false;U placed=deployedArmy[i]-remaining,dead=0;
   // ArenaBattle records deaths before Board removes surviving zombies.
   // Unplayed and surviving deployed units both return to the local army.
-  for(P p=losses;p<end;p+=8)if(at<U>(p,0)==deployedType[i]){U n=at<U>(p,4);if(n>40||dead>40-n)return false;dead+=n;}
+  for(P p=losses;p<end;p+=8)if(at<U>(p,0)==deployedType[i]){U n=at<U>(p,4);if(n>100||dead>100-n)return false;dead+=n;}
   if(dead>placed||dead>next.trains[i].held)return false;
   next.trains[i].held-=dead;log(b,"battle-army-deaths",i,dead);
   if(placed>dead)log(b,"battle-army-recalled",i,placed-dead);
  }
- ++next.sequence;if(!saveEconomy(b,next))return false;economyRuntime.state=next;log(b,"battle-army-saved");return true;
+ if(daveVictory)next.daveWins=1;
+ ++next.sequence;if(!saveEconomy(b,next))return false;economyRuntime.state=next;
+ if(daveVictory){at<U>(m,0x15c)=1;log(b,"evil-dave-defeated");}
+ log(b,"battle-army-saved");return true;
 }
 extern "C" U offlineBattleResult(U b,P m,U stars,U id,U kind){
  if(!arenaModule(b))return 0;
  if(resultSaved)return 1;
- if(!persistBattleArmy(b,m)){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return 1;}
+ const NpcPreset*n=npc(arenaNpc);
+ if(!persistBattleArmy(b,m,n&&n->evil&&stars>0)){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return 1;}
  // The response callback opens the original result window. The unrelated
  // 10485f0 notification tears down the battle and skips that window.
  resultSaved=true;resultAck=true;log(b,"battle-result-local",stars,kind);return 1;
@@ -312,6 +326,7 @@ extern "C" void __aeabi_memclr4(void* p,U n){volatile unsigned char*d=static_cas
 extern "C" void __aeabi_memclr8(void* p,U n){__aeabi_memclr4(p,n);}
 extern "C" void __aeabi_memclr(void* p,U n){__aeabi_memclr4(p,n);}
 extern "C" void __aeabi_memcpy8(void* dst,const void* src,U n){volatile unsigned char*d=static_cast<volatile unsigned char*>(dst);const volatile unsigned char*s=static_cast<const volatile unsigned char*>(src);while(n--)*d++=*s++;}
+extern "C" void __aeabi_memcpy4(void* dst,const void* src,U n){__aeabi_memcpy8(dst,src,n);}
 
 // Record the actual level passed to Board::Load, beyond the request boundary.
 extern "C" void offlineBoardLoad(U b,P board,P name,U seed){
