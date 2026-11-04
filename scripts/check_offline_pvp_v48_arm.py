@@ -9,12 +9,20 @@ class SessionEngine(BattleEngine):
  def __init__(self):
   super().__init__();self.gems=100;self.closed=0;self.prompts=0;self.windows=0;self.starts=0;self.visible={};self.labels={};self.put(BASE+0x18300a4,PM)
  def hook(self,em,a,size,d):
-  off=a-BASE;x,y,z=[em.reg_read(r) for r in (UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2)]
+  off=a-BASE;x,y,z,w=[em.reg_read(r) for r in (UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3)]
   if 0x1086e0c<=off<0x1086e70 or 0x1055474<=off<0x1055518 or 0x108573c<=off<0x1085754 or 0x108d340<=off<0x108d748 or 0x1314548<=off<0x13145f8 or 0x7e96a4<=off<0x7e9738:return
   if a==END+0x300:self.closed+=1;result=0
   elif a==END+0x310:self.visible[x]=y;result=0
   elif a==END+0x330:result=0
   elif off==0x14ea230:result=0 # native wide-string disposal, not UI behavior
+  elif 0x895f0c<=off<0x895fc0:return
+  elif 0x1030a50<=off<0x1030a6c:return
+  elif off==0x9760a8:
+   assert y==M+0x14100 and z==0
+   self.put(x,M+0x14200);self.put(x+4,0);result=x
+  elif off==0x975d78:result=self.get(x)
+  elif off==0x1d9bb4:self.put(x,z);self.put(x+4,w);result=x
+  elif off==0x1da034 and y not in self.products:result=self.get(y)
   elif off==0x14eae74:
    self.labels[x]=bytes(em.mem_read(self.get(y),160)).decode('utf-32-le').split('\0')[0];result=x
   elif off==0x747d00:
@@ -41,6 +49,8 @@ class SessionEngine(BattleEngine):
   em.reg_write(UC_ARM_REG_R0,result);em.reg_write(UC_ARM_REG_PC,em.reg_read(UC_ARM_REG_LR)&~1)
  def live(self):
   self.put(M+0x7000+0x6bc,BOARD);self.string(BOARD+0xc4,'arena_battle_test');self.put(BOARD+0x938,M+0xf100);self.put(BOARD+0x7f4,1)
+  self.products[M+0x14000+0x50]=M+0x14100;self.put(M+0x14200+8,M+0x14300);self.put(M+0x14200+12,0)
+  self.run('offlineBankReady',M+0x14000)
  def training_ui(self):
   ui=self.alloc(0x140);button=self.alloc(0x240);timer=self.alloc(0x240);vtable=self.alloc(0x200)
   self.put(vtable+0x8c,END+0x310);self.put(vtable+0xa4,BASE+0x1314548);self.put(vtable+0x4c,END+0x330)

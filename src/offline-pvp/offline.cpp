@@ -28,7 +28,7 @@ static void completeLocalBattle(U b);
 // S2C attack replies normally translate owned aliases into the numeric
 // ArenaZombieInfoData vector at +d4. The native zombie bank reads this vector,
 // not TrainingData. Use the native alias converter and vector assignment.
-static U deployedArmy[TRAIN_COUNT],deployedUser;
+static U deployedArmy[TRAIN_COUNT],deployedSlot[TRAIN_COUNT],deployedUser;
 static void bindBattleArmy(U b,P m){
  alignas(8) U entries[TRAIN_COUNT][2]{};U count=0,total=0;
  deployedUser=owner(b);for(U i=0;i<TRAIN_COUNT;++i)deployedArmy[i]=0;
@@ -36,7 +36,7 @@ static void bindBattleArmy(U b,P m){
   P name=nullptr;narrow(b,reinterpret_cast<P>(&name),TRAIN_SPECS[i].name);
   U type[2]{};call<void>(b,0xfb6ef0,type,&name);release(b,name);
   if(!type[1]){log(b,"army-alias-rejected",i,held);continue;}
-  entries[count][0]=type[1];entries[count++][1]=held;total+=held;
+  deployedSlot[i]=count;entries[count][0]=type[1];entries[count++][1]=held;total+=held;
   deployedArmy[i]=held;
   starter(b,m,TRAIN_SPECS[i].name,held,false);
  }
@@ -145,10 +145,17 @@ static void preset(U b,P m,const NpcPreset&n){
 static U arenaNpc,arenaUser;
 static bool resultAck,exitAck;
 static bool resultSaved;
+static P armyBankModule,armyBankBoard;
 static P arenaModule(U b){
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);P board=at<P>(app,0x6bc);
  if(!board||!regular(b)||!at<P>(board,0xc4)||!same(reinterpret_cast<const char*>(at<P>(board,0xc4)),"arena_battle_test")||arenaUser!=owner(b)||!npc(arenaNpc))return nullptr;
  P modules=at<P>(board,0x938);return modules?call<P>(b,0x43af38,modules,call<P>(b,0x108a164)):nullptr;
+}
+extern "C" void offlineBankReady(U b,P module){
+ P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
+ P board=at<P>(app,0x6bc);
+ if(!regular(b)||arenaUser!=owner(b)||!npc(arenaNpc)||!board||!at<P>(board,0xc4)||!same(reinterpret_cast<const char*>(at<P>(board,0xc4)),"arena_battle_test"))return;
+ armyBankModule=module;armyBankBoard=at<P>(app,0x6bc);log(b,"battle-bank-ready");
 }
 // Use the successful server-response paths. In particular the attack callback
 // preserves the native pre-load notifications. The debug menu helper skips
@@ -167,6 +174,7 @@ static bool arenaPending(U b,const char*level,U mode){
 }
 static void loadArena(U b,P m,const char*level,U mode){
  resultSaved=false;resultAck=false;exitAck=false;
+ armyBankModule=nullptr;armyBankBoard=nullptr;
  requestedArenaView=at<unsigned char>(m,0x100);
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
  const U offset=mode==1?0xa0:0xa4;
@@ -233,11 +241,16 @@ extern "C" void offlineBattleRequest(U b,P m,U action){
 }
 static bool persistBattleArmy(U b,P m){
  if(!ensureEconomy(b,m)||deployedUser!=owner(b))return false;
- P a=at<P>(m,0xd4),e=at<P>(m,0xd8);if(e<a||U(e-a)>40*8||U(e-a)%8)return false;
+ P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
+ if(!armyBankModule||armyBankBoard!=at<P>(app,0x6bc))return false;
+ P objects=call<P>(b,0x11d74b4),bank=call<P>(b,0x1da034,objects,armyBankModule+0x50);if(!bank)return false;
  Economy next=economyRuntime.state;
  for(U i=0;i<TRAIN_COUNT;++i){
-  P name=nullptr;narrow(b,reinterpret_cast<P>(&name),TRAIN_SPECS[i].name);U type[2]{};call<void>(b,0xfb6ef0,type,&name);release(b,name);
-  U remaining=0;for(P p=a;p<e;p+=8)if(type[1]&&at<U>(p,0)==type[1])remaining+=at<U>(p,4);
+  if(!deployedArmy[i])continue;
+  if(deployedSlot[i]>=6)return false;
+  alignas(8) U weak[2]{};call<void>(b,0x895f0c,weak,bank,deployedSlot[i]);
+  P card=call<P>(b,0x1da034,objects,weak);call<void>(b,0x1d9bb4,weak,0,0,0);
+  if(!card)return false;U remaining=at<U>(card,0x154);log(b,"battle-card-remaining",i,remaining);
   if(remaining>deployedArmy[i])return false;U spent=deployedArmy[i]-remaining;
   if(spent>next.trains[i].held)return false;next.trains[i].held-=spent;
  }

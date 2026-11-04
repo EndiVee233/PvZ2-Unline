@@ -151,6 +151,9 @@ extern "C" void offlineTrainingDisplay(U b,P ui){
  if(!regular(b)||!ensureEconomy(b,manager(b)))return;
  P button=at<P>(ui,0x108),timer=at<P>(ui,0x10c);if(!button||!timer)return;
  U minutes=trainingMinutes(b),price=call<U>(b,0x1086e0c,timer,minutes);
+ // The old updater writes a cash quote here. Keep the original prompt and
+ // confirmation on the same remaining-minute input as the displayed price.
+ at<U>(timer,0x1f4)=minutes;
  // The regular button and cash overlay have the same native button ID (1).
  // Display the regular button so neither cash labels nor product lookups run.
  call<void>(0,at<U>(at<P>(timer,0),0x8c),timer,0);

@@ -4,6 +4,8 @@
 
 一个面向 Windows Subsystem for Android / 普通 Android 的单文件直装版
 
+离线改造及 PVP 恢复进度见 [恢复记录](docs/recovery/README.md)。PVP 仍在逐项恢复；各版记录区分用户验收结果和仅通过模型检查的候选改动。
+
 ## 特性
 
 - **程序名**：植物大战僵尸2
