@@ -8,7 +8,7 @@ from rebuild_bootstrap_dex import rebuild_bootstrap
 from elftools.elf.elffile import ELFFile
 from keystone import Ks,KS_ARCH_ARM,KS_MODE_ARM
 from prepare_offline_neighbors import generate
-ROOT=Path(__file__).resolve().parents[1];VERSION=44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
+ROOT=Path(__file__).resolve().parents[1];VERSION=45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
 OUT=ROOT/f'work/pvp-v{VERSION}';OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -148,7 +148,7 @@ assert struct.unpack_from('<I',b,28)[0]==52 and struct.unpack_from('<H',b,44)[0]
 subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_economy_arm.py'),str(OUT)],cwd=ROOT,check=True)
 subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_redeem_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=41:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_coin_click_arm.py'),str(OUT)],cwd=ROOT,check=True)
-if VERSION>=43:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_scenes_arm.py'),str(OUT)],cwd=ROOT,check=True)
+if VERSION>=43:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v45_arm.py' if VERSION>=45 else 'scripts/check_offline_pvp_scenes_arm.py')),str(OUT)],cwd=ROOT,check=True)
 if '--native-only' in sys.argv:raise SystemExit(0)
 scratch=Path(sys.argv[sys.argv.index('--intermediate-dir')+1]).resolve() if '--intermediate-dir' in sys.argv else OUT
 scratch.mkdir(parents=True,exist_ok=True)

@@ -52,9 +52,9 @@ static void neighbors(U b,P m){
  starter(b,m,"pvpskill_rage",0,true);
  offlineEconomyInit(b);
  // Server map replies normally supply this result field. -1 suppresses the
- // original Evil Dave introduction altogether. 0 makes the original pending
+ // original Evil Dave introduction altogether. A positive challenge level makes the pending
  // introduction eligible; its callback still records completion itself.
- if(!at<unsigned char>(profile(b),0x780)&&at<I>(m,0x15c)<0)at<I>(m,0x15c)=0;
+ if(at<I>(m,0x15c)<0)at<I>(m,0x15c)=1;
  log(b,"neighbors-ready",at<U>(profile(b),0x75c),U(at<P>(m,0x114)-at<P>(m,0x110))/64);
 }
 struct Pos{U type,row,col;};
@@ -127,15 +127,17 @@ static void preset(U b,P m,const NpcPreset&n){
 static bool sameText(P text,const char* expected){
  if(!text)return false;U i=0;while(expected[i]){if(text[i]!=U(expected[i]))return false;++i;}return text[i]==0;
 }
+static U requestedArenaView;
 static bool arenaPending(U b,const char*level,U mode){
  P g=at<P>(reinterpret_cast<P>(b),0x1835eec);
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
- if(at<U>(app,0x1218)!=mode)return false;
+ if(at<U>(app,0x1218)!=mode||requestedArenaView!=U(at<unsigned char>(manager(b),0x100)))return false;
  P board=at<P>(app,0x6bc);
  return (at<U>(g,0xa24)==6&&sameText(at<P>(g,0xa40),level))||
         (at<U>(g,0x984)==6&&board&&sameText(at<P>(board,0xc4),level));
 }
 static void loadArena(U b,P m,const char*level,U mode){
+ requestedArenaView=at<unsigned char>(m,0x100);
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
  const U offset=mode==1?0xa0:0xa4;
  P name=nullptr;narrow(b,reinterpret_cast<P>(&name),level);
@@ -160,7 +162,7 @@ extern "C" void offlineSave(U b,P network,P json,U zone,U type){
  Store s{};if(capture(b,manager(b)+0x80,s)&&writeStore(b,s)){log(b,"defense-saved",s.positions,s.infos);scene(b,25);}else log(b,"defense-save-failed");
 }
 extern "C" void offlineInfo(U b,P m,U a,U id,U kind){
- const NpcPreset*n=npc(id);if(n&&kind==2&&regular(b)){if(arenaPending(b,"arena_plant_test",1)){log(b,"view-duplicate",id);return;}log(b,"view-neighbor",id,n->count);preset(b,m,*n);loadArena(b,m,"arena_plant_test",1);return;}
+ const NpcPreset*n=npc(id);if(n&&kind==2&&regular(b)){if(arenaPending(b,"arena_battle_test",0)){log(b,"view-duplicate",id);return;}log(b,"view-neighbor",id,n->count);preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;}
  call<void>(b,0xf79d74);P net=call<P>(b,0xf7a070);call<void>(b,0xf87154,net,a,id,kind);
 }
 extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
@@ -169,11 +171,11 @@ extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
  if(!n&&id==0&&reason==4){const NpcPreset* selected=npc(at<U>(m,0x104));if(selected&&selected->evil&&selected->zone==at<U>(m,0xfc)&&selected->position==at<U>(m,0xf8))n=selected;}
  if(n&&regular(b)){
   log(b,"attack-request-reason",id,reason);
-  // Native map scouting uses reason 3 with +100 set. The in-board attack
-  // button clears +100 and sends reason 2. They require different levels.
+  // The ArenaBattle level handles both preview (+100 set) and attack.
+  // ArenaPlant is the editor even when the App mode is changed.
   if(reason==3){
-   if(arenaPending(b,"arena_plant_test",1)){log(b,"view-duplicate",id);return;}
-   preset(b,m,*n);loadArena(b,m,"arena_plant_test",1);return;
+   if(arenaPending(b,"arena_battle_test",0)){log(b,"view-duplicate",id);return;}
+   preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;
   }
   if(arenaPending(b,"arena_battle_test",0)){log(b,"attack-duplicate",id);return;}log(b,"attack-neighbor",id,n->count);preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;}
  call<void>(b,0xf79d74);P net=call<P>(b,0xf7a070);call<void>(b,0xf87710,net,id,reason,at<U>(m,0x104),at<U64>(m,0x108));
@@ -189,6 +191,15 @@ extern "C" void offlineBoardLoad(U b,P board,P name,U seed){
   P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);P m=manager(b);
   call<I>(b,0x147adc,4,"OfflinePvP","board-load name=%s mode=%u view=%u kind=%u",at<P>(name,0),at<U>(app,0x1218),U(at<unsigned char>(m,0x100)),at<U>(m,0xa8));
  }
+ if(regular(b)&&sameText(at<P>(name,0),"arena_battle_test")){
+  P m=manager(b);if(ensureEconomy(b,m)){
+   P camp=at<P>(m,0x20);U held=0;if(camp){P a=at<P>(camp,12),e=at<P>(camp,16);if(a&&e>=a&&U(e-a)<=40*32)for(;a<e;a+=32)held+=at<U>(a,4);}
+   log(b,"army-before-board-load",held,economyRuntime.state.trains[0].held);
+   // A level transition may reset native TrainingData without changing its
+   // camp pointer. Rebind the accepted local queue before seed-bank creation.
+   applyEconomy(b,m);
+  }
+ }
  call<void>(b,0x2258d8,board,name,seed);
 }
 static P loggedArenaBoard;
@@ -196,7 +207,7 @@ static void inspectArena(U b){
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);P board=at<P>(app,0x6bc);
  if(!board){loggedArenaBoard=nullptr;return;}if(board==loggedArenaBoard||!regular(b))return;
  P modules=at<P>(board,0x938);if(!modules)return;
- P battle=call<P>(b,0x43af38,modules,call<P>(b,0x1094f28));
- P m=manager(b);call<I>(b,0x147adc,4,"OfflinePvP","board-active level=%s mode=%u state=%u battle_module=%u view=%u",at<P>(board,0xc4),at<U>(app,0x1218),at<U>(board,0xc0),U(battle!=nullptr),U(at<unsigned char>(m,0x100)));
+ P plant=call<P>(b,0x43af38,modules,call<P>(b,0x1094f28));
+ P m=manager(b);call<I>(b,0x147adc,4,"OfflinePvP","board-active level=%s mode=%u state=%u plant_module=%u view=%u",at<P>(board,0xc4),at<U>(app,0x1218),at<U>(board,0xc0),U(plant!=nullptr),U(at<unsigned char>(m,0x100)));
  loggedArenaBoard=board;
 }
