@@ -1,0 +1,9 @@
+{
+  "native_army_vector_assignment": true,
+  "trained_units_handed_to_battle": true,
+  "queued_units_excluded": true,
+  "reentry_replaces_not_accumulates": true,
+  "preview_confirmation_not_blocked": true,
+  "native_dave_click_challenge_available": true,
+  "runtime_game_verified": false
+}

@@ -138,6 +138,40 @@ extern "C" void offlineTraining(U b,P camp,P name,U action){
 }
 extern "C" void offlineTrainingTick(U b,P camp){P m=manager(b);if(ensureEconomy(b,m))settleTraining(b,m);call<void>(b,0x104c894,camp);completeLocalBattle(b);inspectArena(b);}
 static bool trainingFinishPrompt;
+// Read the local queues, rather than the obsolete cash-product availability.
+// Different types train in parallel; each type's queue is sequential.
+static U trainingMinutes(U b){
+ U now=realNow(b),seconds=0;
+ for(U i=0;i<TRAIN_COUNT;++i){const LocalTrain&t=economyRuntime.state.trains[i];
+  if(t.queued){U n=(t.due>now?t.due-now:0)+(t.queued-1)*TRAIN_SPECS[i].seconds;if(n>seconds)seconds=n;}
+ }
+ return (seconds+59)/60;
+}
+extern "C" void offlineTrainingDisplay(U b,P ui){
+ if(!regular(b)||!ensureEconomy(b,manager(b)))return;
+ P button=at<P>(ui,0x108),timer=at<P>(ui,0x10c);if(!button||!timer)return;
+ U minutes=trainingMinutes(b),price=call<U>(b,0x1086e0c,timer,minutes);
+ // The regular button and cash overlay have the same native button ID (1).
+ // Display the regular button so neither cash labels nor product lookups run.
+ call<void>(0,at<U>(at<P>(timer,0),0x8c),timer,0);
+ call<void>(0,at<U>(at<P>(button,0),0x8c),button,1);
+ // Widget::SetDisabled takes true to block input (not true to enable it).
+ call<void>(0,at<U>(at<P>(button,0),0xa4),button,minutes==0);
+ // The original gem button also draws an icon/price decoration at a fixed
+ // position. Clear it through its native destructor before using one label.
+ call<void>(b,0x7e96a4,button);
+ U text[32]{},n=0;if(price>=10)text[n++]=U('0'+price/10);text[n++]=U('0'+price%10);
+ text[n++]=0x94bb;text[n++]=0x77f3;text[n++]=0x7acb;text[n++]=0x5373;text[n++]=0x5b8c;text[n++]=0x6210;
+ P wide=nullptr;char allocator=0;call<void>(b,0x14eb451,&wide,text,&allocator);
+ call<void>(b,0x14eae75,button+0xa4,&wide);release(b,wide,true);
+}
+extern "C" U offlineTrainingClick(U b,P ui,U button){
+ if(!regular(b)||button!=1)return 0;
+ P m=manager(b);if(!ensureEconomy(b,m))return 1;settleTraining(b,m);
+ U minutes=trainingMinutes(b);if(!minutes||!at<P>(ui,0x10c))return 1;
+ // Reuse the original prompt constructor and callback, now intercepted below.
+ call<void>(b,0x1055474,ui,minutes);log(b,"training-gem-prompt",minutes);return 1;
+}
 extern "C" void offlineTrainingFinishPrompt(U b,P timer,P callback){
  trainingFinishPrompt=regular(b);call<void>(b,0x108737c,timer,callback);trainingFinishPrompt=false;
 }

@@ -1,0 +1,14 @@
+{
+  "actual_training_button_dispatch": true,
+  "actual_offer_caller_executed": true,
+  "regular_gem_label_and_cash_overlay_hidden": true,
+  "confirm_cancel_insufficient_and_write_failure": true,
+  "native_result_response_executed": true,
+  "result_window_receives_stars": true,
+  "result_continue_closes_window_and_preserves_wallet": true,
+  "no_premature_teardown": true,
+  "battle_spends_only_deployed_units": true,
+  "duplicate_result_ignored": true,
+  "in_place_start_and_heartbeat_preserved": true,
+  "runtime_game_verified": false
+}

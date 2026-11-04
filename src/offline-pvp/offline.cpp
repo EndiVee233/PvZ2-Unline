@@ -28,13 +28,16 @@ static void completeLocalBattle(U b);
 // S2C attack replies normally translate owned aliases into the numeric
 // ArenaZombieInfoData vector at +d4. The native zombie bank reads this vector,
 // not TrainingData. Use the native alias converter and vector assignment.
+static U deployedArmy[TRAIN_COUNT],deployedUser;
 static void bindBattleArmy(U b,P m){
  alignas(8) U entries[TRAIN_COUNT][2]{};U count=0,total=0;
+ deployedUser=owner(b);for(U i=0;i<TRAIN_COUNT;++i)deployedArmy[i]=0;
  for(U i=0;i<TRAIN_COUNT;++i){U held=economyRuntime.state.trains[i].held;if(!held)continue;
   P name=nullptr;narrow(b,reinterpret_cast<P>(&name),TRAIN_SPECS[i].name);
   U type[2]{};call<void>(b,0xfb6ef0,type,&name);release(b,name);
   if(!type[1]){log(b,"army-alias-rejected",i,held);continue;}
   entries[count][0]=type[1];entries[count++][1]=held;total+=held;
+  deployedArmy[i]=held;
   starter(b,m,TRAIN_SPECS[i].name,held,false);
  }
  P first=reinterpret_cast<P>(entries);P vector[3]={first,first+count*8,first+sizeof(entries)};
@@ -141,6 +144,7 @@ static void preset(U b,P m,const NpcPreset&n){
 }
 static U arenaNpc,arenaUser;
 static bool resultAck,exitAck;
+static bool resultSaved;
 static P arenaModule(U b){
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);P board=at<P>(app,0x6bc);
  if(!board||!regular(b)||!at<P>(board,0xc4)||!same(reinterpret_cast<const char*>(at<P>(board,0xc4)),"arena_battle_test")||arenaUser!=owner(b)||!npc(arenaNpc))return nullptr;
@@ -162,6 +166,7 @@ static bool arenaPending(U b,const char*level,U mode){
         (at<U>(g,0x984)==6&&board&&sameText(at<P>(board,0xc4),level));
 }
 static void loadArena(U b,P m,const char*level,U mode){
+ resultSaved=false;resultAck=false;exitAck=false;
  requestedArenaView=at<unsigned char>(m,0x100);
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
  const U offset=mode==1?0xa0:0xa4;
@@ -227,26 +232,41 @@ extern "C" void offlineBattleRequest(U b,P m,U action){
  call<void>(b,0xf79d74);P net=call<P>(b,0xf7a070);call<void>(b,0xf8c860,net,at<U>(m,0xe4),at<U>(m,0xf4),at<U>(m,0xa8),action);
 }
 static bool persistBattleArmy(U b,P m){
- if(!ensureEconomy(b,m))return false;
+ if(!ensureEconomy(b,m)||deployedUser!=owner(b))return false;
  P a=at<P>(m,0xd4),e=at<P>(m,0xd8);if(e<a||U(e-a)>40*8||U(e-a)%8)return false;
  Economy next=economyRuntime.state;
  for(U i=0;i<TRAIN_COUNT;++i){
   P name=nullptr;narrow(b,reinterpret_cast<P>(&name),TRAIN_SPECS[i].name);U type[2]{};call<void>(b,0xfb6ef0,type,&name);release(b,name);
   U remaining=0;for(P p=a;p<e;p+=8)if(type[1]&&at<U>(p,0)==type[1])remaining+=at<U>(p,4);
-  if(remaining>next.trains[i].held)return false;next.trains[i].held=remaining;
+  if(remaining>deployedArmy[i])return false;U spent=deployedArmy[i]-remaining;
+  if(spent>next.trains[i].held)return false;next.trains[i].held-=spent;
  }
  ++next.sequence;if(!saveEconomy(b,next))return false;economyRuntime.state=next;log(b,"battle-army-saved");return true;
 }
 extern "C" U offlineBattleResult(U b,P m,U stars,U id,U kind){
  if(!arenaModule(b))return 0;
+ if(resultSaved)return 1;
  if(!persistBattleArmy(b,m)){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return 1;}
- // The native result window is constructed after this request returns. Send
- // its original completion notification on the next engine update.
- resultAck=true;log(b,"battle-result-local",stars,kind);return 1;
+ // The response callback opens the original result window. The unrelated
+ // 10485f0 notification tears down the battle and skips that window.
+ resultSaved=true;resultAck=true;log(b,"battle-result-local",stars,kind);return 1;
 }
 static void completeLocalBattle(U b){
- if(resultAck){resultAck=false;P m=manager(b);applyEconomy(b,m);call<void>(b,0x10485f0,m);log(b,"battle-result-acknowledged");}
+ if(resultAck){resultAck=false;P module=arenaModule(b);if(module){P m=manager(b);applyEconomy(b,m);
+  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
+  at<unsigned char>(m,0x17c)=0;call<void>(b,0x3fa970,app);
+  call<void>(b,0x108d340,module,1,0);log(b,"battle-result-window-opened");}}
  if(exitAck){exitAck=false;P m=manager(b);at<unsigned char>(m,0x17c)=0;scene(b,25);log(b,"battle-exited");}
+}
+extern "C" U offlineResultContinue(U b,P window,U button){
+ P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
+ if(!resultSaved||arenaUser!=owner(b)||!arenaModule(b)||at<P>(app,0x139c)!=window)return 0;
+ if(button!=0)return 1;
+ // Native continuation assigns server response balances (+ac/+b0) to the
+ // wallet. Those fields are not offline rewards; retain the local economy.
+ resultSaved=false;call<void>(b,0x3ffc08,app);call<void>(b,0x3fa970,app);
+ P m=manager(b);at<unsigned char>(m,0x17c)=0;applyEconomy(b,m);call<void>(b,0x10446d8,m);
+ scene(b,25);log(b,"battle-result-continued");return 1;
 }
 extern "C" void __aeabi_memclr4(void* p,U n){volatile unsigned char*d=static_cast<volatile unsigned char*>(p);while(n--)*d++=0;}
 extern "C" void __aeabi_memclr8(void* p,U n){__aeabi_memclr4(p,n);}
