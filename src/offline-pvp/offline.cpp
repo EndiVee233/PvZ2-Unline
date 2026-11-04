@@ -157,6 +157,15 @@ extern "C" void offlineBankReady(U b,P module){
  if(!regular(b)||arenaUser!=owner(b)||!npc(arenaNpc)||!board||!at<P>(board,0xc4)||!same(reinterpret_cast<const char*>(at<P>(board,0xc4)),"arena_battle_test"))return;
  armyBankModule=module;armyBankBoard=at<P>(app,0x6bc);log(b,"battle-bank-ready");
 }
+static void finishArenaBoard(U b){
+ P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0),board=at<P>(app,0x6bc);
+ if(board&&at<P>(board,0xc4)&&same(reinterpret_cast<const char*>(at<P>(board,0xc4)),"arena_battle_test")&&at<U>(board,0xc0)!=9){
+  // The original PvP return handlers finish the board before changing scenes.
+  // Removing only its widget leaves plant objects and module listeners alive.
+  call<void>(b,0x226770,board);log(b,"battle-board-finished");
+ }
+ armyBankModule=nullptr;armyBankBoard=nullptr;
+}
 // Use the successful server-response paths. In particular the attack callback
 // preserves the native pre-load notifications. The debug menu helper skips
 // them. A live scouting board must also be ended before loading a new level.
@@ -177,6 +186,7 @@ static void loadArena(U b,P m,const char*level,U mode){
  armyBankModule=nullptr;armyBankBoard=nullptr;
  requestedArenaView=at<unsigned char>(m,0x100);
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
+ finishArenaBoard(b);
  const U offset=mode==1?0xa0:0xa4;
  P name=nullptr;narrow(b,reinterpret_cast<P>(&name),level);
  P previous=at<P>(m,offset);at<P>(m,offset)=name;release(b,previous);
@@ -269,7 +279,7 @@ static void completeLocalBattle(U b){
   P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
   at<unsigned char>(m,0x17c)=0;call<void>(b,0x3fa970,app);
   call<void>(b,0x108d340,module,1,0);log(b,"battle-result-window-opened");}}
- if(exitAck){exitAck=false;P m=manager(b);at<unsigned char>(m,0x17c)=0;scene(b,25);log(b,"battle-exited");}
+ if(exitAck){exitAck=false;P m=manager(b);at<unsigned char>(m,0x17c)=0;finishArenaBoard(b);scene(b,25);log(b,"battle-exited");}
 }
 extern "C" U offlineResultContinue(U b,P window,U button){
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
@@ -278,6 +288,7 @@ extern "C" U offlineResultContinue(U b,P window,U button){
  // Native continuation assigns server response balances (+ac/+b0) to the
  // wallet. Those fields are not offline rewards; retain the local economy.
  resultSaved=false;call<void>(b,0x3ffc08,app);call<void>(b,0x3fa970,app);
+ finishArenaBoard(b);
  P m=manager(b);at<unsigned char>(m,0x17c)=0;applyEconomy(b,m);call<void>(b,0x10446d8,m);
  scene(b,25);log(b,"battle-result-continued");return 1;
 }

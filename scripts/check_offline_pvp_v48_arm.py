@@ -17,6 +17,8 @@ class SessionEngine(BattleEngine):
   elif off==0x14ea230:result=0 # native wide-string disposal, not UI behavior
   elif 0x895f0c<=off<0x895fc0:return
   elif 0x1030a50<=off<0x1030a6c:return
+  elif 0x226770<=off<0x22679c:return
+  elif off==0x2262b0:self.ends+=1;self.put(x+0xc0,9);result=0
   elif off==0x9760a8:
    assert y==M+0x14100 and z==0
    self.put(x,M+0x14200);self.put(x+4,0);result=x
