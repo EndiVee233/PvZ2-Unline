@@ -13,7 +13,7 @@ e=BattleEngine();e.run('offlineGarden');assert len(e.records)==6 and len(e.speci
 # Native +100 distinguishes preview from an actual attack, despite equal level names.
 e.u.mem_write(M+0x100,b'\1');e.stub(0x1042fe8,M,0x70000001,3,0)
 assert e.loads==[('arena_battle_test',0)]
-e.u.mem_write(M+0x100,b'\0');e.stub(0x1042fe8,M,0x70000001,2,0)
+e.stub(0x1042fe8,M,0x70000001,2,0);assert bytes(e.u.mem_read(M+0x100,1))==b'\0'
 assert len(e.loads)==2 and e.loads[-1]==('arena_battle_test',0)
 e.stub(0x1042fe8,M,0x70000001,2,0);assert len(e.loads)==2
 # Persisted local held units must be restored even if a native transition empties

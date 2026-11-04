@@ -171,6 +171,10 @@ extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
  if(!n&&id==0&&reason==4){const NpcPreset* selected=npc(at<U>(m,0x104));if(selected&&selected->evil&&selected->zone==at<U>(m,0xfc)&&selected->position==at<U>(m,0xf8))n=selected;}
  if(n&&regular(b)){
   log(b,"attack-request-reason",id,reason);
+  // Some native preview buttons leave +100 set when sending reason 2.
+  // Normalize from the actual request before evaluating the duplicate guard.
+  if(reason==3)at<unsigned char>(m,0x100)=1;
+  else if(reason==1||reason==2||reason==4)at<unsigned char>(m,0x100)=0;
   // The ArenaBattle level handles both preview (+100 set) and attack.
   // ArenaPlant is the editor even when the App mode is changed.
   if(reason==3){
