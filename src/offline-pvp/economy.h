@@ -136,4 +136,35 @@ extern "C" void offlineTraining(U b,P camp,P name,U action){
  ++next.sequence;if(!saveEconomy(b,next)){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return;}
  r.state=next;applyEconomy(b,m);notifyTraining(b,m);log(b,"training-updated",index,action);
 }
-extern "C" void offlineTrainingTick(U b,P camp){P m=manager(b);if(ensureEconomy(b,m))settleTraining(b,m);call<void>(b,0x104c894,camp);inspectArena(b);}
+extern "C" void offlineTrainingTick(U b,P camp){P m=manager(b);if(ensureEconomy(b,m))settleTraining(b,m);call<void>(b,0x104c894,camp);completeLocalBattle(b);inspectArena(b);}
+static bool trainingFinishPrompt;
+extern "C" void offlineTrainingFinishPrompt(U b,P timer,P callback){
+ trainingFinishPrompt=regular(b);call<void>(b,0x108737c,timer,callback);trainingFinishPrompt=false;
+}
+extern "C" void offlineFinishCurrencyText(U b,P out,P text,P allocator){
+ U key[64]{};
+ if(trainingFinishPrompt){const char*s="[PVP_TRAINING_FINISH_TIP]";for(U i=0;s[i];++i)key[i]=U(s[i]);text=reinterpret_cast<P>(key);}
+ call<void>(b,0x14eb451,out,text,allocator);
+}
+// Only the training timer's original callback is eligible. Upgrade/research
+// dialogs use the same checkout widget but retain their own native path.
+extern "C" U offlineTrainingFinish(U b,P timer){
+ if(!regular(b)||at<U>(timer,0x1fc)!=b+0x1055588)return 0;
+ P m=manager(b);if(!ensureEconomy(b,m))return 1;settleTraining(b,m);
+ Economy next=economyRuntime.state;U total=0;for(U i=0;i<TRAIN_COUNT;++i)total+=next.trains[i].queued;
+ if(!total)return 1;
+ U price=call<U>(b,0x1086e0c,timer,at<U>(timer,0x1f4));if(!price||price>15)return 1;
+ if(call<I>(b,0x747d00,profile(b),price)<0){economyNotice(b,"[V41_GEMS_REQUIRED]");return 1;}
+ for(U i=0;i<TRAIN_COUNT;++i){LocalTrain&t=next.trains[i];t.held+=t.queued;t.queued=0;t.due=0;}
+ ++next.sequence;
+ if(!saveEconomy(b,next)){call<void>(b,0x745220,profile(b),price,1);economyNotice(b,"[V38_PVP_SAVE_ERROR]");return 1;}
+ economyRuntime.state=next;applyEconomy(b,m);notifyTraining(b,m);log(b,"training-finished-with-gems",price,total);return 1;
+}
+extern "C" U offlineTrainingFinishConfirm(U b,P timer,U unused,U button){
+ if(!regular(b)||at<U>(timer,0x1fc)!=b+0x1055588)return 0;
+ // Use the confirm callback's actual receiver. Later checkout code reuses
+ // its r6 register for the product object, so it no longer identifies timer.
+ P cell=reinterpret_cast<P>(b)+0x1836300;P dialog=at<P>(cell,0);
+ if(dialog){call<void>(0,at<U>(at<P>(dialog,0),0x17c),dialog);at<P>(cell,0)=nullptr;}
+ if(button==1)offlineTrainingFinish(b,timer);return 1;
+}

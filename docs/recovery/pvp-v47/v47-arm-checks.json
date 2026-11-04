@@ -1,0 +1,13 @@
+{
+  "preview_starts_native_battle_in_place": true,
+  "no_second_level_load_or_formation_apply": true,
+  "local_heartbeat_uses_native_clock": true,
+  "result_ack_deferred_exactly_once": true,
+  "spent_army_persisted": true,
+  "exit_ack_returns_to_map": true,
+  "training_finish_native_confirm_uses_gems": true,
+  "training_finish_empty_insufficient_and_write_failure_guards": true,
+  "upgrade_checkout_unchanged": true,
+  "shared_mummy_rig_selected": true,
+  "runtime_game_verified": false
+}

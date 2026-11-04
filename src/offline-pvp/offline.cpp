@@ -22,8 +22,24 @@ static void starter(U b,P m,const char*name,U count,bool skill){
  release(b,key);
 }
 static void inspectArena(U b);
+static void completeLocalBattle(U b);
 #include "economy.h"
 #include "redeem.h"
+// S2C attack replies normally translate owned aliases into the numeric
+// ArenaZombieInfoData vector at +d4. The native zombie bank reads this vector,
+// not TrainingData. Use the native alias converter and vector assignment.
+static void bindBattleArmy(U b,P m){
+ alignas(8) U entries[TRAIN_COUNT][2]{};U count=0,total=0;
+ for(U i=0;i<TRAIN_COUNT;++i){U held=economyRuntime.state.trains[i].held;if(!held)continue;
+  P name=nullptr;narrow(b,reinterpret_cast<P>(&name),TRAIN_SPECS[i].name);
+  U type[2]{};call<void>(b,0xfb6ef0,type,&name);release(b,name);
+  if(!type[1]){log(b,"army-alias-rejected",i,held);continue;}
+  entries[count][0]=type[1];entries[count++][1]=held;total+=held;
+  starter(b,m,TRAIN_SPECS[i].name,held,false);
+ }
+ P first=reinterpret_cast<P>(entries);P vector[3]={first,first+count*8,first+sizeof(entries)};
+ call<void>(b,0x10454b0,m,vector);log(b,"battle-army-bound",count,total);
+}
 static void neighbors(U b,P m){
  if(!regular(b))return;
  for(U i=0;i<NPC_COUNT;++i){const NpcPreset& n=NPCS[i];
@@ -34,7 +50,9 @@ static void neighbors(U b,P m){
   if(n.evil){
    // Native BigMapInfo type 4 is the special Evil Dave house. Its name is at
    // +8 and its plot at +1c/+20, unlike player-neighbor records.
-   alignas(8) U special[16]={n.id,0,0,n.level,1000,2000,100,n.zone,n.position,4,0,0,0,0,1,0};
+   // +30 is dfmt, the challenge total compared with manager+15c by the
+   // original map click handler. Zero makes even an untouched house "beaten".
+   alignas(8) U special[16]={n.id,0,0,n.level,1000,2000,100,n.zone,n.position,4,0,0,n.level,0,1,0};
    char alloc=0;call<void>(b,0x14eb451,reinterpret_cast<P>(special)+8,n.name,&alloc);
    call<void>(b,0x104678c,m,special);release(b,reinterpret_cast<P>(special[2]),true);
    continue;
@@ -52,9 +70,9 @@ static void neighbors(U b,P m){
  starter(b,m,"pvpskill_rage",0,true);
  offlineEconomyInit(b);
  // Server map replies normally supply this result field. -1 suppresses the
- // original Evil Dave introduction altogether. A positive challenge level makes the pending
- // introduction eligible; its callback still records completion itself.
- if(at<I>(m,0x15c)<0)at<I>(m,0x15c)=1;
+ // original Evil Dave introduction altogether. Start with zero completed
+ // challenges; the house supplies its nonzero challenge total separately.
+ if(at<I>(m,0x15c)<0)at<I>(m,0x15c)=0;
  log(b,"neighbors-ready",at<U>(profile(b),0x75c),U(at<P>(m,0x114)-at<P>(m,0x110))/64);
 }
 struct Pos{U type,row,col;};
@@ -121,6 +139,13 @@ static void preset(U b,P m,const NpcPreset&n){
  }
  apply(b,m+0x80,s);
 }
+static U arenaNpc,arenaUser;
+static bool resultAck,exitAck;
+static P arenaModule(U b){
+ P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);P board=at<P>(app,0x6bc);
+ if(!board||!regular(b)||!at<P>(board,0xc4)||!same(reinterpret_cast<const char*>(at<P>(board,0xc4)),"arena_battle_test")||arenaUser!=owner(b)||!npc(arenaNpc))return nullptr;
+ P modules=at<P>(board,0x938);return modules?call<P>(b,0x43af38,modules,call<P>(b,0x108a164)):nullptr;
+}
 // Use the successful server-response paths. In particular the attack callback
 // preserves the native pre-load notifications. The debug menu helper skips
 // them. A live scouting board must also be ended before loading a new level.
@@ -162,7 +187,7 @@ extern "C" void offlineSave(U b,P network,P json,U zone,U type){
  Store s{};if(capture(b,manager(b)+0x80,s)&&writeStore(b,s)){log(b,"defense-saved",s.positions,s.infos);scene(b,25);}else log(b,"defense-save-failed");
 }
 extern "C" void offlineInfo(U b,P m,U a,U id,U kind){
- const NpcPreset*n=npc(id);if(n&&kind==2&&regular(b)){if(arenaPending(b,"arena_battle_test",0)){log(b,"view-duplicate",id);return;}log(b,"view-neighbor",id,n->count);preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;}
+ const NpcPreset*n=npc(id);if(n&&kind==2&&regular(b)){if(arenaPending(b,"arena_battle_test",0)){log(b,"view-duplicate",id);return;}log(b,"view-neighbor",id,n->count);arenaNpc=n->id;arenaUser=owner(b);preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;}
  call<void>(b,0xf79d74);P net=call<P>(b,0xf7a070);call<void>(b,0xf87154,net,a,id,kind);
 }
 extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
@@ -175,14 +200,53 @@ extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
   // Normalize from the actual request before evaluating the duplicate guard.
   if(reason==3)at<unsigned char>(m,0x100)=1;
   else if(reason==1||reason==2||reason==4)at<unsigned char>(m,0x100)=0;
+  // The live preview already owns its plants and seed bank. The native
+  // ArenaBattle start method reveals the banks and enables combat in place.
+  // Reloading the same level fires another plant-placement notification.
+  P live=arenaModule(b);
+  if(reason==2&&arenaNpc==n->id&&live&&at<U>(live,0xb0)==2){
+   requestedArenaView=0;call<void>(b,0x1090990,live);log(b,"preview-battle-started",id);return;
+  }
   // The ArenaBattle level handles both preview (+100 set) and attack.
   // ArenaPlant is the editor even when the App mode is changed.
   if(reason==3){
    if(arenaPending(b,"arena_battle_test",0)){log(b,"view-duplicate",id);return;}
-   preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;
+   arenaNpc=n->id;arenaUser=owner(b);preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;
   }
-  if(arenaPending(b,"arena_battle_test",0)){log(b,"attack-duplicate",id);return;}log(b,"attack-neighbor",id,n->count);preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;}
+  if(arenaPending(b,"arena_battle_test",0)){log(b,"attack-duplicate",id);return;}log(b,"attack-neighbor",id,n->count);arenaNpc=n->id;arenaUser=owner(b);preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;}
  call<void>(b,0xf79d74);P net=call<P>(b,0xf7a070);call<void>(b,0xf87710,net,id,reason,at<U>(m,0x104),at<U64>(m,0x108));
+}
+// The offline session acknowledges the original three-second heartbeat using
+// the same monotonic clock as ArenaBattleModule's native timeout check.
+extern "C" void offlineBattleRequest(U b,P m,U action){
+ P module=arenaModule(b);
+ if(module){
+  if(action==2){P clock=call<P>(b,0x1f7380);at<U>(module,0x40)=at<U>(clock,0x18);return;}
+  if(action==4){exitAck=true;log(b,"battle-exit-requested");return;}
+ }
+ call<void>(b,0xf79d74);P net=call<P>(b,0xf7a070);call<void>(b,0xf8c860,net,at<U>(m,0xe4),at<U>(m,0xf4),at<U>(m,0xa8),action);
+}
+static bool persistBattleArmy(U b,P m){
+ if(!ensureEconomy(b,m))return false;
+ P a=at<P>(m,0xd4),e=at<P>(m,0xd8);if(e<a||U(e-a)>40*8||U(e-a)%8)return false;
+ Economy next=economyRuntime.state;
+ for(U i=0;i<TRAIN_COUNT;++i){
+  P name=nullptr;narrow(b,reinterpret_cast<P>(&name),TRAIN_SPECS[i].name);U type[2]{};call<void>(b,0xfb6ef0,type,&name);release(b,name);
+  U remaining=0;for(P p=a;p<e;p+=8)if(type[1]&&at<U>(p,0)==type[1])remaining+=at<U>(p,4);
+  if(remaining>next.trains[i].held)return false;next.trains[i].held=remaining;
+ }
+ ++next.sequence;if(!saveEconomy(b,next))return false;economyRuntime.state=next;log(b,"battle-army-saved");return true;
+}
+extern "C" U offlineBattleResult(U b,P m,U stars,U id,U kind){
+ if(!arenaModule(b))return 0;
+ if(!persistBattleArmy(b,m)){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return 1;}
+ // The native result window is constructed after this request returns. Send
+ // its original completion notification on the next engine update.
+ resultAck=true;log(b,"battle-result-local",stars,kind);return 1;
+}
+static void completeLocalBattle(U b){
+ if(resultAck){resultAck=false;P m=manager(b);applyEconomy(b,m);call<void>(b,0x10485f0,m);log(b,"battle-result-acknowledged");}
+ if(exitAck){exitAck=false;P m=manager(b);at<unsigned char>(m,0x17c)=0;scene(b,25);log(b,"battle-exited");}
 }
 extern "C" void __aeabi_memclr4(void* p,U n){volatile unsigned char*d=static_cast<volatile unsigned char*>(p);while(n--)*d++=0;}
 extern "C" void __aeabi_memclr8(void* p,U n){__aeabi_memclr4(p,n);}
@@ -202,6 +266,7 @@ extern "C" void offlineBoardLoad(U b,P board,P name,U seed){
    // A level transition may reset native TrainingData without changing its
    // camp pointer. Rebind the accepted local queue before seed-bank creation.
    applyEconomy(b,m);
+   bindBattleArmy(b,m);
   }
  }
  call<void>(b,0x2258d8,board,name,seed);

@@ -8,7 +8,7 @@ from rebuild_bootstrap_dex import rebuild_bootstrap
 from elftools.elf.elffile import ELFFile
 from keystone import Ks,KS_ARCH_ARM,KS_MODE_ARM
 from prepare_offline_neighbors import generate
-ROOT=Path(__file__).resolve().parents[1];VERSION=45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
+ROOT=Path(__file__).resolve().parents[1];VERSION=47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
 OUT=ROOT/f'work/pvp-v{VERSION}';OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -18,6 +18,10 @@ if VERSION>=43:
  from prepare_offline_pvp_scenes import prepare as prepare_scenes
  resource,scene_record=prepare_scenes(resource,OUT/'generated')
  economy_record['scenes']=scene_record
+if VERSION>=47:
+ from prepare_offline_pvp_zombie_rig import prepare as prepare_rig
+ resource,rig_record=prepare_rig(resource,OUT/'generated')
+ economy_record['rig']=rig_record
 with zipfile.ZipFile(BASE) as src:
  b=bytearray(src.read('lib/armeabi/libSrc.so'))
  old_resource=src.read('assets/reconstruction/dynamic-original-speed.rsb.smf')
@@ -27,7 +31,10 @@ with zipfile.ZipFile(BASE) as src:
  if VERSION>=43:
   previous=economy_record['scenes']['predecessor_sha256']
   extra=extra.replace('    :v38_older_versions', f'    :v38_older_versions\n\n    const-string v0, \"{previous}\"\n    invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z\n    move-result v0\n    if-eqz v0, :v43_older_versions\n    const/4 v0, 0x1\n    return v0\n    :v43_older_versions')
- marker='.offline-pvp-v43' if VERSION>=43 else '.offline-economy-v38'
+ if VERSION>=47:
+  previous=economy_record['rig']['predecessor_sha256']
+  extra=extra.replace('    :v43_older_versions', f'    :v43_older_versions\n\n    const-string v0, "{previous}"\n    invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z\n    move-result v0\n    if-eqz v0, :v47_older_versions\n    const/4 v0, 0x1\n    return v0\n    :v47_older_versions')
+ marker='.offline-pvp-v47' if VERSION>=47 else '.offline-pvp-v43' if VERSION>=43 else '.offline-economy-v38'
  dex=rebuild_bootstrap(src.read('classes8.dex'),OUT/'bootstrap',{oldsha:newsha,method:method+extra,'.offline-defense-v35':marker,hex(len(old_resource)):hex(len(resource))},ROOT/'tools/apktool.jar')
 strings.update(V39_ADMIN_GRANTED='获得100钻石和10000金币，可再次输入 admin 领取',
  V39_ADMIN_LIMIT='金币或钻石已接近上限，暂时无法领取',
@@ -73,7 +80,7 @@ def append_stub(symbol,shift=False):
 def patch(site,symbol,expected=None,shift=False):
  before=bytes(b[site:site+4])
  if expected is not None:assert before==expected,(hex(site),before.hex())
- target=append_stub(symbol,shift);b[site:site+4]=bl(site,target) if symbol in ('offlineGarden','offlineOwn','offlineSave','offlineBoardLoad') else struct.pack('<I',0xea000000|(((target-site-8)//4)&0xffffff))
+ target=append_stub(symbol,shift);b[site:site+4]=bl(site,target) if symbol in ('offlineGarden','offlineOwn','offlineSave','offlineBoardLoad','offlineTrainingFinishPrompt','offlineFinishCurrencyText') else struct.pack('<I',0xea000000|(((target-site-8)//4)&0xffffff))
  patches.append(dict(site=hex(site),symbol=symbol,before=before.hex(),after=bytes(b[site:site+4]).hex()))
 assert struct.unpack_from('<I',b,0x107bf08)[0]>>24==0xeb
 patch(0x107bf08,'offlineGarden')
@@ -126,6 +133,18 @@ if VERSION>=41:
 if VERSION>=42:
  patch(0x104309c,'offlineCoinRequest',original[0x104309c:0x10430a0],True)
 
+if VERSION>=47:
+ patch(0x10554e8,'offlineTrainingFinishPrompt',bl(0x10554e8,0x108737c),True)
+ # This shared prompt chooses the gem text only during the training offer.
+ patch(0x10873d4,'offlineFinishCurrencyText',original[0x10873d4:0x10873d8],True)
+ site=0x10870e0;first=struct.unpack_from('<I',b,site)[0];assert first==0xe92d48f0
+ target=custom_stub('push {r0-r4,lr}\nmov r3,r2\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlineTrainingFinishConfirm"]}\ncmp r0,#0\npop {{r0-r4,lr}}\nbne finish_handled\n.word {first}\nb #{site+4}\nfinish_handled: bx lr')
+ redirect(site,target)
+ patch(0x104305c,'offlineBattleRequest',original[0x104305c:0x1043060],True)
+ site=0x10448e8;first=struct.unpack_from('<I',b,site)[0];assert first==0xe92d4bf0
+ target=custom_stub('push {r0-r4,lr}\nsub sp,sp,#8\nstr r3,[sp]\nmov r3,r2\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlineBattleResult"]}\nadd sp,sp,#8\ncmp r0,#0\npop {{r0-r4,lr}}\nbne handled\n.word {first}\nb #{site+4}\nhandled: bx lr')
+ redirect(site,target)
+
 site=0x1021f4c;word=struct.unpack_from('<I',b,site)[0];assert word>>24==0xea
 delta=word&0xffffff
 if delta&0x800000:delta-=1<<24
@@ -148,7 +167,7 @@ assert struct.unpack_from('<I',b,28)[0]==52 and struct.unpack_from('<H',b,44)[0]
 subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_economy_arm.py'),str(OUT)],cwd=ROOT,check=True)
 subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_redeem_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=41:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_coin_click_arm.py'),str(OUT)],cwd=ROOT,check=True)
-if VERSION>=43:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v45_arm.py' if VERSION>=45 else 'scripts/check_offline_pvp_scenes_arm.py')),str(OUT)],cwd=ROOT,check=True)
+if VERSION>=43:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v47_arm.py' if VERSION>=47 else 'scripts/check_offline_pvp_v46_arm.py' if VERSION>=46 else 'scripts/check_offline_pvp_v45_arm.py' if VERSION>=45 else 'scripts/check_offline_pvp_scenes_arm.py')),str(OUT)],cwd=ROOT,check=True)
 if '--native-only' in sys.argv:raise SystemExit(0)
 scratch=Path(sys.argv[sys.argv.index('--intermediate-dir')+1]).resolve() if '--intermediate-dir' in sys.argv else OUT
 scratch.mkdir(parents=True,exist_ok=True)
