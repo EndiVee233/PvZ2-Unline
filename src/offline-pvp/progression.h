@@ -4,6 +4,10 @@ static U upgradeCost(const Economy&s,U kind){U n=levelOf(s,kind)-1;return kind==
 static U upgradeSeconds(const Economy&s,U kind){U n=levelOf(s,kind)-1;return kind==1?BASE_SPECS[n].seconds:kind==2?SUN_SPECS[n].seconds:CAMP_SPECS[n].seconds;}
 static void ownBaseRecord(U b,P m){
  const Economy&s=economyRuntime.state;const BaseSpec&base=BASE_SPECS[s.baseLevel-1];
+ // Context kind 4 (own base) reads this dedicated six-word block, not the
+ // BigMapInfo neighbor vector used by context kinds 2/3.
+ at<U>(m,0x138)=s.medals;at<U>(m,0x13c)=base.medalLimit;at<U>(m,0x140)=s.coins;
+ at<U>(m,0x144)=base.coinLimit;at<U>(m,0x148)=base.medals;at<U>(m,0x14c)=base.coins;
  P first=at<P>(m,0x110),end=at<P>(m,0x114),record=nullptr;
  if(first&&end>=first&&U(end-first)<=64*256)for(P p=first;p<end;p+=64)if(at<U>(p,48)==1&&at<U>(p,52)==2){record=p;break;}
  if(!record){

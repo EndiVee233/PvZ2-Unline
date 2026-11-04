@@ -1,0 +1,20 @@
+{
+  "initial_1000_starcoins_200_medals_once": true,
+  "first_tutorial_army_preserved": true,
+  "legacy_wallet_preserved": true,
+  "profile_isolation": true,
+  "native_lab_setters_executed": true,
+  "base_panel_balance_rates_capacity": true,
+  "original_building_costs_and_timers": true,
+  "all_three_buildings_complete_and_persist": true,
+  "atomic_upgrade_write_failure": true,
+  "native_upgrade_gem_offer_and_confirm": true,
+  "upgrade_gem_label_cancel_insufficient_refund": true,
+  "offline_production_and_caps": true,
+  "purchased_over_cap_balance_retained": true,
+  "dave_independent_formation": true,
+  "dave_server_preparation_cleared": true,
+  "dave_victory_persisted": true,
+  "prior_v52_regressions_passed": true,
+  "runtime_game_verified": false
+}

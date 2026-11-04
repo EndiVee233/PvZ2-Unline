@@ -1,0 +1,9 @@
+{
+  "native_board_finish_guard_executed": true,
+  "result_return_finishes_board_before_map": true,
+  "second_zero_deployment_result_and_exit": true,
+  "already_finished_board_not_repeated": true,
+  "stale_board_finished_before_next_load": true,
+  "army_preserved": true,
+  "runtime_game_verified": false
+}

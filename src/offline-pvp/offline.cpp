@@ -225,13 +225,15 @@ extern "C" void offlineSave(U b,P network,P json,U zone,U type){
  Store s{};if(capture(b,manager(b)+0x80,s)&&writeStore(b,s)){log(b,"defense-saved",s.positions,s.infos);scene(b,25);}else log(b,"defense-save-failed");
 }
 extern "C" void offlineInfo(U b,P m,U a,U id,U kind){
- const NpcPreset*n=npc(id);if(n&&kind==2&&regular(b)){if(arenaPending(b,"arena_battle_test",0)){log(b,"view-duplicate",id);return;}log(b,"view-neighbor",id,n->count);arenaNpc=n->id;arenaUser=owner(b);preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;}
+ const NpcPreset*n=npc(id);if(n&&kind==2&&regular(b)){
+  if(n->evil){at<unsigned char>(m,0x100)=1;at<unsigned char>(m,0x102)=0;at<unsigned char>(m,0x103)=0;at<U>(m,0xa8)=1;}
+  if(arenaPending(b,"arena_battle_test",0)){log(b,"view-duplicate",id);return;}log(b,"view-neighbor",id,n->count);arenaNpc=n->id;arenaUser=owner(b);preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;}
  call<void>(b,0xf79d74);P net=call<P>(b,0xf7a070);call<void>(b,0xf87154,net,a,id,kind);
 }
 extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
  const NpcPreset*n=npc(id);
  // Native special houses send a zero player id and put the house id in +104.
- if(!n&&id==0&&reason==4){const NpcPreset* selected=npc(at<U>(m,0x104));if(selected&&selected->evil&&selected->zone==at<U>(m,0xfc)&&selected->position==at<U>(m,0xf8))n=selected;}
+ if(!n&&id==0&&reason>=1&&reason<=4){const NpcPreset* selected=npc(at<U>(m,0x104));if(selected&&selected->evil&&selected->zone==at<U>(m,0xfc)&&selected->position==at<U>(m,0xf8))n=selected;}
  if(n&&regular(b)){
   log(b,"attack-request-reason",id,reason);
   // The special-house handler sets this server-driven preparation flag.
@@ -240,7 +242,7 @@ extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
   if(n->evil){at<unsigned char>(m,0x102)=0;at<unsigned char>(m,0x103)=0;at<U>(m,0xa8)=1;}
   // Some native preview buttons leave +100 set when sending reason 2.
   // Normalize from the actual request before evaluating the duplicate guard.
-  if(reason==3)at<unsigned char>(m,0x100)=1;
+  if(reason==3||(n->evil&&reason==4))at<unsigned char>(m,0x100)=1;
   else if(reason==1||reason==2||reason==4)at<unsigned char>(m,0x100)=0;
   // The live preview already owns its plants and seed bank. The native
   // ArenaBattle start method reveals the banks and enables combat in place.
@@ -251,7 +253,7 @@ extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
   }
   // The ArenaBattle level handles both preview (+100 set) and attack.
   // ArenaPlant is the editor even when the App mode is changed.
-  if(reason==3){
+  if(reason==3||(n->evil&&reason==4)){
    if(arenaPending(b,"arena_battle_test",0)){log(b,"view-duplicate",id);return;}
    arenaNpc=n->id;arenaUser=owner(b);preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;
   }
