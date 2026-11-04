@@ -1,0 +1,12 @@
+{
+  "real_dave_preview_button_executed": true,
+  "zero_player_id_reason_one_exercised": true,
+  "native_dave_start_executed": true,
+  "native_combat_state_and_active_flag": true,
+  "preview_flags_cleared": true,
+  "no_board_finish_or_reload": true,
+  "plants_bank_and_army_preserved": true,
+  "duplicate_request_does_not_restart": true,
+  "previous_v55_regressions": true,
+  "runtime_game_verified": false
+}

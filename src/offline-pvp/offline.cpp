@@ -248,8 +248,10 @@ extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
   // ArenaBattle start method reveals the banks and enables combat in place.
   // Reloading the same level fires another plant-placement notification.
   P live=arenaModule(b);
-  if(reason==2&&arenaNpc==n->id&&live&&at<U>(live,0xb0)==2){
-   requestedArenaView=0;call<void>(b,0x1090990,live);log(b,"preview-battle-started",id);return;
+  if((reason==2||(n->evil&&reason==1))&&arenaNpc==n->id&&live&&at<U>(live,0xb0)==2){
+   // Dave's real preview button (1088aa0) sends zero-id reason 1, while
+   // neighbors use reason 2. The native starts also clear different flags.
+   requestedArenaView=0;call<void>(b,n->evil&&reason==1?0x1090dec:0x1090990,live);log(b,"preview-battle-started",id);return;
   }
   // The ArenaBattle level handles both preview (+100 set) and attack.
   // ArenaPlant is the editor even when the App mode is changed.

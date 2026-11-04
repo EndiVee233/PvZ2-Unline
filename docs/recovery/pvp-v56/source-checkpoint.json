@@ -1,0 +1,9 @@
+{
+  "src/offline-pvp/offline.cpp": "efc862ff5f5022360a4be2cd1e073d039363e19884ef4902d16c8b1cc3dab972",
+  "src/offline-pvp/economy.h": "21f9dbbbf0059b443348b58583f43bb7efc1113195bef8616c1a9fc8a0242b60",
+  "src/offline-pvp/progression.h": "cc6f46ee1b176eb8e4b6e5ed344be832736dfb8ae720b8d38f2bf658145e812d",
+  "src/offline-pvp/neighbors.json": "73addb53a842b83d65b5e67e8190d43844cb04142e5a1e1093c947cd97a4a906",
+  "scripts/build_pvp_v39.py": "11130296e715fa76d305b33dd57d40d4335d35198e0e6b7191663113bb2818e9",
+  "scripts/build_pvp_v56.py": "9598ece8ee7a44f6699ea2111b35d56770677b67a3ee1154ac988c6fe909aa6f",
+  "scripts/check_offline_pvp_v56_arm.py": "43b6998b17fc34c643e373fa6fbe9a05a4c6938647a047d7244e94ef1c166f33"
+}
