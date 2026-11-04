@@ -8,7 +8,7 @@ from rebuild_bootstrap_dex import rebuild_bootstrap
 from elftools.elf.elffile import ELFFile
 from keystone import Ks,KS_ARCH_ARM,KS_MODE_ARM
 from prepare_offline_neighbors import generate
-ROOT=Path(__file__).resolve().parents[1];VERSION=58 if '--v58' in sys.argv else 57 if '--v57' in sys.argv else 56 if '--v56' in sys.argv else 55 if '--v55' in sys.argv else 54 if '--v54' in sys.argv else 53 if '--v53' in sys.argv else 52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
+ROOT=Path(__file__).resolve().parents[1];VERSION=59 if '--v59' in sys.argv else 58 if '--v58' in sys.argv else 57 if '--v57' in sys.argv else 56 if '--v56' in sys.argv else 55 if '--v55' in sys.argv else 54 if '--v54' in sys.argv else 53 if '--v53' in sys.argv else 52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
 OUT=ROOT/f'work/pvp-v{VERSION}';OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -22,6 +22,9 @@ if VERSION>=47:
  from prepare_offline_pvp_zombie_rig import prepare as prepare_rig
  resource,rig_record=prepare_rig(resource,OUT/'generated')
  economy_record['rig']=rig_record
+if VERSION>=59:
+ from prepare_offline_pvp_no_rank import prepare as prepare_no_rank
+ resource,no_rank_record=prepare_no_rank(resource,OUT/'generated');economy_record['no_rank']=no_rank_record
 from prepare_offline_progression import prepare as prepare_progression
 economy_record['progression']=prepare_progression(resource,OUT/'generated')
 with zipfile.ZipFile(BASE) as src:
@@ -36,7 +39,10 @@ with zipfile.ZipFile(BASE) as src:
  if VERSION>=47:
   previous=economy_record['rig']['predecessor_sha256']
   extra=extra.replace('    :v43_older_versions', f'    :v43_older_versions\n\n    const-string v0, "{previous}"\n    invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z\n    move-result v0\n    if-eqz v0, :v47_older_versions\n    const/4 v0, 0x1\n    return v0\n    :v47_older_versions')
- marker='.offline-pvp-v47' if VERSION>=47 else '.offline-pvp-v43' if VERSION>=43 else '.offline-economy-v38'
+ if VERSION>=59:
+  previous=economy_record['no_rank']['predecessor_sha256']
+  extra+=f'\n\n    const-string v0, "{previous}"\n    invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z\n    move-result v0\n    if-eqz v0, :v59_older_versions\n    const/4 v0, 0x1\n    return v0\n    :v59_older_versions'
+ marker=f'.offline-pvp-v59-{newsha[:12]}' if VERSION>=59 else '.offline-pvp-v47' if VERSION>=47 else '.offline-pvp-v43' if VERSION>=43 else '.offline-economy-v38'
  dex=rebuild_bootstrap(src.read('classes8.dex'),OUT/'bootstrap',{oldsha:newsha,method:method+extra,'.offline-defense-v35':marker,hex(len(old_resource)):hex(len(resource))},ROOT/'tools/apktool.jar')
 if VERSION>=58:
  from prepare_offline_pvp_skill_art import prepare as prepare_art
@@ -212,6 +218,11 @@ if VERSION>=55:
  site=0x10402cc;before=bytes(b[site:site+4]);assert before==original[site:site+4]
  redirect(site,0x10404b4)
 
+if VERSION>=59:
+ site=0x107bb98;before=bytes(b[site:site+8]);assert before==original[site:site+8]
+ b[site:site+8]=bytes.fromhex('0000a0e31eff2fe1') # mov r0,#0; bx lr: no rank window/request.
+ patches.append(dict(site=hex(site),role='Remove PvP league/rank window factory',before=before.hex(),after=bytes(b[site:site+8]).hex()))
+
 if VERSION>=57:
  def range_call(site,target,expected,name):
   assert bytes(b[site:site+4])==bl(site,expected),hex(site)
@@ -253,6 +264,7 @@ subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_redeem_arm.py'),s
 if VERSION>=41:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_coin_click_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=43:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v56_arm.py' if VERSION>=56 else 'scripts/check_offline_pvp_v55_arm.py' if VERSION>=55 else 'scripts/check_offline_pvp_v54_arm.py' if VERSION>=54 else 'scripts/check_offline_pvp_v52_arm.py' if VERSION>=52 else 'scripts/check_offline_pvp_v51_arm.py' if VERSION>=51 else 'scripts/check_offline_pvp_v50_arm.py' if VERSION>=50 else 'scripts/check_offline_pvp_v48_arm.py' if VERSION>=48 else 'scripts/check_offline_pvp_v47_arm.py' if VERSION>=47 else 'scripts/check_offline_pvp_v46_arm.py' if VERSION>=46 else 'scripts/check_offline_pvp_v45_arm.py' if VERSION>=45 else 'scripts/check_offline_pvp_scenes_arm.py')),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=57:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v57_arm.py'),str(OUT)],cwd=ROOT,check=True)
+if VERSION>=59:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v59_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if '--native-only' in sys.argv:raise SystemExit(0)
 scratch=Path(sys.argv[sys.argv.index('--intermediate-dir')+1]).resolve() if '--intermediate-dir' in sys.argv else OUT
 scratch.mkdir(parents=True,exist_ok=True)
