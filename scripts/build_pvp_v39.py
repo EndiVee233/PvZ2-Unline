@@ -8,7 +8,7 @@ from rebuild_bootstrap_dex import rebuild_bootstrap
 from elftools.elf.elffile import ELFFile
 from keystone import Ks,KS_ARCH_ARM,KS_MODE_ARM
 from prepare_offline_neighbors import generate
-ROOT=Path(__file__).resolve().parents[1];VERSION=60 if '--v60' in sys.argv else 59 if '--v59' in sys.argv else 58 if '--v58' in sys.argv else 57 if '--v57' in sys.argv else 56 if '--v56' in sys.argv else 55 if '--v55' in sys.argv else 54 if '--v54' in sys.argv else 53 if '--v53' in sys.argv else 52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
+ROOT=Path(__file__).resolve().parents[1];VERSION=61 if '--v61' in sys.argv else 60 if '--v60' in sys.argv else 59 if '--v59' in sys.argv else 58 if '--v58' in sys.argv else 57 if '--v57' in sys.argv else 56 if '--v56' in sys.argv else 55 if '--v55' in sys.argv else 54 if '--v54' in sys.argv else 53 if '--v53' in sys.argv else 52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
 OUT=ROOT/f'work/pvp-v{VERSION}';OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -48,10 +48,18 @@ if VERSION>=58:
  from prepare_offline_pvp_skill_art import prepare as prepare_art
  with zipfile.ZipFile(BASE) as art_src:old_art=art_src.read('assets/reconstruction/zombie2-pvp.rsb.smf')
  skill_art,art_record=prepare_art(old_art,OUT/'generated');economy_record['skill_art']=art_record
- old_art_sha=art_record['predecessor_sha256'];new_art_sha=art_record['sha256']
+ old_art_sha=art_record['predecessor_sha256'];art_predecessor=art_record['sha256']
+ if VERSION>=61:
+  from prepare_offline_pvp_seagull import prepare as prepare_seagull
+  legacy=Path(sys.argv[sys.argv.index('--legacy-zombie1')+1]) if '--legacy-zombie1' in sys.argv else ROOT/'work/pvp-v61/original175-zombie1.smf'
+  skill_art,seagull_record=prepare_seagull(skill_art,legacy.read_bytes(),OUT/'generated');economy_record['seagull']=seagull_record
+ new_art_sha=hashlib.sha256(skill_art).hexdigest()
  art_method='.method private static isPvpResourcePredecessor(Ljava/lang/String;)Z\n    .registers 2'
  art_extra=f'\n\n    const-string v0, "{old_art_sha}"\n    invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z\n    move-result v0\n    if-eqz v0, :v58_art_predecessors\n    const/4 v0, 0x1\n    return v0\n    :v58_art_predecessors'
- dex=rebuild_bootstrap(dex,OUT/'bootstrap-art',{old_art_sha:new_art_sha,art_method:art_method+art_extra,'.pvp-skills-v32-'+old_art_sha[:12]:'.pvp-art-v58-'+new_art_sha[:12],hex(len(old_art)):hex(len(skill_art))},ROOT/'tools/apktool.jar')
+ if VERSION>=61:
+  art_extra+=f'\n\n    const-string v0, "{art_predecessor}"\n    invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z\n    move-result v0\n    if-eqz v0, :v61_art_predecessors\n    const/4 v0, 0x1\n    return v0\n    :v61_art_predecessors'
+ art_marker=('.pvp-seagull-v61-' if VERSION>=61 else '.pvp-art-v58-')+new_art_sha[:12]
+ dex=rebuild_bootstrap(dex,OUT/'bootstrap-art',{old_art_sha:new_art_sha,art_method:art_method+art_extra,'.pvp-skills-v32-'+old_art_sha[:12]:art_marker,hex(len(old_art)):hex(len(skill_art))},ROOT/'tools/apktool.jar')
 strings.update(V39_ADMIN_GRANTED='获得100钻石和10000金币，可再次输入 admin 领取',
  V39_ADMIN_LIMIT='金币或钻石已接近上限，暂时无法领取',
  GEMS_RESTORE_TITLE='兑换码',GEMS_RESTORE_TIP='请输入兑换码',
@@ -290,3 +298,4 @@ with zipfile.ZipFile(BASE) as src,zipfile.ZipFile(final) as dst:
   assert dst.getinfo(item.filename).CRC==item.CRC and dst.getinfo(item.filename).file_size==item.file_size,item.filename
 record=dict(apk=str(final.relative_to(ROOT)),sha256=hashlib.file_digest(final.open('rb'),'sha256').hexdigest(),patches=patches,economy=economy_record,localization=localization,entry=hex(entry),symbols={k:hex(v) for k,v in symbols.items() if k.startswith('offline')},runtime_verified=False)
 (OUT/'build.json').write_text(json.dumps(record,indent=2)+'\n',encoding='utf8');print(json.dumps(record))
+if VERSION>=61:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_seagull.py'),str(OUT)],cwd=ROOT,check=True)
