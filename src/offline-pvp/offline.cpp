@@ -540,6 +540,9 @@ extern "C" void offlineLabProperties(U b,P type,P props,U caller){
 }
 #endif
 static P loggedArenaBoard;
+#ifdef PVP_STAR_DISPLAY
+#include "star_display.h"
+#endif
 static void inspectArena(U b){
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);P board=at<P>(app,0x6bc);
  if(!board){loggedArenaBoard=nullptr;return;}if(board==loggedArenaBoard||!regular(b))return;
