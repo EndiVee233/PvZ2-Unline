@@ -15,6 +15,7 @@ e.confirm(timer);assert e.gems==97 and e.held()==40
 e.stub(0x1042fe8,M,0x70000001,3,0)
 name=e.alloc(4);e.string(name,'arena_battle_test');e.run('offlineBoardLoad',BOARD,name,0xffffffff);e.live()
 # Native PVPZombieSeedPacket setter is the same one used by bank population.
+e.put(MODULE+0xb0,2);e.stub(0x1042fe8,M,0x70000001,2,0)
 e.run(0x1030a50,M+0x14300,39)
 e.put(e.get(M+0xd4)+4,1) # original result request reports one dead unit
 e.stub(0x10448e8,M,0,0x70000001,2);e.run('offlineTrainingTick',e.get(M+0x20))
@@ -24,6 +25,7 @@ e.stub(0x104fa50,M+0x12000,0)
 e.put(M+0x7000+0x6bc,0)
 e.stub(0x1042fe8,M,0x70000002,3,0);e.run('offlineBoardLoad',BOARD,name,0xffffffff);e.live()
 assert e.army()==[(201,39)]
+e.put(MODULE+0xb0,2);e.stub(0x1042fe8,M,0x70000002,2,0)
 e.run(0x1030a50,M+0x14300,39) # no zombie was placed in this battle
 e.put(M+0xd8,e.get(M+0xd4)) # zero deaths
 e.stub(0x10448e8,M,0,0x70000002,2);e.run('offlineTrainingTick',e.get(M+0x20))

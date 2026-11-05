@@ -3,14 +3,27 @@
 struct LocalTrain {U held,queued,due;};
 struct Economy {U magic,version,user,coins,home,sequence,checksum,reserved;LocalTrain trains[TRAIN_COUNT];
  U initialized,medals,baseLevel,sunLevel,campLevel,upgradeKind,upgradeDue,producedAt,coinFraction,medalFraction,daveWins;
+#ifdef PVP_BATTLE_ECONOMY
+ U battleSerial,battleOpen,battleSettled,battleNpc,battleStage,battleFee;
+#endif
 };
 static constexpr U LEGACY_ECONOMY_SIZE=32+12*TRAIN_COUNT;
+static constexpr U V2_ECONOMY_SIZE=LEGACY_ECONOMY_SIZE+44;
 struct EconomyRuntime {U user,lastTick;bool loaded,blocked,busy,loadedFromDisk;P camp;Economy state;};
 static EconomyRuntime economyRuntime;
 static bool same(const char*a,const char*b){while(*a&&*a==*b){++a;++b;}return *a==*b;}
-static U checkEconomy(const Economy&s){const unsigned char*p=reinterpret_cast<const unsigned char*>(&s);U h=2166136261u;for(U i=0;i<(s.version==1?LEGACY_ECONOMY_SIZE:sizeof(s));++i)if(i<24||i>=28)h=(h^p[i])*16777619u;return h;}
+static U checkEconomy(const Economy&s){const unsigned char*p=reinterpret_cast<const unsigned char*>(&s);U h=2166136261u;for(U i=0;i<(s.version==1?LEGACY_ECONOMY_SIZE:s.version==2?V2_ECONOMY_SIZE:sizeof(s));++i)if(i<24||i>=28)h=(h^p[i])*16777619u;return h;}
 static bool validEconomy(const Economy&s,U user){
- if(s.magic!=0x45435650||(s.version!=1&&s.version!=2)||s.user!=user||s.coins>2000000000u||!s.home||s.home>20||s.checksum!=checkEconomy(s))return false;
+ bool version=s.version==1||s.version==2;
+#ifdef PVP_BATTLE_ECONOMY
+ version=version||s.version==3;
+ if(s.version==3){
+  if(s.battleSettled>s.battleSerial)return false;
+  if(s.battleOpen){const NpcPreset*n=npc(s.battleNpc);if(s.battleOpen!=s.battleSerial||s.battleOpen<=s.battleSettled||!n||n->evil||s.battleStage<1||s.battleStage>2||s.battleFee!=1)return false;}
+  else if(s.battleNpc||s.battleStage||s.battleFee||s.battleSettled!=s.battleSerial)return false;
+ }
+#endif
+ if(s.magic!=0x45435650||!version||s.user!=user||s.coins>2000000000u||!s.home||s.home>20||s.checksum!=checkEconomy(s))return false;
  if(s.initialized&&(s.initialized!=1||s.medals>2000000000u||!s.baseLevel||s.baseLevel>20||!s.sunLevel||s.sunLevel>20||!s.campLevel||s.campLevel>20||s.upgradeKind>3||bool(s.upgradeKind)!=bool(s.upgradeDue)||s.coinFraction>=3600||s.medalFraction>=3600||s.daveWins>1))return false;
  U used=0;
  for(U i=0;i<TRAIN_COUNT;++i){const LocalTrain&t=s.trains[i];if(t.held>100||t.queued>100||(t.queued&&!t.due)||(!t.queued&&t.due))return false;used+=(t.held+t.queued)*TRAIN_SPECS[i].space;}
@@ -23,6 +36,9 @@ static void economyPath(U id,char*out,bool tmp){
 }
 static bool saveEconomy(U b,Economy&s){
  s.version=2;
+#ifdef PVP_BATTLE_ECONOMY
+ s.version=3;
+#endif
  s.checksum=checkEconomy(s);if(!validEconomy(s,s.user))return false;
  char dst[160],tmp[160];economyPath(s.user,dst,false);economyPath(s.user,tmp,true);
  I fd=call<I>(b,0x148448,tmp,0x241,0600);if(fd<0)return false;U done=0;
@@ -34,7 +50,10 @@ static I loadEconomy(U b,Economy&s){
  char path[160];economyPath(owner(b),path,false);I fd=call<I>(b,0x148448,path,0,0);if(fd<0)return 0;U done=0;
  while(done<sizeof(s)){I n=call<I>(b,0x148460,fd,reinterpret_cast<P>(&s)+done,sizeof(s)-done);if(n<=0)break;done+=U(n);}
  char tail;I extra=call<I>(b,0x148460,fd,&tail,1);call<I>(b,0x147b90,fd);
- bool length=(s.version==1&&done==LEGACY_ECONOMY_SIZE)||(s.version==2&&done==sizeof(s));
+ bool length=(s.version==1&&done==LEGACY_ECONOMY_SIZE)||(s.version==2&&done==V2_ECONOMY_SIZE);
+#ifdef PVP_BATTLE_ECONOMY
+ length=length||(s.version==3&&done==sizeof(s));
+#endif
  return length&&extra==0&&validEconomy(s,owner(b))?1:-1;
 }
 static void economyNotice(U b,const char*message){
@@ -64,6 +83,16 @@ static bool ensureEconomy(U b,P m,bool entering=false){
   r.loadedFromDisk=found==1;
   if(found<0){r.blocked=true;log(b,"economy-invalid");return false;}
   if(!found){r.state.magic=0x45435650;r.state.version=2;r.state.user=user;r.state.coins=at<U>(m,4);r.state.home=at<U>(m,0x10);if(!r.state.home||r.state.home>20)r.state.home=1;}
+#ifdef PVP_BATTLE_ECONOMY
+  // A process restart cannot resume an old Board or replay its result. Refund
+  // a load that never created its bank; a battle that started keeps its fee.
+  if(found==1&&r.state.battleOpen){Economy next=r.state;
+   if(next.battleStage==1&&next.coins<=2000000000u-next.battleFee)next.coins+=next.battleFee;
+   next.battleSettled=next.battleOpen;next.battleOpen=next.battleNpc=next.battleStage=next.battleFee=0;++next.sequence;
+   if(!saveEconomy(b,next)){r.blocked=true;log(b,"battle-recovery-save-failed");return false;}
+   r.state=next;log(b,"battle-recovered",next.battleSettled,next.coins);
+  }
+#endif
   log(b,"economy-loaded",r.state.coins,found==1);
  }
  if(r.blocked)return false;

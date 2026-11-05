@@ -156,6 +156,9 @@ static U arenaNpc,arenaUser;
 static bool resultAck,exitAck;
 static bool resultSaved;
 static P armyBankModule,armyBankBoard;
+#ifdef PVP_BATTLE_ECONOMY
+#include "battle_economy.h"
+#endif
 static P arenaModule(U b){
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);P board=at<P>(app,0x6bc);
  if(!board||!regular(b)||!at<P>(board,0xc4)||!same(reinterpret_cast<const char*>(at<P>(board,0xc4)),"arena_battle_test")||arenaUser!=owner(b)||!npc(arenaNpc))return nullptr;
@@ -166,6 +169,9 @@ extern "C" void offlineBankReady(U b,P module){
  P board=at<P>(app,0x6bc);
  if(!regular(b)||arenaUser!=owner(b)||!npc(arenaNpc)||!board||!at<P>(board,0xc4)||!same(reinterpret_cast<const char*>(at<P>(board,0xc4)),"arena_battle_test"))return;
  armyBankModule=module;armyBankBoard=at<P>(app,0x6bc);log(b,"battle-bank-ready");
+#ifdef PVP_BATTLE_ECONOMY
+ if(!at<unsigned char>(manager(b),0x100))markPaidBattleStarted(b);
+#endif
 }
 extern "C" void offlineMapArmyPrepare(U b,P map){
  P m=manager(b);if(!regular(b)||!ensureEconomy(b,m))return;
@@ -229,6 +235,9 @@ extern "C" void offlineSave(U b,P network,P json,U zone,U type){
 }
 extern "C" void offlineInfo(U b,P m,U a,U id,U kind){
  const NpcPreset*n=npc(id);if(n&&kind==2&&regular(b)){
+#ifdef PVP_BATTLE_ECONOMY
+  at<unsigned char>(m,0x100)=1;
+#endif
   if(n->evil){at<unsigned char>(m,0x100)=1;at<unsigned char>(m,0x102)=0;at<unsigned char>(m,0x103)=0;at<U>(m,0xa8)=1;}
   if(arenaPending(b,"arena_battle_test",0)){log(b,"view-duplicate",id);return;}log(b,"view-neighbor",id,n->count);arenaNpc=n->id;arenaUser=owner(b);preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;}
  call<void>(b,0xf79d74);P net=call<P>(b,0xf7a070);call<void>(b,0xf87154,net,a,id,kind);
@@ -251,9 +260,17 @@ extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
   // ArenaBattle start method reveals the banks and enables combat in place.
   // Reloading the same level fires another plant-placement notification.
   P live=arenaModule(b);
+#ifdef PVP_BATTLE_ECONOMY
+  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0),board=at<P>(app,0x6bc);
+  if(board&&at<U>(board,0xc0)==9)live=nullptr;
+  if(live&&arenaNpc==n->id&&at<U>(live,0xb0)==3){log(b,"active-battle-duplicate",n->id);return;}
+#endif
   if((reason==2||(n->evil&&reason==1))&&arenaNpc==n->id&&live&&at<U>(live,0xb0)==2){
    // Dave's real preview button (1088aa0) sends zero-id reason 1, while
    // neighbors use reason 2. The native starts also clear different flags.
+#ifdef PVP_BATTLE_ECONOMY
+   if(!beginBattleFee(b,m,*n,true)){at<unsigned char>(m,0x100)=1;return;}
+#endif
    requestedArenaView=0;call<void>(b,n->evil&&reason==1?0x1090dec:0x1090990,live);log(b,"preview-battle-started",id);return;
   }
   // The ArenaBattle level handles both preview (+100 set) and attack.
@@ -262,7 +279,12 @@ extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
    if(arenaPending(b,"arena_battle_test",0)){log(b,"view-duplicate",id);return;}
    arenaNpc=n->id;arenaUser=owner(b);preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;
   }
-  if(arenaPending(b,"arena_battle_test",0)){log(b,"attack-duplicate",id);return;}log(b,"attack-neighbor",id,n->count);arenaNpc=n->id;arenaUser=owner(b);preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;}
+  if(arenaPending(b,"arena_battle_test",0)){log(b,"attack-duplicate",id);return;}
+#ifdef PVP_BATTLE_ECONOMY
+  if(reason!=1&&reason!=2&&reason!=4){log(b,"unknown-battle-reason",reason);return;}
+  if(!beginBattleFee(b,m,*n,false))return;
+#endif
+  log(b,"attack-neighbor",id,n->count);arenaNpc=n->id;arenaUser=owner(b);preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;}
  call<void>(b,0xf79d74);P net=call<P>(b,0xf7a070);call<void>(b,0xf87710,net,id,reason,at<U>(m,0x104),at<U64>(m,0x108));
 }
 // The offline session acknowledges the original three-second heartbeat using
@@ -271,11 +293,15 @@ extern "C" void offlineBattleRequest(U b,P m,U action){
  P module=arenaModule(b);
  if(module){
   if(action==2){P clock=call<P>(b,0x1f7380);at<U>(module,0x40)=at<U>(clock,0x18);return;}
-  if(action==4){exitAck=true;log(b,"battle-exit-requested");return;}
+  if(action==4){
+#ifdef PVP_BATTLE_ECONOMY
+   if(!closeAbandonedBattle(b,m))return;
+#endif
+   exitAck=true;log(b,"battle-exit-requested");return;}
  }
  call<void>(b,0xf79d74);P net=call<P>(b,0xf7a070);call<void>(b,0xf8c860,net,at<U>(m,0xe4),at<U>(m,0xf4),at<U>(m,0xa8),action);
 }
-static bool persistBattleArmy(U b,P m,bool daveVictory=false){
+static bool persistBattleArmy(U b,P m,bool daveVictory=false,U stars=0){
  if(!ensureEconomy(b,m)||deployedUser!=owner(b))return false;
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
  if(!armyBankModule||armyBankBoard!=at<P>(app,0x6bc))return false;
@@ -298,6 +324,10 @@ static bool persistBattleArmy(U b,P m,bool daveVictory=false){
   if(placed>dead)log(b,"battle-army-recalled",i,placed-dead);
  }
  if(daveVictory)next.daveWins=1;
+#ifdef PVP_BATTLE_ECONOMY
+ const NpcPreset*n=npc(arenaNpc);
+ if(n&&!n->evil&&!settleBattleReward(b,next,stars))return false;
+#endif
  ++next.sequence;if(!saveEconomy(b,next))return false;economyRuntime.state=next;
  if(daveVictory){at<U>(m,0x15c)=1;log(b,"evil-dave-defeated");}
  log(b,"battle-army-saved");return true;
@@ -306,7 +336,22 @@ extern "C" U offlineBattleResult(U b,P m,U stars,U id,U kind){
  if(!arenaModule(b))return 0;
  if(resultSaved)return 1;
  const NpcPreset*n=npc(arenaNpc);
- if(!persistBattleArmy(b,m,n&&n->evil&&stars>0)){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return 1;}
+#ifdef PVP_BATTLE_ECONOMY
+ if(!n||stars>3||(!n->evil&&(id!=n->id||kind!=2||!ensureEconomy(b,m)||!paidBattleMatches(b,economyRuntime.state)))){log(b,"battle-result-unpaid-or-stale",stars,id);return 1;}
+ U previousCoins=economyRuntime.state.coins;
+#endif
+ if(!persistBattleArmy(b,m,n&&n->evil&&stars>0,stars)){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return 1;}
+#ifdef PVP_BATTLE_ECONOMY
+ if(n&&!n->evil){
+  // Original result drawing reads +c4/+c8 currency deltas; the continuation
+  // reads +ac/+b0 totals. Keep both views of the successful local transaction
+  // in sync, with no leftover server medal/cup or bonus reward fields.
+  at<U>(m,0xac)=economyRuntime.state.coins;at<U>(m,0xb0)=economyRuntime.state.medals;at<U>(m,0xb4)=at<U>(m,12);
+  at<U>(m,0xb8)=at<U>(m,0xbc)=at<U>(m,0xc0)=0;
+  at<U>(m,0xc4)=economyRuntime.state.coins-previousCoins;at<U>(m,0xc8)=at<U>(m,0xcc)=0;
+  log(b,"battle-reward-saved",stars,at<U>(m,0xc4));
+ }
+#endif
  // The response callback opens the original result window. The unrelated
  // 10485f0 notification tears down the battle and skips that window.
  resultSaved=true;resultAck=true;log(b,"battle-result-local",stars,kind);return 1;

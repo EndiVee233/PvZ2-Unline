@@ -37,6 +37,7 @@ def fixture():
  ui,button,timer=e.training_ui();e.run('offlineTrainingDisplay',ui);e.stub(0x1059300,ui,1);e.confirm(timer)
  e.stub(0x1042fe8,M,0x70000001,3,0)
  name=e.alloc(4);e.string(name,'arena_battle_test');e.run('offlineBoardLoad',BOARD,name,0xffffffff);e.live()
+ e.put(MODULE+0xb0,2);e.stub(0x1042fe8,M,0x70000001,2,0)
  e.run(0x1030a50,M+0x14300,2) # one unit placed, two still in the card
  return e
 

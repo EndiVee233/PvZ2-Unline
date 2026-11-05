@@ -6,6 +6,7 @@ import json
 e=SessionEngine();e.run('offlineGarden');e.stub(0x9344a4,e.product(),1);e.train();e.advance(31);e.run('offlineTrainingTick',e.get(M+0x20))
 e.stub(0x1042fe8,M,0x70000001,3,0)
 name=e.alloc(4);e.string(name,'arena_battle_test');e.run('offlineBoardLoad',BOARD,name,0xffffffff);e.live();e.put(BOARD+0xc0,5)
+e.put(MODULE+0xb0,2);e.stub(0x1042fe8,M,0x70000001,2,0)
 e.run(0x1030a50,M+0x14300,1) # no deployment
 e.put(M+0xd8,e.get(M+0xd4))
 e.stub(0x10448e8,M,0,0x70000001,2);e.run('offlineTrainingTick',e.get(M+0x20));assert e.windows==1
@@ -13,6 +14,7 @@ e.stub(0x104fa50,M+0x12000,0)
 assert e.ends==1 and e.get(BOARD+0xc0)==9 and e.scenes[-1]==25 and e.held()==1
 e.stub(0x1042fe8,M,0x70000002,3,0);assert e.ends==1,'already-finished board ended twice'
 e.run('offlineBoardLoad',BOARD,name,0xffffffff);e.live();e.put(BOARD+0xc0,5)
+e.put(MODULE+0xb0,2);e.stub(0x1042fe8,M,0x70000002,2,0)
 e.run(0x1030a50,M+0x14300,1)
 e.put(M+0xd8,e.get(M+0xd4))
 e.stub(0x10448e8,M,0,0x70000002,2);e.run('offlineTrainingTick',e.get(M+0x20));assert e.windows==2
