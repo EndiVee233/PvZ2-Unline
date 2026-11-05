@@ -38,10 +38,20 @@ static void settleEvolution(U b,P m);
 static U finishEvolutionWithGems(U b,P timer);
 static bool evolutionFinishPrompt;
 #endif
+#ifdef PVP_SKILL_RESEARCH
+static void applyResearch(U b,P m);
+static bool ensureResearch(U b,P m);
+static void settleResearch(U b,P m);
+static U finishResearchWithGems(U b,P timer);
+static bool researchFinishPrompt;
+#endif
 #include "economy.h"
 #include "progression.h"
 #ifdef PVP_EVOLUTION
 #include "evolution.h"
+#endif
+#ifdef PVP_SKILL_RESEARCH
+#include "research.h"
 #endif
 #include "redeem.h"
 // S2C attack replies normally translate owned aliases into the numeric

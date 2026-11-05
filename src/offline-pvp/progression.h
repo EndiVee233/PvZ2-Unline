@@ -75,6 +75,9 @@ extern "C" void offlineProgressionInit(U b){
 #ifdef PVP_EVOLUTION
  if(regular(b)&&ensureEvolution(b,m)){settleEvolution(b,m);applyEvolution(b,m);}
 #endif
+#ifdef PVP_SKILL_RESEARCH
+ if(regular(b)&&ensureResearch(b,m)){settleResearch(b,m);applyResearch(b,m);}
+#endif
 }
 // Only the three original building categories use this page. Research pages
 // have separate per-zombie/per-skill configurations and remain separate.
@@ -93,6 +96,9 @@ extern "C" U offlineUpgradeClick(U b,P ui,U button){
   if(next.upgradeKind
 #ifdef PVP_EVOLUTION
     ||next.evolutionIndex
+#endif
+#ifdef PVP_SKILL_RESEARCH
+    ||next.researchIndex
 #endif
   ){economyNotice(b,"[V54_UPGRADE_BUSY]");return 1;}
   if(levelOf(next,kind)>=20)return 1;

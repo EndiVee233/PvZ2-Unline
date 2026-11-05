@@ -9,14 +9,18 @@ struct Economy {U magic,version,user,coins,home,sequence,checksum,reserved;Local
 #ifdef PVP_EVOLUTION
  U evolutionInitialized,evolutionLevels[TRAIN_COUNT],evolutionIndex,evolutionDue;
 #endif
+#ifdef PVP_SKILL_RESEARCH
+ U researchInitialized,researchLevels[4],researchIndex,researchDue;
+#endif
 };
 static constexpr U LEGACY_ECONOMY_SIZE=32+12*TRAIN_COUNT;
 static constexpr U V2_ECONOMY_SIZE=LEGACY_ECONOMY_SIZE+44;
 static constexpr U V3_ECONOMY_SIZE=V2_ECONOMY_SIZE+24;
+static constexpr U V4_ECONOMY_SIZE=V3_ECONOMY_SIZE+12+4*TRAIN_COUNT;
 struct EconomyRuntime {U user,lastTick;bool loaded,blocked,busy,loadedFromDisk;P camp;Economy state;};
 static EconomyRuntime economyRuntime;
 static bool same(const char*a,const char*b){while(*a&&*a==*b){++a;++b;}return *a==*b;}
-static U checkEconomy(const Economy&s){const unsigned char*p=reinterpret_cast<const unsigned char*>(&s);U h=2166136261u;for(U i=0;i<(s.version==1?LEGACY_ECONOMY_SIZE:s.version==2?V2_ECONOMY_SIZE:s.version==3?V3_ECONOMY_SIZE:sizeof(s));++i)if(i<24||i>=28)h=(h^p[i])*16777619u;return h;}
+static U checkEconomy(const Economy&s){const unsigned char*p=reinterpret_cast<const unsigned char*>(&s);U h=2166136261u;for(U i=0;i<(s.version==1?LEGACY_ECONOMY_SIZE:s.version==2?V2_ECONOMY_SIZE:s.version==3?V3_ECONOMY_SIZE:s.version==4?V4_ECONOMY_SIZE:sizeof(s));++i)if(i<24||i>=28)h=(h^p[i])*16777619u;return h;}
 static bool validEconomy(const Economy&s,U user){
  bool version=s.version==1||s.version==2;
 #ifdef PVP_BATTLE_ECONOMY
@@ -34,6 +38,14 @@ static bool validEconomy(const Economy&s,U user){
   for(U i=0;i<TRAIN_COUNT;++i)if(s.evolutionLevels[i]<1||s.evolutionLevels[i]>4)return false;
   if(s.evolutionIndex&&s.evolutionLevels[s.evolutionIndex-1]>=4)return false;
  }else if(s.evolutionIndex||s.evolutionDue)return false;
+#endif
+#ifdef PVP_SKILL_RESEARCH
+ version=version||s.version==5;
+ if(s.researchInitialized){
+  if(s.researchInitialized!=1||s.researchIndex>4||bool(s.researchIndex)!=bool(s.researchDue)||s.researchIndex&&(s.upgradeKind||s.evolutionIndex))return false;
+  for(U i=0;i<4;++i)if(s.researchLevels[i]<1||s.researchLevels[i]>4)return false;
+  if(s.researchIndex&&s.researchLevels[s.researchIndex-1]>=4)return false;
+ }else if(s.researchIndex||s.researchDue)return false;
 #endif
  if(s.magic!=0x45435650||!version||s.user!=user||s.coins>2000000000u||!s.home||s.home>20||s.checksum!=checkEconomy(s))return false;
  if(s.initialized&&(s.initialized!=1||s.medals>2000000000u||!s.baseLevel||s.baseLevel>20||!s.sunLevel||s.sunLevel>20||!s.campLevel||s.campLevel>20||s.upgradeKind>3||bool(s.upgradeKind)!=bool(s.upgradeDue)||s.coinFraction>=3600||s.medalFraction>=3600||s.daveWins>1))return false;
@@ -54,6 +66,9 @@ static bool saveEconomy(U b,Economy&s){
 #ifdef PVP_EVOLUTION
  s.version=4;
 #endif
+#ifdef PVP_SKILL_RESEARCH
+ s.version=5;
+#endif
  s.checksum=checkEconomy(s);if(!validEconomy(s,s.user))return false;
  char dst[160],tmp[160];economyPath(s.user,dst,false);economyPath(s.user,tmp,true);
  I fd=call<I>(b,0x148448,tmp,0x241,0600);if(fd<0)return false;U done=0;
@@ -70,7 +85,10 @@ static I loadEconomy(U b,Economy&s){
  length=length||(s.version==3&&done==V3_ECONOMY_SIZE);
 #endif
 #ifdef PVP_EVOLUTION
- length=length||(s.version==4&&done==sizeof(s));
+ length=length||(s.version==4&&done==V4_ECONOMY_SIZE);
+#endif
+#ifdef PVP_SKILL_RESEARCH
+ length=length||(s.version==5&&done==sizeof(s));
 #endif
  return length&&extra==0&&validEconomy(s,owner(b))?1:-1;
 }
@@ -95,6 +113,9 @@ static void applyEconomy(U b,P m){
  if(r.state.initialized)applyProgression(b,m);
 #ifdef PVP_EVOLUTION
  if(r.state.evolutionInitialized)applyEvolution(b,m);
+#endif
+#ifdef PVP_SKILL_RESEARCH
+ if(r.state.researchInitialized)applyResearch(b,m);
 #endif
 }
 static bool ensureEconomy(U b,P m,bool entering=false){
@@ -200,6 +221,9 @@ extern "C" void offlineTrainingTick(U b,P camp){P m=manager(b);if(ensureEconomy(
 #ifdef PVP_EVOLUTION
  settleEvolution(b,m);
 #endif
+#ifdef PVP_SKILL_RESEARCH
+ settleResearch(b,m);
+#endif
  call<void>(b,0x104c894,camp);completeLocalBattle(b);inspectArena(b);}
 static bool trainingFinishPrompt;
 // Read the local queues, rather than the obsolete cash-product availability.
@@ -248,6 +272,9 @@ extern "C" void offlineFinishCurrencyText(U b,P out,P text,P allocator){
 #ifdef PVP_EVOLUTION
   if(evolutionFinishPrompt)s="[V63_EVOLUTION_FINISH_TIP]";
 #endif
+#ifdef PVP_SKILL_RESEARCH
+  if(researchFinishPrompt)s="[V65_RESEARCH_FINISH_TIP]";
+#endif
   for(U i=0;s[i];++i)key[i]=U(s[i]);text=reinterpret_cast<P>(key);}
  call<void>(b,0x14eb451,out,text,allocator);
 }
@@ -255,6 +282,9 @@ extern "C" void offlineFinishCurrencyText(U b,P out,P text,P allocator){
 // dialogs use the same checkout widget but retain their own native path.
 extern "C" U offlineTrainingFinish(U b,P timer){
  if(!regular(b))return 0;
+#ifdef PVP_SKILL_RESEARCH
+ if(at<U>(timer,0x1fc)==b+0x108531c)return finishResearchWithGems(b,timer);
+#endif
 #ifdef PVP_EVOLUTION
  if(at<U>(timer,0x1fc)==b+0x1080e28)return finishEvolutionWithGems(b,timer);
 #endif
@@ -272,6 +302,9 @@ extern "C" U offlineTrainingFinish(U b,P timer){
 }
 extern "C" U offlineTrainingFinishConfirm(U b,P timer,U unused,U button){
  bool known=at<U>(timer,0x1fc)==b+0x1055588||at<U>(timer,0x1fc)==b+0x10748e8;
+#ifdef PVP_SKILL_RESEARCH
+ known=known||at<U>(timer,0x1fc)==b+0x108531c;
+#endif
 #ifdef PVP_EVOLUTION
  known=known||at<U>(timer,0x1fc)==b+0x1080e28;
 #endif

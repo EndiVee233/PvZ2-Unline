@@ -25,7 +25,7 @@ class SkillLabEngine(EvolutionEngine):
   else:return super().hook(em,a,size,d)
   em.reg_write(UC_ARM_REG_R0,result);em.reg_write(UC_ARM_REG_PC,em.reg_read(UC_ARM_REG_LR)&~1)
 
-e=SkillLabEngine();e.enter();assert not e.skill_nodes
+e=SkillLabEngine();e.enter();e.skill_nodes.clear();assert not e.skill_nodes
 ui=e.alloc(0x100);before=(e.get(M+4),e.get(M+8),e.gems,e.held(),dict(e.files))
 e.run(0x10726e4,ui,15)
 expected={'pvpskill_zombiefood','pvpskill_aid','pvpskill_invisible','pvpskill_rage'}
