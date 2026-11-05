@@ -14,7 +14,7 @@ class CutDelivery(Exception):pass
 
 class ExchangeEngine(StarEngine):
  def __init__(self):
-  super().__init__();self.inventory={};self.disk_inventory={};self.disk_sold=[];self.native_writes=0;self.generated=0;self.grants=[];self.cut='';self.fail_profile=False
+  super().__init__();self.inventory={};self.disk_inventory={};self.disk_sold=[];self.native_writes=0;self.generated=0;self.grants=[];self.cut='';self.fail_profile=False;self.timezone_offset=28800;self.calendar_tm=self.alloc(44)
   self.put(BASE+0x18300a4,PM)
   original=(OUT/'libSrc.so').read_bytes()
   pointer=0x7a8ef8+struct.unpack_from('<I',original,0x7a8f1c)[0]
@@ -40,7 +40,9 @@ class ExchangeEngine(StarEngine):
    sp=em.reg_read(UC_ARM_REG_SP)
    for i,r in enumerate(regs):em.reg_write(r,self.get(sp+4*i))
    em.reg_write(UC_ARM_REG_SP,sp+4*len(regs));return
-  if off==0x71e15c:
+  if off==0x147854:
+   self.put(self.calendar_tm+0x24,self.timezone_offset);ret=self.calendar_tm
+  elif off==0x71e15c:
    assert x==PROFILE and em.mem_read(PM+0x81,1)==b'\1';self.set_sold(self.sold()+[y]);ret=0
   elif off==0x106c884:
    assert x==M+0x200 and em.mem_read(PM+0x81,1)==b'\1' and y in self.sold()

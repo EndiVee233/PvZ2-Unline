@@ -23,7 +23,8 @@ def prepare(resource,out):
    assert 0<p['Quantity']<=100 and 0<p['Price']<=2000000000
    lines.append('{%d,%d,%d},'%(p['ObjectId'],p['Quantity'],p['Price']))
   lines+=['};','static const ExchangeSpec* exchangeSpec(unsigned id){for(const auto&s:EXCHANGE_SPECS)if(s.id==id)return &s;return nullptr;}',
-   'static const unsigned EXCHANGE_REFRESH_COSTS[]={'+','.join(map(str,j['refreshCost']))+'};']
+   'static const unsigned EXCHANGE_REFRESH_COSTS[]={'+','.join(map(str,j['refreshCost']))+'};',
+   'static constexpr unsigned EXCHANGE_AUTO_AT=%d;'%j['refreshTime']]
   out=Path(out);(out/'exchange_presets.h').write_text('\n'.join(lines)+'\n',encoding='utf8')
   record=dict(source=n,offers=offers,display_count=6,asset_unchanged=True,refresh_costs=j['refreshCost'],daily_refresh_local_seconds=j['refreshTime'],automatic_refresh_implemented=False)
   (out/'exchange-presets.json').write_text(json.dumps(record,ensure_ascii=False,indent=2)+'\n',encoding='utf8')

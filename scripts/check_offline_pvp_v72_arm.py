@@ -57,7 +57,7 @@ class RefreshEngine(ExchangeEngine):
   return [self.get(p) for p in range(self.get(M+0x24c),self.get(M+0x250),16)]
  def price(self):return self.get(M+0x248)
  def stock_record(self):
-  raw=next(v for k,v in self.files.items() if k.endswith('.eco'));assert len(raw)==400;return struct.unpack('<9I',raw[364:])
+  raw=next(v for k,v in self.files.items() if k.endswith('.eco'));assert len(raw) in (400,412);return struct.unpack('<9I',raw[364:400])
 
 def fixture():
  e=RefreshEngine();e.enter();e.advance(86400*5);e.enter();e.open();return e

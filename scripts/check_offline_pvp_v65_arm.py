@@ -28,7 +28,7 @@ class ResearchEngine(SkillLabEngine):
   ui=self.alloc(0xe0);self.put(ui+0xc4,self.skill_nodes[NAMES[index]]);self.put(ui+0xc0,index);self.put(ui+0xac,self.make_button());self.run(0x1083d88,ui,0);return ui
  def click_research(self,ui):self.run(0x108531c,ui,0xfffffffe)
  def research_state(self):
-  suffix=f'offline-pvp-{self.get(PM+0x74):08x}.eco';raw=next(v for k,v in self.files.items() if k.endswith(suffix));assert len(raw) in (332,344,364,400)
+  suffix=f'offline-pvp-{self.get(PM+0x74):08x}.eco';raw=next(v for k,v in self.files.items() if k.endswith(suffix));assert len(raw) in (332,344,364,400,412)
   return struct.unpack('<83I',raw[:332])
  def research_queue(self):return self.research_state()[81:83]
  def research_grade(self,index=0):return self.get(self.skill_nodes[NAMES[index]]+4)

@@ -3,6 +3,9 @@
 // native shop/profile memory is repeatable after either profile write fails.
 static U exchangeQuoteUser,exchangeQuoteDay,exchangeQuoteIndex,exchangeQuoteFee;
 static P exchangeQuoteWindow;
+#ifdef PVP_EXCHANGE_CLOCK
+static bool settleExchangeClock(U b,P shop);
+#endif
 static U exchangeRefreshPrice(U count){
  U n=sizeof(EXCHANGE_REFRESH_COSTS)/sizeof(EXCHANGE_REFRESH_COSTS[0]);
  return EXCHANGE_REFRESH_COSTS[count<n?count:n-1];
@@ -58,6 +61,9 @@ static U prepareExchangeStock(U b,P shop,U refresh){
  // A recovered refresh may just have restored the generation needed by a
  // later purchase journal whose native profile write had not reached disk.
  if(!recoverExchange(b,shop))return 1;
+#ifdef PVP_EXCHANGE_CLOCK
+ if(!settleExchangeClock(b,shop))return 1;
+#endif
  if(!refresh)return 1;
  P dialog=at<P>(reinterpret_cast<P>(b),0x18a584c);
  Economy next=economyRuntime.state;U price=exchangeRefreshPrice(next.stockRefresh);
@@ -71,7 +77,13 @@ static U prepareExchangeStock(U b,P shop,U refresh){
 }
 extern "C" void offlineExchangeQuote(U b,P dialog,U mode){
  if(!regular(b)||mode!=0||!ensureEconomy(b,manager(b)))return;
+#ifdef PVP_EXCHANGE_CLOCK
+ if(!economyRuntime.state.stockInitialized||!settleExchangeClock(b,manager(b)+0x200))return;
+#endif
  const Economy&s=economyRuntime.state;if(!s.stockInitialized)return;
  exchangeQuoteWindow=dialog;exchangeQuoteUser=owner(b);exchangeQuoteDay=s.stockDay;exchangeQuoteIndex=s.stockRefresh;exchangeQuoteFee=exchangeRefreshPrice(s.stockRefresh);
  log(b,"exchange-refresh-quote",exchangeQuoteFee,s.stockRefresh);
 }
+#ifdef PVP_EXCHANGE_CLOCK
+#include "exchange_clock.h"
+#endif

@@ -23,7 +23,7 @@ class NativeSamplerEngine(RefreshEngine):
   em.reg_write(UC_ARM_REG_PC,em.reg_read(UC_ARM_REG_LR)&~1)
 
 def check():
- e=NativeSamplerEngine();e.enter();e.open();seen=set()
+ e=NativeSamplerEngine();e.now=1700000000;e.enter();e.open();seen=set()
  for _ in range(20):
   e.quote();e.refresh();ids=e.current();assert len(ids)==6 and len(set(ids))==6
   for part,group in zip((ids[:1],ids[1:3],ids[3:]),e.offer_groups):assert all(id in [o['ObjectId'] for o in group] for id in part)

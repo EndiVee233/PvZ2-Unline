@@ -29,7 +29,7 @@ class NarrativeEngine(LabelEngine):
   # map. Its new journal fields remain zero until the next transaction.
   if len(raw)==332:
    assert struct.unpack_from('<I',raw,4)[0]==5;return (0,0,0)
-  assert len(raw) in (344,364,400)
+  assert len(raw) in (344,364,400,412)
   return struct.unpack('<3I',raw[332:344])
  def setup(self):
   self.enter();self.run('offlineGarden');self.train();self.advance(31);self.run('offlineTrainingTick',self.get(M+0x20))
