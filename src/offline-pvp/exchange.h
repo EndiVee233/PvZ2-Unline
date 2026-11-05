@@ -4,6 +4,9 @@
 // Native inventory and the native purchased-ID list are flushed together,
 // letting a restart replay an interrupted debit without delivering twice.
 static bool exchangeBusy;
+#ifdef PVP_EXCHANGE_REFRESH
+static U prepareExchangeStock(U b,P shop,U refresh);
+#endif
 static bool exchangeBought(U b,U id){
  P p=profile(b),first=at<P>(p,0x7a8),end=at<P>(p,0x7ac);
  if(end<first||U(end-first)>4096||U(end-first)%4)return false;
@@ -39,14 +42,22 @@ extern "C" U offlineExchangePrepare(U b,P shop,U refresh){
  if(!regular(b))return 0;
  if(shop!=manager(b)+0x200)return 1;
  if(!ensureEconomy(b,manager(b))||!recoverExchange(b,shop))return 1;
+#ifdef PVP_EXCHANGE_REFRESH
+ return prepareExchangeStock(b,shop,refresh);
+#else
  if(refresh){economyNotice(b,"[V71_EXCHANGE_REFRESH_PENDING]");return 1;}
  return 0; // Preserve original local catalogue generation and layout.
+#endif
 }
 extern "C" U offlineExchangeBuy(U b,P shop,U id){
  if(!regular(b))return 0;
  P m=manager(b);
  if(shop!=m+0x200||exchangeBusy||!ensureEconomy(b,m))return 1;
  if(!recoverExchange(b,shop))return 1;
+#ifdef PVP_EXCHANGE_REFRESH
+ prepareExchangeStock(b,shop,0);
+ if(!economyRuntime.state.stockInitialized)return 1;
+#endif
  const ExchangeSpec*spec=exchangeSpec(id);
  P first=at<P>(shop,0x4c),end=at<P>(shop,0x50),offer=nullptr;
  if(end<first||U(end-first)>16*6||U(end-first)%16)return 1;
@@ -62,3 +73,6 @@ extern "C" U offlineExchangeBuy(U b,P shop,U id){
  recoverExchange(b,shop);
  return 1;
 }
+#ifdef PVP_EXCHANGE_REFRESH
+#include "exchange_refresh.h"
+#endif

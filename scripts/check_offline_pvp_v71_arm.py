@@ -71,67 +71,70 @@ class ExchangeEngine(StarEngine):
 def fixture(offers=SPECS[:6]):
  e=ExchangeEngine();e.enter();e.advance(86400*5);e.enter();e.catalogue(offers);return e
 
-e=fixture();before=(e.get(M+8),e.gems,dict(e.files));e.open()
-assert e.generated==1 and (e.get(M+8),e.gems,e.files)==before
-e.open(1);assert e.generated==1 and e.notices[-1]=='[V71_EXCHANGE_REFRESH_PENDING]'
+def check_exchange_transactions():
+ e=fixture();before=(e.get(M+8),e.gems,dict(e.files));e.open()
+ assert e.generated==1 and (e.get(M+8),e.gems,e.files)==before
+ e.open(1);assert e.generated==1 and e.notices[-1]=='[V71_EXCHANGE_REFRESH_PENDING]'
 
-# Every original SKU uses its original quantity and price; no replacement
-# medals/gems/coins are created. Each offer can be redeemed only once.
-for o in SPECS:
- print('exchange SKU',o['ObjectId'],flush=True)
- e=fixture([o]);before=(e.get(M+4),e.get(M+8),e.gems);e.buy(o['ObjectId'])
- assert (e.get(M+4),e.get(M+8),e.gems)==(before[0],before[1]-o['Price'],before[2])
- assert e.inventory=={o['ObjectId']:o['Quantity']} and e.native_writes==1
- assert e.disk_inventory==e.inventory and e.disk_sold==[o['ObjectId']]
- assert e.get(e.get(M+0x24c)+12)==1
- e.buy(o['ObjectId']);assert len(e.grants)==1 and e.native_writes==1
- r=ExchangeEngine();r.now=e.now;r.copy_state(e);r.enter();r.catalogue([o]);r.open()
- assert r.inventory==e.inventory and r.get(M+8)==e.get(M+8) and not r.grants
- e.close_engine();r.close_engine()
+ # Every original SKU uses its original quantity and price; no replacement
+ # medals/gems/coins are created. Each offer can be redeemed only once.
+ for o in SPECS:
+  print('exchange SKU',o['ObjectId'],flush=True)
+  e=fixture([o]);before=(e.get(M+4),e.get(M+8),e.gems);e.buy(o['ObjectId'])
+  assert (e.get(M+4),e.get(M+8),e.gems)==(before[0],before[1]-o['Price'],before[2])
+  assert e.inventory=={o['ObjectId']:o['Quantity']} and e.native_writes==1
+  assert e.disk_inventory==e.inventory and e.disk_sold==[o['ObjectId']]
+  assert e.get(e.get(M+0x24c)+12)==1
+  e.buy(o['ObjectId']);assert len(e.grants)==1 and e.native_writes==1
+  r=ExchangeEngine();r.now=e.now;r.copy_state(e);r.enter();r.catalogue([o]);r.open()
+  assert r.inventory==e.inventory and r.get(M+8)==e.get(M+8) and not r.grants
+  e.close_engine();r.close_engine()
 
-o=SPECS[0]
-poor=ExchangeEngine();poor.enter();poor.catalogue([o]);before=dict(poor.files);poor.buy(o['ObjectId'])
-assert poor.get(M+8)==200 and not poor.grants and poor.files==before
+ o=SPECS[0]
+ poor=ExchangeEngine();poor.enter();poor.catalogue([o]);before=dict(poor.files);poor.buy(o['ObjectId'])
+ assert poor.get(M+8)==200 and not poor.grants and poor.files==before
 
-for bad in (dict(o,Price=1),dict(o,Quantity=99)):
- e=fixture([bad]);before=(e.get(M+8),dict(e.files));e.buy(o['ObjectId']);assert (e.get(M+8),e.files)==before and not e.grants
-e=fixture();e.buy(999999);assert not e.grants
-e=fixture([o]);e.failwrite=True;before=(e.get(M+8),dict(e.files));e.buy(o['ObjectId'])
-assert (e.get(M+8),e.files)==before and not e.grants and not e.sold()
+ for bad in (dict(o,Price=1),dict(o,Quantity=99)):
+  e=fixture([bad]);before=(e.get(M+8),dict(e.files));e.buy(o['ObjectId']);assert (e.get(M+8),e.files)==before and not e.grants
+ e=fixture();e.buy(999999);assert not e.grants
+ e=fixture([o]);e.failwrite=True;before=(e.get(M+8),dict(e.files));e.buy(o['ObjectId'])
+ assert (e.get(M+8),e.files)==before and not e.grants and not e.sold()
 
-# Interrupt before item delivery and after the native profile flush; both
-# restart paths keep the single debit and converge to a single award.
-for cut in ('before-grant','after-profile-save'):
- e=fixture([o]);before=e.get(M+8);e.cut=cut
- try:e.buy(o['ObjectId']);raise AssertionError('missing simulated interruption')
- except CutDelivery:pass
- r=ExchangeEngine();r.now=e.now;r.copy_state(e);r.enter();r.catalogue([o]);r.open()
- assert r.get(M+8)==before-o['Price'] and r.inventory=={o['ObjectId']:o['Quantity']}
- assert r.sold()==[o['ObjectId']] and (not r.grants if cut=='after-profile-save' else r.grants==[(o['ObjectId'],o['Quantity'])])
+ # Interrupt before item delivery and after the native profile flush; both
+ # restart paths keep the single debit and converge to a single award.
+ for cut in ('before-grant','after-profile-save'):
+  e=fixture([o]);before=e.get(M+8);e.cut=cut
+  try:e.buy(o['ObjectId']);raise AssertionError('missing simulated interruption')
+  except CutDelivery:pass
+  r=ExchangeEngine();r.now=e.now;r.copy_state(e);r.enter();r.catalogue([o]);r.open()
+  assert r.get(M+8)==before-o['Price'] and r.inventory=={o['ObjectId']:o['Quantity']}
+  assert r.sold()==[o['ObjectId']] and (not r.grants if cut=='after-profile-save' else r.grants==[(o['ObjectId'],o['Quantity'])])
 
-# If a native profile write does not reach disk, retain the delivery journal
-# so the next launch can recover it instead of losing the purchased item.
-e=fixture([o]);e.fail_profile=True;e.buy(o['ObjectId']);assert not e.disk_sold
-r=ExchangeEngine();r.now=e.now;r.copy_state(e);r.enter();r.catalogue([o]);r.open();assert r.inventory=={o['ObjectId']:o['Quantity']}
+ # If a native profile write does not reach disk, retain the delivery journal
+ # so the next launch can recover it instead of losing the purchased item.
+ e=fixture([o]);e.fail_profile=True;e.buy(o['ObjectId']);assert not e.disk_sold
+ r=ExchangeEngine();r.now=e.now;r.copy_state(e);r.enter();r.catalogue([o]);r.open();assert r.inventory=={o['ObjectId']:o['Quantity']}
 
-# Migration uses the old checksum extent. Merely entering the UI does not
-# rewrite a v6 wallet or replay any prior purchase.
-e=fixture();key=next(k for k in e.files if k.endswith('.eco'));raw=e.files[key][:344];struct.pack_into('<I',raw,4,6);h=2166136261
-for i,c in enumerate(raw):
- if not 24<=i<28:h=((h^c)*16777619)&0xffffffff
-struct.pack_into('<I',raw,24,h);e.files[key]=raw
-r=ExchangeEngine();r.now=e.now;r.copy_state(e);r.enter();r.catalogue([o]);r.open();assert len(r.files[key])==344 and not r.grants
-r.buy(o['ObjectId']);assert len(r.files[key])==364
+ # Migration uses the old checksum extent. Merely entering the UI does not
+ # rewrite a v6 wallet or replay any prior purchase.
+ e=fixture();key=next(k for k in e.files if k.endswith('.eco'));raw=e.files[key][:344];struct.pack_into('<I',raw,4,6);h=2166136261
+ for i,c in enumerate(raw):
+  if not 24<=i<28:h=((h^c)*16777619)&0xffffffff
+ struct.pack_into('<I',raw,24,h);e.files[key]=raw
+ r=ExchangeEngine();r.now=e.now;r.copy_state(e);r.enter();r.catalogue([o]);r.open();assert len(r.files[key])==344 and not r.grants
+ r.buy(o['ObjectId']);assert len(r.files[key])==364
 
-# Rollover clears native purchase flags; an old journal must not award the
-# same item again in the new stock generation.
-e=fixture([o]);e.buy(o['ObjectId']);r=ExchangeEngine();r.now=e.now;r.copy_state(e);r.enter();r.set_sold([]);r.put(PROFILE+0x798,1);r.catalogue([o]);r.open()
-assert r.inventory==e.inventory and not r.grants
+ # Rollover clears native purchase flags; an old journal must not award the
+ # same item again in the new stock generation.
+ e=fixture([o]);e.buy(o['ObjectId']);r=ExchangeEngine();r.now=e.now;r.copy_state(e);r.enter();r.set_sold([]);r.put(PROFILE+0x798,1);r.catalogue([o]);r.open()
+ assert r.inventory==e.inventory and not r.grants
 
-report=dict(original_28_sku_quantities_and_prices=True,native_catalogue_and_confirm_path_preserved=True,
- no_network_purchase=True,medal_debit_once=True,original_item_grant_delegated=True,
- actual_native_profile_save_gate_batched=True,sold_flag_and_inventory_single_native_flush=True,
- before_delivery_and_after_flush_interruptions_recovered=True,profile_write_retry_on_restart=True,
- insufficient_medals_and_bad_offer_no_debit=True,wallet_write_failure_no_grant=True,
- v6_migration_preserves_prior_state=True,refresh_deferred=True,previous_v70_regressions=True,runtime_game_verified=False)
-(OUT/'v71-arm-checks.json').write_text(json.dumps(report,indent=2)+'\n',encoding='utf8');print(json.dumps(report))
+ report=dict(original_28_sku_quantities_and_prices=True,native_catalogue_and_confirm_path_preserved=True,
+  no_network_purchase=True,medal_debit_once=True,original_item_grant_delegated=True,
+  actual_native_profile_save_gate_batched=True,sold_flag_and_inventory_single_native_flush=True,
+  before_delivery_and_after_flush_interruptions_recovered=True,profile_write_retry_on_restart=True,
+  insufficient_medals_and_bad_offer_no_debit=True,wallet_write_failure_no_grant=True,
+  v6_migration_preserves_prior_state=True,refresh_deferred=True,previous_v70_regressions=True,runtime_game_verified=False)
+ (OUT/'v71-arm-checks.json').write_text(json.dumps(report,indent=2)+'\n',encoding='utf8');print(json.dumps(report))
+
+if __name__=="__main__":check_exchange_transactions()
