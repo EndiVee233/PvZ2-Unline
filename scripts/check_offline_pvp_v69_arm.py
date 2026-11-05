@@ -12,21 +12,22 @@ class StarEngine(NarrativeEngine):
  def __init__(self):
   super().__init__();self.draws=[];self.star_lookups=0;self.image_available=True;self.resource=self.alloc(0x100);self.lit=self.alloc(0x80);self.original_animations=0
   self.put(BASE+0x183607c,self.resource);self.put(BASE+0x183606c,88);self.put(self.resource+0xe8,12)
+  raw=(OUT/'libSrc.so').read_bytes();word=struct.unpack_from('<I',raw,0x11b5c00)[0]
+  singleton=(0x11b5b70+word)&0xffffffff;self.put(BASE+singleton+8,41)
  def hook(self,em,a,size,d):
   off=a-BASE;x,y,z,w=[em.reg_read(r) for r in (UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3)]
   if off==0x109e438 or 0x109e4a8<=off<0x109e528:return
+  if 0x11b5b5c<=off<0x11b5b80:return # real native type getter, cached fast path
   if off==0x109e43c:
    self.original_animations+=1;sp=em.reg_read(UC_ARM_REG_SP)
    for i,r in enumerate((UC_ARM_REG_R4,UC_ARM_REG_R5,UC_ARM_REG_R11,UC_ARM_REG_PC)):em.reg_write(r,self.get(sp+4*i))
    em.reg_write(UC_ARM_REG_SP,sp+16);return
-  if off==0x11c5b5c:ret=41
-  elif off==0x11ca888:
+  if off==0x11ba888:
    assert x==self.resource and y==41 and self.txt(self.get(z))=='IMAGE_UI_HUD_INGAME_ARENA_STAR_ON'
    assert self.get(self.resource+0xe8)==88;self.star_lookups+=1
    if self.image_available:
     record=self.alloc(0x20);self.put(record+0x18,self.lit);self.put(record+0x1c,0);ret=record
    else:ret=0
-   em.reg_write(UC_ARM_REG_R1,0)
   elif off==0x11694c8:self.draws.append((x,y,z,w));ret=0
   else:return super().hook(em,a,size,d)
   em.reg_write(UC_ARM_REG_R0,ret);em.reg_write(UC_ARM_REG_PC,em.reg_read(UC_ARM_REG_LR)&~1)
