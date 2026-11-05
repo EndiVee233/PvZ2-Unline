@@ -31,9 +31,12 @@ def start(e):
 def result(e,stars):
  e.deaths(0);e.put(MODULE+0x78,stars);e.stub(0x10448e8,M,stars,0,1);e.run('offlineTrainingTick',e.get(M+0x20))
 def available(e):
- e.dave_available=False;e.u.reg_write(UC_ARM_REG_R8,M);e.u.reg_write(UC_ARM_REG_R5,0);e.run(0x101a3d8);return e.dave_available
+ e.dave_available=False;e.u.reg_write(UC_ARM_REG_R8,M)
+ e.u.reg_write(UC_ARM_REG_R5,next(i*64 for i,r in enumerate(e.special) if struct.unpack_from('<I',r,0)[0]==0x70000007))
+ e.run(0x101a3d8);return e.dave_available
 
-e=make();assert struct.unpack_from('<I',e.special[0],48)[0]==6 and e.get(M+0x15c)==0 and available(e)
+e=make();dave=next(r for r in e.special if struct.unpack_from('<I',r,0)[0]==0x70000007)
+assert struct.unpack_from('<I',dave,48)[0]==6 and e.get(M+0x15c)==0 and available(e)
 initial=(e.get(M+4),e.get(M+8),e.gems,e.held());formation=preview(e);assert len(formation)==10*12
 start(e);result(e,0);assert e.get(M+0x15c)==0 and (e.get(M+4),e.get(M+8),e.gems,e.held())==initial
 return_map(e);assert preview(e)==formation

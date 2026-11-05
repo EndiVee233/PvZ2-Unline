@@ -21,12 +21,15 @@ class LabelEngine(DaveRoundEngine):
  def draw_title(self,record):
   self.formatted=[];point=self.alloc(8);self.stub(0x10129f0,0,1,record,point);return self.formatted
 
-e=LabelEngine();e.enter();e.run('offlineGarden');record=e.get(M+0x128)
+def dave_record(e):
+ return next(p for p in range(e.get(M+0x128),e.get(M+0x12c),64) if e.get(p)==0x70000007)
+
+e=LabelEngine();e.enter();e.run('offlineGarden');record=dave_record(e)
 assert e.draw_title(record)==[0,6]
 e.put(record+0x2c,0);e.put(record+0x30,0);assert e.draw_title(record)==[0,6]
 # Use an actual successful battle's saved wallet, not an edited player file.
 won=make();preview(won);start(won);result(won,1);return_map(won)
-r=LabelEngine();r.copy_state(won);r.enter();r.run('offlineGarden');record=r.get(M+0x128)
+r=LabelEngine();r.copy_state(won);r.enter();r.run('offlineGarden');record=dave_record(r)
 r.put(record+0x2c,0);r.put(record+0x30,0);assert r.draw_title(record)==[1,6]
 before=(r.get(M+4),r.get(M+8),r.gems,r.held(),dict(r.files));assert r.draw_title(record)==[1,6]
 assert (r.get(M+4),r.get(M+8),r.gems,r.held(),r.files)==before,'drawing saved or awarded game state'

@@ -8,6 +8,11 @@ static void ownBaseRecord(U b,P m){
  // BigMapInfo neighbor vector used by context kinds 2/3.
  at<U>(m,0x138)=s.medals;at<U>(m,0x13c)=base.medalLimit;at<U>(m,0x140)=s.coins;
  at<U>(m,0x144)=base.coinLimit;at<U>(m,0x148)=base.medals;at<U>(m,0x14c)=base.coins;
+#ifdef PVP_RESIDENT_NEIGHBORS
+ // The original map has a dedicated own-base house/label and kind-4 panel.
+ // A second entry in the business vector overlays a numbered business tag.
+ return;
+#endif
  P first=at<P>(m,0x110),end=at<P>(m,0x114),record=nullptr;
  if(first&&end>=first&&U(end-first)<=64*256)for(P p=first;p<end;p+=64)if(at<U>(p,48)==1&&at<U>(p,52)==2){record=p;break;}
  if(!record){

@@ -22,6 +22,9 @@ static void bytes(P d,const unsigned char*s,U n){for(U i=0;i<n;++i)d[i]=s[i];}
 static void narrow(U b,P dst,const char*src){char a=0;call<void>(b,0x14ed0e1,dst,src,&a);}
 static void release(U b,P value,bool wide=false){if(value){char a=0;call<void>(b,wide?0x14ea239:0x14ebf59,value-12,&a);}}
 static void log(U b,const char*what,U a=0,U c=0){call<I>(b,0x147adc,4,"OfflinePvP","%s a=%u b=%u",what,a,c);}
+#ifdef PVP_RESIDENT_NEIGHBORS
+#include "residences.h"
+#endif
 static void starter(U b,P m,const char*name,U count,bool skill){
  P key=nullptr;narrow(b,reinterpret_cast<P>(&key),name);
  if(!call<P>(b,skill?0x1046764:0x104673c,m,&key)){
@@ -87,6 +90,9 @@ static void bindBattleArmy(U b,P m){
 }
 static void neighbors(U b,P m){
  if(!regular(b))return;
+#ifdef PVP_RESIDENT_NEIGHBORS
+ removeLocalBusinessRecords(b,m);
+#endif
  for(U i=0;i<NPC_COUNT;++i){const NpcPreset& n=NPCS[i];
   bool occupied=false;P begin=at<P>(m,0x110),end=at<P>(m,0x114);
   if(begin&&end>=begin&&U(end-begin)<=64*256){
@@ -106,6 +112,9 @@ static void neighbors(U b,P m){
    call<void>(b,0x104678c,m,special);release(b,reinterpret_cast<P>(special[2]),true);
    continue;
   }
+#ifdef PVP_RESIDENT_NEIGHBORS
+  residentialNeighbor(b,m,n);continue;
+#endif
   if(occupied)continue;
   alignas(8) U record[16]={n.id,0,n.id,0,0,n.level,1000,2000,100,2000,40,20,n.zone,n.position,1,0};
   char alloc=0;call<void>(b,0x14eb451,reinterpret_cast<P>(record)+16,n.name,&alloc);
@@ -311,8 +320,23 @@ extern "C" void offlineInfo(U b,P m,U a,U id,U kind){
 extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
  const NpcPreset*n=npc(id);
  // Native special houses send a zero player id and put the house id in +104.
- if(!n&&id==0&&reason>=1&&reason<=4){const NpcPreset* selected=npc(at<U>(m,0x104));if(selected&&selected->evil&&selected->zone==at<U>(m,0xfc)&&selected->position==at<U>(m,0xf8))n=selected;}
+ if(!n&&id==0&&reason>=1&&reason<=4){const NpcPreset* selected=npc(at<U>(m,0x104));if(selected&&
+#ifndef PVP_RESIDENT_NEIGHBORS
+ selected->evil&&
+#endif
+ selected->zone==at<U>(m,0xfc)&&selected->position==at<U>(m,0xf8))n=selected;}
  if(n&&regular(b)){
+#ifdef PVP_RESIDENT_NEIGHBORS
+  // Residential buttons use zero-id reasons 4 (scout) and 1 (raid).
+  // Route ordinary opponents through the already accepted local battle kind,
+  // including in-place preview starts, fees and survivor/death settlement.
+  if(!n->evil&&id==0){
+   if(reason!=1&&reason!=4){log(b,"residence-reason-rejected",reason);return;}
+   reason=reason==4?3:2;id=n->id;at<U>(m,0xa8)=2;at<U>(m,0xf4)=n->id;
+   at<unsigned char>(m,0x102)=at<unsigned char>(m,0x103)=0;
+   log(b,"residence-request",id,reason);
+  }
+#endif
   if(!localDaveAllowed(b,m,*n))return;
   log(b,"attack-request-reason",id,reason);
   // The special-house handler sets this server-driven preparation flag.

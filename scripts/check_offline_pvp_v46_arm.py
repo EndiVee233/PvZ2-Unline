@@ -30,8 +30,9 @@ class BattleEngine(SceneEngine):
   em.reg_write(UC_ARM_REG_PC,em.reg_read(UC_ARM_REG_LR)&~1)
 
 e=BattleEngine();e.run('offlineGarden')
-assert e.get(M+0x15c)==0 and len(e.special)==1
-e.dave_available=False;e.u.reg_write(UC_ARM_REG_R8,M);e.u.reg_write(UC_ARM_REG_R5,0)
+assert e.get(M+0x15c)==0 and len(e.special)==(7 if 'offlineResidentialMode' in e.exports else 1)
+e.dave_available=False;e.u.reg_write(UC_ARM_REG_R8,M)
+e.u.reg_write(UC_ARM_REG_R5,next(i*64 for i,r in enumerate(e.special) if struct.unpack_from('<I',r,0)[0]==0x70000007))
 e.run(0x101a3d8)
 assert e.dave_available,'native map misclassified the untouched Dave house'
 e.u.mem_write(M+0x100,b'\1');e.stub(0x1042fe8,M,0x70000001,3,0)

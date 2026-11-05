@@ -31,9 +31,13 @@ class ProgressionEngine(RecallEngine):
 e=ProgressionEngine();e.enter()
 assert (e.get(M+4),e.get(M+8))==(1000,200)
 assert all(e.level(i)==1 for i in (1,2,3))
-own=next(r for r in e.records if struct.unpack_from('<II',r,48)==(1,2))
-assert struct.unpack_from('<6I',own,24)==(200,2000,1000,2000,20,40)
-e.enter();assert e.get(M+4)==1000 and e.get(M+8)==200 and len(e.records)==1
+if 'offlineResidentialMode' in e.exports:
+ assert [e.get(M+o) for o in range(0x138,0x150,4)]==[200,2000,1000,2000,20,40]
+ assert not e.records,'own base duplicated in business records'
+else:
+ own=next(r for r in e.records if struct.unpack_from('<II',r,48)==(1,2))
+ assert struct.unpack_from('<6I',own,24)==(200,2000,1000,2000,20,40)
+e.enter();assert e.get(M+4)==1000 and e.get(M+8)==200 and len(e.records)==(0 if 'offlineResidentialMode' in e.exports else 1)
 r=ProgressionEngine();r.copy_state(e);r.enter();assert (r.get(M+4),r.get(M+8))==(1000,200)
 early=ProgressionEngine();early.put(PROFILE+0x75c,1);temporary=early.alloc(0x40);early.put(M+0x20,temporary);early.enter()
 assert (early.get(M+4),early.get(M+8))==(1000,200) and early.get(M+0x20)==temporary,'first tutorial army replaced'
