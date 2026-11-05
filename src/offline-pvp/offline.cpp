@@ -398,6 +398,33 @@ extern "C" void offlineBoardLoad(U b,P board,P name,U seed){
  }
  call<void>(b,0x2258d8,board,name,seed);
 }
+#ifdef PVP_LAB_ROSTER
+// The old server populated the lab roster separately from TrainingData. The
+// local training wallet must not be interpreted as zombie evolution levels.
+extern "C" void offlineLabRoster(U b,P ui,U button){
+ if(button!=13||!regular(b))return;
+ P m=manager(b);if(!ensureEconomy(b,m))return;
+ for(U i=0;i<TRAIN_COUNT;++i){
+  P key=nullptr;narrow(b,reinterpret_cast<P>(&key),TRAIN_SPECS[i].name);
+  P info=call<P>(b,0x104673c,m,&key);
+  if(!info&&TRAIN_SPECS[i].level<=economyRuntime.state.home){
+   U entry[5]={reinterpret_cast<U>(key),1,1,0,1};info=call<P>(b,0x1048f44,m,entry);
+   log(b,"lab-roster-added",i,1);
+  }
+  if(info){log(b,"lab-record-level",i,at<U>(info,4));log(b,"lab-record-allow",U(at<unsigned char>(info,8)),at<U>(info,12));log(b,"lab-record-advance",i,U(at<unsigned char>(info,16)));}
+  else log(b,"lab-record-missing",i,TRAIN_SPECS[i].level);
+  release(b,key);
+ }
+}
+extern "C" void offlineLabProperties(U b,P type,P props,U caller){
+ U site=caller-b;if(site<0x107c000||site>=0x1085000)return;
+ const char*name=at<P>(type,0x1c)?reinterpret_cast<const char*>(at<P>(type,0x1c)):"(empty)";
+ if(!props){call<I>(b,0x147adc,4,"OfflinePvP","lab-properties-missing popanim=%s caller=%x",name,site);return;}
+ U first=at<U>(props,0x108),last=at<U>(props,0x10c);
+ U count=last>=first&&(last-first)%12==0&&(last-first)<=12*20?(last-first)/12:0xffffffffu;
+ call<I>(b,0x147adc,4,"OfflinePvP","lab-properties popanim=%s rows=%u caller=%x",name,count,site);
+}
+#endif
 static P loggedArenaBoard;
 static void inspectArena(U b){
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);P board=at<P>(app,0x6bc);
