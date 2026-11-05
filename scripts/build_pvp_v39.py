@@ -8,7 +8,7 @@ from rebuild_bootstrap_dex import rebuild_bootstrap
 from elftools.elf.elffile import ELFFile
 from keystone import Ks,KS_ARCH_ARM,KS_MODE_ARM
 from prepare_offline_neighbors import generate
-ROOT=Path(__file__).resolve().parents[1];VERSION=65 if '--v65' in sys.argv else 64 if '--v64' in sys.argv else 63 if '--v63' in sys.argv else 62 if '--v62' in sys.argv else 61 if '--v61' in sys.argv else 60 if '--v60' in sys.argv else 59 if '--v59' in sys.argv else 58 if '--v58' in sys.argv else 57 if '--v57' in sys.argv else 56 if '--v56' in sys.argv else 55 if '--v55' in sys.argv else 54 if '--v54' in sys.argv else 53 if '--v53' in sys.argv else 52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
+ROOT=Path(__file__).resolve().parents[1];VERSION=66 if '--v66' in sys.argv else 65 if '--v65' in sys.argv else 64 if '--v64' in sys.argv else 63 if '--v63' in sys.argv else 62 if '--v62' in sys.argv else 61 if '--v61' in sys.argv else 60 if '--v60' in sys.argv else 59 if '--v59' in sys.argv else 58 if '--v58' in sys.argv else 57 if '--v57' in sys.argv else 56 if '--v56' in sys.argv else 55 if '--v55' in sys.argv else 54 if '--v54' in sys.argv else 53 if '--v53' in sys.argv else 52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
 OUT=ROOT/f'work/pvp-v{VERSION}';OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -33,6 +33,9 @@ if VERSION>=63:
 if VERSION>=65:
  from prepare_offline_research import prepare as prepare_research
  economy_record['research']=prepare_research(resource,OUT/'generated')
+if VERSION>=66:
+ from prepare_offline_dave import prepare as prepare_dave
+ economy_record['dave']=prepare_dave(OUT/'generated')
 with zipfile.ZipFile(BASE) as src:
  b=bytearray(src.read('lib/armeabi/libSrc.so'))
  old_resource=src.read('assets/reconstruction/dynamic-original-speed.rsb.smf')
@@ -73,6 +76,7 @@ strings.update(V39_ADMIN_GRANTED='获得100钻石和10000金币，可再次输�
  V41_GEMS_REQUIRED='钻石不足，请先兑换钻石',V54_UPGRADE_BUSY='已有升级进行中，请先完成当前升级',V54_BASE_LEVEL_REQUIRED='请先升级基地，再升级此设施')
 if VERSION>=63:strings['V63_EVOLUTION_FINISH_TIP']='花费{NUMBER}钻石立即完成本次僵尸进阶？'
 if VERSION>=65:strings['V65_RESEARCH_FINISH_TIP']='花费{NUMBER}钻石立即完成本次技能研究？'
+if VERSION>=66:strings['V66_DAVE_FINISHED']='已完成邪恶戴夫的六轮挑战。'
 b,localization=add_exchange_localization(b,strings)
 e=ELFFile(BytesIO(b));index,tail=[(i,s) for i,s in enumerate(e.iter_segments()) if s['p_type']=='PT_LOAD'][-1]
 old=len(b);assert tail['p_offset']+tail['p_filesz']==old
@@ -86,6 +90,7 @@ if VERSION>=62:flags.append('-DPVP_LAB_ROSTER')
 if VERSION>=63:flags.append('-DPVP_EVOLUTION')
 if VERSION>=64:flags.append('-DPVP_SKILL_LAB')
 if VERSION>=65:flags.append('-DPVP_SKILL_RESEARCH')
+if VERSION>=66:flags.append('-DPVP_DAVE_ROUNDS')
 subprocess.run([compiler,*flags,'-c',str(ROOT/'src/offline-pvp/offline.cpp'),'-o',str(OUT/'offline.o')],check=True)
 # A flat payload has no dynamic relocation table. Absolute pointer constants
 # would work at base zero in analysis and crash after Android relocates the SO.
@@ -331,7 +336,8 @@ if 60<=VERSION<63:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline
 if VERSION==62:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v62_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION==63:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v63_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION==64:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v64_arm.py'),str(OUT)],cwd=ROOT,check=True)
-if VERSION>=65:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v65_arm.py'),str(OUT)],cwd=ROOT,check=True)
+if VERSION==65:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v65_arm.py'),str(OUT)],cwd=ROOT,check=True)
+if VERSION>=66:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v66_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if '--native-only' in sys.argv:raise SystemExit(0)
 scratch=Path(sys.argv[sys.argv.index('--intermediate-dir')+1]).resolve() if '--intermediate-dir' in sys.argv else OUT
 scratch.mkdir(parents=True,exist_ok=True)

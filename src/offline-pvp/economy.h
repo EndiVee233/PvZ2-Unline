@@ -17,6 +17,11 @@ static constexpr U LEGACY_ECONOMY_SIZE=32+12*TRAIN_COUNT;
 static constexpr U V2_ECONOMY_SIZE=LEGACY_ECONOMY_SIZE+44;
 static constexpr U V3_ECONOMY_SIZE=V2_ECONOMY_SIZE+24;
 static constexpr U V4_ECONOMY_SIZE=V3_ECONOMY_SIZE+12+4*TRAIN_COUNT;
+#ifdef PVP_DAVE_ROUNDS
+static constexpr U DAVE_WINS_LIMIT=6;
+#else
+static constexpr U DAVE_WINS_LIMIT=1;
+#endif
 struct EconomyRuntime {U user,lastTick;bool loaded,blocked,busy,loadedFromDisk;P camp;Economy state;};
 static EconomyRuntime economyRuntime;
 static bool same(const char*a,const char*b){while(*a&&*a==*b){++a;++b;}return *a==*b;}
@@ -48,7 +53,7 @@ static bool validEconomy(const Economy&s,U user){
  }else if(s.researchIndex||s.researchDue)return false;
 #endif
  if(s.magic!=0x45435650||!version||s.user!=user||s.coins>2000000000u||!s.home||s.home>20||s.checksum!=checkEconomy(s))return false;
- if(s.initialized&&(s.initialized!=1||s.medals>2000000000u||!s.baseLevel||s.baseLevel>20||!s.sunLevel||s.sunLevel>20||!s.campLevel||s.campLevel>20||s.upgradeKind>3||bool(s.upgradeKind)!=bool(s.upgradeDue)||s.coinFraction>=3600||s.medalFraction>=3600||s.daveWins>1))return false;
+ if(s.initialized&&(s.initialized!=1||s.medals>2000000000u||!s.baseLevel||s.baseLevel>20||!s.sunLevel||s.sunLevel>20||!s.campLevel||s.campLevel>20||s.upgradeKind>3||bool(s.upgradeKind)!=bool(s.upgradeDue)||s.coinFraction>=3600||s.medalFraction>=3600||s.daveWins>DAVE_WINS_LIMIT))return false;
  U used=0;
  for(U i=0;i<TRAIN_COUNT;++i){const LocalTrain&t=s.trains[i];if(t.held>100||t.queued>100||(t.queued&&!t.due)||(!t.queued&&t.due))return false;used+=(t.held+t.queued)*TRAIN_SPECS[i].space;}
  return used<=(s.initialized?campCapacity(s.campLevel):40);

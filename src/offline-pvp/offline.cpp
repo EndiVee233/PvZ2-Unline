@@ -6,6 +6,9 @@ template<class R,class...A>R call(U b,U o,A...a){return reinterpret_cast<R(*)(A.
 #include "skill_ranges.h"
 #endif
 #include "npc_presets.h"
+#ifdef PVP_DAVE_ROUNDS
+#include "dave_presets.h"
+#endif
 static P manager(U b){return call<P>(b,0x7fa754);}
 static P profile(U b){return call<P>(b,0x7a98dc,call<P>(b,0x1df738));}
 static U owner(U b){return at<U>(call<P>(b,0x1df738),0x74);}
@@ -86,6 +89,9 @@ static void neighbors(U b,P m){
    // +30 is dfmt, the challenge total compared with manager+15c by the
    // original map click handler. Zero makes even an untouched house "beaten".
    alignas(8) U special[16]={n.id,0,0,n.level,1000,2000,100,n.zone,n.position,4,0,0,n.level,0,1,0};
+#ifdef PVP_DAVE_ROUNDS
+   special[12]=DAVE_ROUND_COUNT;
+#endif
    char alloc=0;call<void>(b,0x14eb451,reinterpret_cast<P>(special)+8,n.name,&alloc);
    call<void>(b,0x104678c,m,special);release(b,reinterpret_cast<P>(special[2]),true);
    continue;
@@ -165,9 +171,23 @@ static void apply(U b,P d,const Store&s){
  }
  at<U>(d,28)=1;
 }
+static U arenaDaveRound;
+static bool localDaveAllowed(U b,P m,const NpcPreset&n){
+#ifdef PVP_DAVE_ROUNDS
+ if(n.evil){
+  if(!ensureEconomy(b,m))return false;
+  if(economyRuntime.state.daveWins>=DAVE_ROUND_COUNT){economyNotice(b,"[V66_DAVE_FINISHED]");return false;}
+ }
+#endif
+ return true;
+}
 static void preset(U b,P m,const NpcPreset&n){
- Store s{};s.user=owner(b);s.positions=n.count;
- for(U k=0;k<n.count;++k){s.pos[k]={n.plants[k][0],n.plants[k][1],n.plants[k][2]};bool seen=false;for(U j=0;j<s.infos;++j)if(s.info[j].type==s.pos[k].type)seen=true;
+ const U (*plants)[3]=n.plants;U count=n.count;
+#ifdef PVP_DAVE_ROUNDS
+ if(n.evil){arenaDaveRound=economyRuntime.state.daveWins;const DaveRound&r=DAVE_ROUNDS[arenaDaveRound<DAVE_ROUND_COUNT?arenaDaveRound:DAVE_ROUND_COUNT-1];plants=r.plants;count=r.count;log(b,"dave-round-prepared",arenaDaveRound+1,count);}
+#endif
+ Store s{};s.user=owner(b);s.positions=count;
+ for(U k=0;k<count;++k){s.pos[k]={plants[k][0],plants[k][1],plants[k][2]};bool seen=false;for(U j=0;j<s.infos;++j)if(s.info[j].type==s.pos[k].type)seen=true;
   if(!seen){Info&v=s.info[s.infos++];v.type=s.pos[k].type;v.level=1;}
  }
  apply(b,m+0x80,s);
@@ -255,6 +275,7 @@ extern "C" void offlineSave(U b,P network,P json,U zone,U type){
 }
 extern "C" void offlineInfo(U b,P m,U a,U id,U kind){
  const NpcPreset*n=npc(id);if(n&&kind==2&&regular(b)){
+  if(!localDaveAllowed(b,m,*n))return;
 #ifdef PVP_BATTLE_ECONOMY
   at<unsigned char>(m,0x100)=1;
 #endif
@@ -267,6 +288,7 @@ extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
  // Native special houses send a zero player id and put the house id in +104.
  if(!n&&id==0&&reason>=1&&reason<=4){const NpcPreset* selected=npc(at<U>(m,0x104));if(selected&&selected->evil&&selected->zone==at<U>(m,0xfc)&&selected->position==at<U>(m,0xf8))n=selected;}
  if(n&&regular(b)){
+  if(!localDaveAllowed(b,m,*n))return;
   log(b,"attack-request-reason",id,reason);
   // The special-house handler sets this server-driven preparation flag.
   // ArenaBattle then stays in state 1, hiding banks until an online start
@@ -343,26 +365,40 @@ static bool persistBattleArmy(U b,P m,bool daveVictory=false,U stars=0){
   next.trains[i].held-=dead;log(b,"battle-army-deaths",i,dead);
   if(placed>dead)log(b,"battle-army-recalled",i,placed-dead);
  }
- if(daveVictory)next.daveWins=1;
+ if(daveVictory){
+#ifdef PVP_DAVE_ROUNDS
+  if(arenaDaveRound>=DAVE_ROUND_COUNT||next.daveWins!=arenaDaveRound){log(b,"dave-result-stale",arenaDaveRound,next.daveWins);return false;}
+  ++next.daveWins;
+#else
+  next.daveWins=1;
+#endif
+ }
 #ifdef PVP_BATTLE_ECONOMY
  const NpcPreset*n=npc(arenaNpc);
  if(n&&!n->evil&&!settleBattleReward(b,next,stars))return false;
 #endif
  ++next.sequence;if(!saveEconomy(b,next))return false;economyRuntime.state=next;
- if(daveVictory){at<U>(m,0x15c)=1;log(b,"evil-dave-defeated");}
+ if(daveVictory){at<U>(m,0x15c)=next.daveWins;log(b,"evil-dave-defeated",next.daveWins);}
  log(b,"battle-army-saved");return true;
 }
 extern "C" U offlineBattleResult(U b,P m,U stars,U id,U kind){
  if(!arenaModule(b))return 0;
  if(resultSaved)return 1;
  const NpcPreset*n=npc(arenaNpc);
+#ifdef PVP_DAVE_ROUNDS
+ if(n&&n->evil&&(kind!=1||(id&&id!=n->id))){log(b,"dave-result-foreign",id,kind);return 1;}
+#endif
 #ifdef PVP_BATTLE_ECONOMY
  if(!n||stars>3||(!n->evil&&(id!=n->id||kind!=2||!ensureEconomy(b,m)||!paidBattleMatches(b,economyRuntime.state)))){log(b,"battle-result-unpaid-or-stale",stars,id);return 1;}
  U previousCoins=economyRuntime.state.coins;
 #endif
  if(!persistBattleArmy(b,m,n&&n->evil&&stars>0,stars)){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return 1;}
 #ifdef PVP_BATTLE_ECONOMY
- if(n&&!n->evil){
+ if(n&&(!n->evil
+#ifdef PVP_DAVE_ROUNDS
+ ||n->evil
+#endif
+ )){
   // Original result drawing reads +c4/+c8 currency deltas; the continuation
   // reads +ac/+b0 totals. Keep both views of the successful local transaction
   // in sync, with no leftover server medal/cup or bonus reward fields.
