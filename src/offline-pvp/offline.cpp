@@ -6,6 +6,9 @@ template<class R,class...A>R call(U b,U o,A...a){return reinterpret_cast<R(*)(A.
 #include "skill_ranges.h"
 #endif
 #include "npc_presets.h"
+#ifdef PVP_EXCHANGE
+#include "exchange_presets.h"
+#endif
 #ifdef PVP_DAVE_ROUNDS
 #include "dave_presets.h"
 #endif
@@ -50,6 +53,9 @@ static bool researchFinishPrompt;
 #endif
 #include "economy.h"
 #include "progression.h"
+#ifdef PVP_EXCHANGE
+#include "exchange.h"
+#endif
 #ifdef PVP_EVOLUTION
 #include "evolution.h"
 #endif
