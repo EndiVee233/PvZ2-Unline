@@ -412,6 +412,21 @@ extern "C" void offlineBoardLoad(U b,P board,P name,U seed){
 // The old server populated the lab roster separately from TrainingData. The
 // local training wallet must not be interpreted as zombie evolution levels.
 extern "C" void offlineLabRoster(U b,P ui,U button){
+#ifdef PVP_SKILL_LAB
+ if(button==15&&regular(b)){
+  P m=manager(b);if(!ensureEconomy(b,m))return;
+  // SkillInfo is a separate server-populated tree. Opening the laboratory
+  // directly from the lobby must not depend on visiting Garden Wars first.
+  const char names[4][32]={"pvpskill_zombiefood","pvpskill_aid","pvpskill_invisible","pvpskill_rage"};
+  for(U i=0;i<4;++i){
+   starter(b,m,names[i],0,true);
+   P key=nullptr;narrow(b,reinterpret_cast<P>(&key),names[i]);
+   P info=call<P>(b,0x1046764,m,&key);release(b,key);
+   log(b,"skill-lab-record",i,info?at<U>(info,4):0);
+  }
+  return;
+ }
+#endif
  if(button!=13||!regular(b))return;
  P m=manager(b);if(!ensureEconomy(b,m))return;
 #ifdef PVP_EVOLUTION
@@ -430,6 +445,17 @@ extern "C" void offlineLabRoster(U b,P ui,U button){
   release(b,key);
  }
 }
+#ifdef PVP_SKILL_LAB
+// Only the skill-page title call is guarded. The generic name helper
+// dereferences a null resolved weak reference; keep its localization for
+// valid selections and leave an empty title while selection is stale.
+extern "C" P offlineSkillName(U b,P destination,P weak){
+ if(!regular(b)||call<P>(b,0x1da034,call<P>(b,0x11d74b4),weak))
+  return call<P>(b,0xa45450,destination,weak);
+ const U empty[1]={0};char allocator=0;
+ call<void>(b,0x14eb451,destination,empty,&allocator);return destination;
+}
+#endif
 extern "C" void offlineLabProperties(U b,P type,P props,U caller){
 #ifdef PVP_EVOLUTION
  return; // v62 identified the roster issue; stop per-frame diagnostic logging.
