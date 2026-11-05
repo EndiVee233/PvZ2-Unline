@@ -56,6 +56,9 @@ static bool researchFinishPrompt;
 #ifdef PVP_SKILL_RESEARCH
 #include "research.h"
 #endif
+#ifdef PVP_DAVE_NARRATIVE
+#include "dave_narrative.h"
+#endif
 #include "redeem.h"
 // S2C attack replies normally translate owned aliases into the numeric
 // ArenaZombieInfoData vector at +d4. The native zombie bank reads this vector,
@@ -392,6 +395,12 @@ static bool persistBattleArmy(U b,P m,bool daveVictory=false,U stars=0){
 #ifdef PVP_BATTLE_ECONOMY
  const NpcPreset*n=npc(arenaNpc);
  if(n&&!n->evil&&!settleBattleReward(b,next,stars))return false;
+#endif
+#ifdef PVP_DAVE_NARRATIVE
+ if(n&&n->evil){
+  if(next.daveDialogueSerial==0xffffffffu)return false;
+  ++next.daveDialogueSerial;next.daveDialogueOutcome=daveVictory?next.daveWins:0;
+ }
 #endif
  ++next.sequence;if(!saveEconomy(b,next))return false;economyRuntime.state=next;
  if(daveVictory){at<U>(m,0x15c)=next.daveWins;log(b,"evil-dave-defeated",next.daveWins);}
