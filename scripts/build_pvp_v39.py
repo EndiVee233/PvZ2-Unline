@@ -8,7 +8,7 @@ from rebuild_bootstrap_dex import rebuild_bootstrap
 from elftools.elf.elffile import ELFFile
 from keystone import Ks,KS_ARCH_ARM,KS_MODE_ARM
 from prepare_offline_neighbors import generate
-ROOT=Path(__file__).resolve().parents[1];VERSION=62 if '--v62' in sys.argv else 61 if '--v61' in sys.argv else 60 if '--v60' in sys.argv else 59 if '--v59' in sys.argv else 58 if '--v58' in sys.argv else 57 if '--v57' in sys.argv else 56 if '--v56' in sys.argv else 55 if '--v55' in sys.argv else 54 if '--v54' in sys.argv else 53 if '--v53' in sys.argv else 52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
+ROOT=Path(__file__).resolve().parents[1];VERSION=63 if '--v63' in sys.argv else 62 if '--v62' in sys.argv else 61 if '--v61' in sys.argv else 60 if '--v60' in sys.argv else 59 if '--v59' in sys.argv else 58 if '--v58' in sys.argv else 57 if '--v57' in sys.argv else 56 if '--v56' in sys.argv else 55 if '--v55' in sys.argv else 54 if '--v54' in sys.argv else 53 if '--v53' in sys.argv else 52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
 OUT=ROOT/f'work/pvp-v{VERSION}';OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -27,6 +27,9 @@ if VERSION>=59:
  resource,no_rank_record=prepare_no_rank(resource,OUT/'generated');economy_record['no_rank']=no_rank_record
 from prepare_offline_progression import prepare as prepare_progression
 economy_record['progression']=prepare_progression(resource,OUT/'generated')
+if VERSION>=63:
+ from prepare_offline_evolution import prepare as prepare_evolution
+ economy_record['evolution']=prepare_evolution(resource,OUT/'generated')
 with zipfile.ZipFile(BASE) as src:
  b=bytearray(src.read('lib/armeabi/libSrc.so'))
  old_resource=src.read('assets/reconstruction/dynamic-original-speed.rsb.smf')
@@ -65,6 +68,7 @@ strings.update(V39_ADMIN_GRANTED='获得100钻石和10000金币，可再次输�
  GEMS_RESTORE_TITLE='兑换码',GEMS_RESTORE_TIP='请输入兑换码',
  GEMS_RESTORE_DES='输入兑换码领取奖励',GEMS_RESTORE_BUTTON_TITLE='兑换',
  V41_GEMS_REQUIRED='钻石不足，请先兑换钻石',V54_UPGRADE_BUSY='已有升级进行中，请先完成当前升级',V54_BASE_LEVEL_REQUIRED='请先升级基地，再升级此设施')
+if VERSION>=63:strings['V63_EVOLUTION_FINISH_TIP']='花费{NUMBER}钻石立即完成本次僵尸进阶？'
 b,localization=add_exchange_localization(b,strings)
 e=ELFFile(BytesIO(b));index,tail=[(i,s) for i,s in enumerate(e.iter_segments()) if s['p_type']=='PT_LOAD'][-1]
 old=len(b);assert tail['p_offset']+tail['p_filesz']==old
@@ -75,6 +79,7 @@ flags=['--target=armv7a-linux-androideabi21','-marm','-Os','-fPIC','-ffreestandi
 if VERSION>=57:flags.append('-DPVP_RECT_SKILLS')
 if VERSION>=60:flags.append('-DPVP_BATTLE_ECONOMY')
 if VERSION>=62:flags.append('-DPVP_LAB_ROSTER')
+if VERSION>=63:flags.append('-DPVP_EVOLUTION')
 subprocess.run([compiler,*flags,'-c',str(ROOT/'src/offline-pvp/offline.cpp'),'-o',str(OUT/'offline.o')],check=True)
 # A flat payload has no dynamic relocation table. Absolute pointer constants
 # would work at base zero in analysis and crash after Android relocates the SO.
@@ -240,8 +245,20 @@ if VERSION>=62:
  redirect(site,target)
  # Retain the actual property lookup and its result. Only caller-local lab
  # observations are logged; no null fallback changes gameplay or hides errors.
- site=0xb82878;first=struct.unpack_from('<I',b,site)[0];assert first==0xe92d4870
- target=custom_stub('push {r4-r8,lr}\nmov r4,r0\nmov r6,lr\nbl lab_props_original\nmov r5,r0\nmov r1,r4\nmov r2,r5\nmov r3,r6\n'+baseasm()+f'bl #{symbols["offlineLabProperties"]}\nmov r0,r5\npop {{r4-r8,pc}}\nlab_props_original: .word {first}\nb #{site+4}')
+ if VERSION==62:
+  site=0xb82878;first=struct.unpack_from('<I',b,site)[0];assert first==0xe92d4870
+  target=custom_stub('push {r4-r8,lr}\nmov r4,r0\nmov r6,lr\nbl lab_props_original\nmov r5,r0\nmov r1,r4\nmov r2,r5\nmov r3,r6\n'+baseasm()+f'bl #{symbols["offlineLabProperties"]}\nmov r0,r5\npop {{r4-r8,pc}}\nlab_props_original: .word {first}\nb #{site+4}')
+  redirect(site,target)
+
+if VERSION>=63:
+ site=0x107eb28;first=struct.unpack_from('<I',b,site)[0];assert first==0xe92d4ff0
+ target=custom_stub('push {r4,lr}\nmov r4,r0\nmov r1,r4\n'+baseasm()+f'bl #{symbols["offlineEvolutionBuild"]}\nmov r0,r4\nbl evolution_build_original\nmov r1,r4\n'+baseasm()+f'bl #{symbols["offlineEvolutionTick"]}\npop {{r4,pc}}\nevolution_build_original: .word {first}\nb #{site+4}')
+ redirect(site,target)
+ site=0x107cd10;first=struct.unpack_from('<I',b,site)[0];assert first==0xe92d48f0
+ target=custom_stub('push {r4,lr}\nmov r4,r0\nbl evolution_tick_original\nmov r1,r4\n'+baseasm()+f'bl #{symbols["offlineEvolutionTick"]}\npop {{r4,pc}}\nevolution_tick_original: .word {first}\nb #{site+4}')
+ redirect(site,target)
+ site=0x1080e28;first=struct.unpack_from('<I',b,site)[0];assert first==0xe92d48f0
+ target=custom_stub('push {r0-r4,lr}\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlineEvolutionClick"]}\ncmp r0,#0\npop {{r0-r4,lr}}\nbne evolution_handled\n.word {first}\nb #{site+4}\nevolution_handled: bx lr')
  redirect(site,target)
 
 if VERSION>=57:
@@ -283,11 +300,12 @@ assert struct.unpack_from('<I',b,28)[0]==52 and struct.unpack_from('<H',b,44)[0]
 subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_economy_arm.py'),str(OUT)],cwd=ROOT,check=True)
 subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_redeem_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=41:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_coin_click_arm.py'),str(OUT)],cwd=ROOT,check=True)
-if VERSION>=43:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v56_arm.py' if VERSION>=56 else 'scripts/check_offline_pvp_v55_arm.py' if VERSION>=55 else 'scripts/check_offline_pvp_v54_arm.py' if VERSION>=54 else 'scripts/check_offline_pvp_v52_arm.py' if VERSION>=52 else 'scripts/check_offline_pvp_v51_arm.py' if VERSION>=51 else 'scripts/check_offline_pvp_v50_arm.py' if VERSION>=50 else 'scripts/check_offline_pvp_v48_arm.py' if VERSION>=48 else 'scripts/check_offline_pvp_v47_arm.py' if VERSION>=47 else 'scripts/check_offline_pvp_v46_arm.py' if VERSION>=46 else 'scripts/check_offline_pvp_v45_arm.py' if VERSION>=45 else 'scripts/check_offline_pvp_scenes_arm.py')),str(OUT)],cwd=ROOT,check=True)
+if 43<=VERSION<63:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v56_arm.py' if VERSION>=56 else 'scripts/check_offline_pvp_v55_arm.py' if VERSION>=55 else 'scripts/check_offline_pvp_v54_arm.py' if VERSION>=54 else 'scripts/check_offline_pvp_v52_arm.py' if VERSION>=52 else 'scripts/check_offline_pvp_v51_arm.py' if VERSION>=51 else 'scripts/check_offline_pvp_v50_arm.py' if VERSION>=50 else 'scripts/check_offline_pvp_v48_arm.py' if VERSION>=48 else 'scripts/check_offline_pvp_v47_arm.py' if VERSION>=47 else 'scripts/check_offline_pvp_v46_arm.py' if VERSION>=46 else 'scripts/check_offline_pvp_v45_arm.py' if VERSION>=45 else 'scripts/check_offline_pvp_scenes_arm.py')),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=57:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v57_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION==59:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v59_arm.py'),str(OUT)],cwd=ROOT,check=True)
-if VERSION>=60:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v60_arm.py'),str(OUT)],cwd=ROOT,check=True)
-if VERSION>=62:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v62_arm.py'),str(OUT)],cwd=ROOT,check=True)
+if 60<=VERSION<63:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v60_arm.py'),str(OUT)],cwd=ROOT,check=True)
+if VERSION==62:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v62_arm.py'),str(OUT)],cwd=ROOT,check=True)
+if VERSION>=63:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v63_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if '--native-only' in sys.argv:raise SystemExit(0)
 scratch=Path(sys.argv[sys.argv.index('--intermediate-dir')+1]).resolve() if '--intermediate-dir' in sys.argv else OUT
 scratch.mkdir(parents=True,exist_ok=True)

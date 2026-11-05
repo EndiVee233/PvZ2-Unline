@@ -31,8 +31,18 @@ static U campCapacity(U level){return CAMP_SPECS[level>=1&&level<=20?level-1:0].
 static void applyProgression(U b,P m);
 static void tickProgression(U b);
 static U finishProgressionWithGems(U b,P timer);
+#ifdef PVP_EVOLUTION
+static void applyEvolution(U b,P m);
+static bool ensureEvolution(U b,P m);
+static void settleEvolution(U b,P m);
+static U finishEvolutionWithGems(U b,P timer);
+static bool evolutionFinishPrompt;
+#endif
 #include "economy.h"
 #include "progression.h"
+#ifdef PVP_EVOLUTION
+#include "evolution.h"
+#endif
 #include "redeem.h"
 // S2C attack replies normally translate owned aliases into the numeric
 // ArenaZombieInfoData vector at +d4. The native zombie bank reads this vector,
@@ -404,6 +414,10 @@ extern "C" void offlineBoardLoad(U b,P board,P name,U seed){
 extern "C" void offlineLabRoster(U b,P ui,U button){
  if(button!=13||!regular(b))return;
  P m=manager(b);if(!ensureEconomy(b,m))return;
+#ifdef PVP_EVOLUTION
+ if(!ensureEvolution(b,m))return;
+ applyEvolution(b,m);return;
+#endif
  for(U i=0;i<TRAIN_COUNT;++i){
   P key=nullptr;narrow(b,reinterpret_cast<P>(&key),TRAIN_SPECS[i].name);
   P info=call<P>(b,0x104673c,m,&key);
@@ -417,6 +431,9 @@ extern "C" void offlineLabRoster(U b,P ui,U button){
  }
 }
 extern "C" void offlineLabProperties(U b,P type,P props,U caller){
+#ifdef PVP_EVOLUTION
+ return; // v62 identified the roster issue; stop per-frame diagnostic logging.
+#endif
  U site=caller-b;if(site<0x107c000||site>=0x1085000)return;
  const char*name=at<P>(type,0x1c)?reinterpret_cast<const char*>(at<P>(type,0x1c)):"(empty)";
  if(!props){call<I>(b,0x147adc,4,"OfflinePvP","lab-properties-missing popanim=%s caller=%x",name,site);return;}

@@ -6,22 +6,34 @@ struct Economy {U magic,version,user,coins,home,sequence,checksum,reserved;Local
 #ifdef PVP_BATTLE_ECONOMY
  U battleSerial,battleOpen,battleSettled,battleNpc,battleStage,battleFee;
 #endif
+#ifdef PVP_EVOLUTION
+ U evolutionInitialized,evolutionLevels[TRAIN_COUNT],evolutionIndex,evolutionDue;
+#endif
 };
 static constexpr U LEGACY_ECONOMY_SIZE=32+12*TRAIN_COUNT;
 static constexpr U V2_ECONOMY_SIZE=LEGACY_ECONOMY_SIZE+44;
+static constexpr U V3_ECONOMY_SIZE=V2_ECONOMY_SIZE+24;
 struct EconomyRuntime {U user,lastTick;bool loaded,blocked,busy,loadedFromDisk;P camp;Economy state;};
 static EconomyRuntime economyRuntime;
 static bool same(const char*a,const char*b){while(*a&&*a==*b){++a;++b;}return *a==*b;}
-static U checkEconomy(const Economy&s){const unsigned char*p=reinterpret_cast<const unsigned char*>(&s);U h=2166136261u;for(U i=0;i<(s.version==1?LEGACY_ECONOMY_SIZE:s.version==2?V2_ECONOMY_SIZE:sizeof(s));++i)if(i<24||i>=28)h=(h^p[i])*16777619u;return h;}
+static U checkEconomy(const Economy&s){const unsigned char*p=reinterpret_cast<const unsigned char*>(&s);U h=2166136261u;for(U i=0;i<(s.version==1?LEGACY_ECONOMY_SIZE:s.version==2?V2_ECONOMY_SIZE:s.version==3?V3_ECONOMY_SIZE:sizeof(s));++i)if(i<24||i>=28)h=(h^p[i])*16777619u;return h;}
 static bool validEconomy(const Economy&s,U user){
  bool version=s.version==1||s.version==2;
 #ifdef PVP_BATTLE_ECONOMY
  version=version||s.version==3;
- if(s.version==3){
+ if(s.version>=3){
   if(s.battleSettled>s.battleSerial)return false;
   if(s.battleOpen){const NpcPreset*n=npc(s.battleNpc);if(s.battleOpen!=s.battleSerial||s.battleOpen<=s.battleSettled||!n||n->evil||s.battleStage<1||s.battleStage>2||s.battleFee!=1)return false;}
   else if(s.battleNpc||s.battleStage||s.battleFee||s.battleSettled!=s.battleSerial)return false;
  }
+#endif
+#ifdef PVP_EVOLUTION
+ version=version||s.version==4;
+ if(s.evolutionInitialized){
+  if(s.evolutionInitialized!=1||s.evolutionIndex>TRAIN_COUNT||bool(s.evolutionIndex)!=bool(s.evolutionDue)||s.evolutionIndex&&s.upgradeKind)return false;
+  for(U i=0;i<TRAIN_COUNT;++i)if(s.evolutionLevels[i]<1||s.evolutionLevels[i]>4)return false;
+  if(s.evolutionIndex&&s.evolutionLevels[s.evolutionIndex-1]>=4)return false;
+ }else if(s.evolutionIndex||s.evolutionDue)return false;
 #endif
  if(s.magic!=0x45435650||!version||s.user!=user||s.coins>2000000000u||!s.home||s.home>20||s.checksum!=checkEconomy(s))return false;
  if(s.initialized&&(s.initialized!=1||s.medals>2000000000u||!s.baseLevel||s.baseLevel>20||!s.sunLevel||s.sunLevel>20||!s.campLevel||s.campLevel>20||s.upgradeKind>3||bool(s.upgradeKind)!=bool(s.upgradeDue)||s.coinFraction>=3600||s.medalFraction>=3600||s.daveWins>1))return false;
@@ -39,6 +51,9 @@ static bool saveEconomy(U b,Economy&s){
 #ifdef PVP_BATTLE_ECONOMY
  s.version=3;
 #endif
+#ifdef PVP_EVOLUTION
+ s.version=4;
+#endif
  s.checksum=checkEconomy(s);if(!validEconomy(s,s.user))return false;
  char dst[160],tmp[160];economyPath(s.user,dst,false);economyPath(s.user,tmp,true);
  I fd=call<I>(b,0x148448,tmp,0x241,0600);if(fd<0)return false;U done=0;
@@ -52,7 +67,10 @@ static I loadEconomy(U b,Economy&s){
  char tail;I extra=call<I>(b,0x148460,fd,&tail,1);call<I>(b,0x147b90,fd);
  bool length=(s.version==1&&done==LEGACY_ECONOMY_SIZE)||(s.version==2&&done==V2_ECONOMY_SIZE);
 #ifdef PVP_BATTLE_ECONOMY
- length=length||(s.version==3&&done==sizeof(s));
+ length=length||(s.version==3&&done==V3_ECONOMY_SIZE);
+#endif
+#ifdef PVP_EVOLUTION
+ length=length||(s.version==4&&done==sizeof(s));
 #endif
  return length&&extra==0&&validEconomy(s,owner(b))?1:-1;
 }
@@ -75,6 +93,9 @@ static void applyEconomy(U b,P m){
  // g is the native garden level, distinct from ag (star coins) at manager+4.
  if(at<U>(m,0x10)<1)at<U>(m,0x10)=r.state.home;
  if(r.state.initialized)applyProgression(b,m);
+#ifdef PVP_EVOLUTION
+ if(r.state.evolutionInitialized)applyEvolution(b,m);
+#endif
 }
 static bool ensureEconomy(U b,P m,bool entering=false){
  if(!regular(b)&&!entering)return false;EconomyRuntime&r=economyRuntime;U user=owner(b);
@@ -175,7 +196,11 @@ extern "C" void offlineTraining(U b,P camp,P name,U action){
  ++next.sequence;if(!saveEconomy(b,next)){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return;}
  r.state=next;applyEconomy(b,m);notifyTraining(b,m);log(b,"training-updated",index,action);
 }
-extern "C" void offlineTrainingTick(U b,P camp){P m=manager(b);if(ensureEconomy(b,m))settleTraining(b,m);tickProgression(b);call<void>(b,0x104c894,camp);completeLocalBattle(b);inspectArena(b);}
+extern "C" void offlineTrainingTick(U b,P camp){P m=manager(b);if(ensureEconomy(b,m))settleTraining(b,m);tickProgression(b);
+#ifdef PVP_EVOLUTION
+ settleEvolution(b,m);
+#endif
+ call<void>(b,0x104c894,camp);completeLocalBattle(b);inspectArena(b);}
 static bool trainingFinishPrompt;
 // Read the local queues, rather than the obsolete cash-product availability.
 // Different types train in parallel; each type's queue is sequential.
@@ -219,13 +244,20 @@ extern "C" void offlineTrainingFinishPrompt(U b,P timer,P callback){
 }
 extern "C" void offlineFinishCurrencyText(U b,P out,P text,P allocator){
  U key[64]{};
- if(trainingFinishPrompt){const char*s="[PVP_TRAINING_FINISH_TIP]";for(U i=0;s[i];++i)key[i]=U(s[i]);text=reinterpret_cast<P>(key);}
+ if(trainingFinishPrompt){const char*s="[PVP_TRAINING_FINISH_TIP]";
+#ifdef PVP_EVOLUTION
+  if(evolutionFinishPrompt)s="[V63_EVOLUTION_FINISH_TIP]";
+#endif
+  for(U i=0;s[i];++i)key[i]=U(s[i]);text=reinterpret_cast<P>(key);}
  call<void>(b,0x14eb451,out,text,allocator);
 }
 // Only the training timer's original callback is eligible. Upgrade/research
 // dialogs use the same checkout widget but retain their own native path.
 extern "C" U offlineTrainingFinish(U b,P timer){
  if(!regular(b))return 0;
+#ifdef PVP_EVOLUTION
+ if(at<U>(timer,0x1fc)==b+0x1080e28)return finishEvolutionWithGems(b,timer);
+#endif
  if(at<U>(timer,0x1fc)==b+0x10748e8)return finishProgressionWithGems(b,timer);
  if(at<U>(timer,0x1fc)!=b+0x1055588)return 0;
  P m=manager(b);if(!ensureEconomy(b,m))return 1;settleTraining(b,m);
@@ -239,7 +271,11 @@ extern "C" U offlineTrainingFinish(U b,P timer){
  economyRuntime.state=next;applyEconomy(b,m);notifyTraining(b,m);log(b,"training-finished-with-gems",price,total);return 1;
 }
 extern "C" U offlineTrainingFinishConfirm(U b,P timer,U unused,U button){
- if(!regular(b)||(at<U>(timer,0x1fc)!=b+0x1055588&&at<U>(timer,0x1fc)!=b+0x10748e8))return 0;
+ bool known=at<U>(timer,0x1fc)==b+0x1055588||at<U>(timer,0x1fc)==b+0x10748e8;
+#ifdef PVP_EVOLUTION
+ known=known||at<U>(timer,0x1fc)==b+0x1080e28;
+#endif
+ if(!regular(b)||!known)return 0;
  // Use the confirm callback's actual receiver. Later checkout code reuses
  // its r6 register for the product object, so it no longer identifies timer.
  P cell=reinterpret_cast<P>(b)+0x1836300;P dialog=at<P>(cell,0);

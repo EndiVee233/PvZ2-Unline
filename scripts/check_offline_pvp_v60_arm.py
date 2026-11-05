@@ -10,8 +10,8 @@ import json,struct
 NPC=0x70000001
 def wallet(e):
  raw=next(v for k,v in e.files.items() if k.endswith('.eco'))
- assert len(raw)==244 and struct.unpack_from('<I',raw,4)[0]==3
- return struct.unpack('<61I',raw)
+ assert (len(raw),struct.unpack_from('<I',raw,4)[0]) in ((244,3),(304,4))
+ return struct.unpack('<61I',raw[:244])
 
 def fixture():
  e=BattleEngine();e.enter();e.run('offlineGarden')
