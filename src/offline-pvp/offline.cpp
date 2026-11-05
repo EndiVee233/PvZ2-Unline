@@ -90,6 +90,7 @@ static void neighbors(U b,P m){
    // original map click handler. Zero makes even an untouched house "beaten".
    alignas(8) U special[16]={n.id,0,0,n.level,1000,2000,100,n.zone,n.position,4,0,0,n.level,0,1,0};
 #ifdef PVP_DAVE_ROUNDS
+   special[11]=economyRuntime.state.daveWins;
    special[12]=DAVE_ROUND_COUNT;
 #endif
    char alloc=0;call<void>(b,0x14eb451,reinterpret_cast<P>(special)+8,n.name,&alloc);
@@ -181,6 +182,21 @@ static bool localDaveAllowed(U b,P m,const NpcPreset&n){
 #endif
  return true;
 }
+#ifdef PVP_DAVE_LABEL
+// Map names format {SON}/{MON} from this house record, not manager+15c.
+// The record can outlive a completed battle or be rebuilt by the old map
+// notifications. Project the accepted local values at the actual title call.
+extern "C" void offlineDaveLabel(U b,P record){
+ if(!record||!regular(b))return;const NpcPreset*n=npc(at<U>(record,0));
+ if(!n||!n->evil||at<U>(record,0x24)!=4||at<U>(record,0x1c)!=n->zone||at<U>(record,0x20)!=n->position)return;
+ if(!ensureEconomy(b,manager(b)))return;
+ U wins=economyRuntime.state.daveWins;
+ if(at<U>(record,0x2c)!=wins||at<U>(record,0x30)!=DAVE_ROUND_COUNT){
+  log(b,"dave-label-previous",at<U>(record,0x2c),at<U>(record,0x30));
+  at<U>(record,0x2c)=wins;at<U>(record,0x30)=DAVE_ROUND_COUNT;log(b,"dave-label-local",wins,DAVE_ROUND_COUNT);
+ }
+}
+#endif
 static void preset(U b,P m,const NpcPreset&n){
  const U (*plants)[3]=n.plants;U count=n.count;
 #ifdef PVP_DAVE_ROUNDS
