@@ -134,8 +134,20 @@ static U finishProgressionWithGems(U b,P timer){
 }
 extern "C" void offlineUpgradeDisplay(U b,P ui){
  U kind=at<U>(ui,0xac);EconomyRuntime&r=economyRuntime;
+#ifdef PVP_UPGRADE_VISUAL_FIX
+ if(!regular(b)||kind<1||kind>3)return;
+ P button=at<P>(ui,0xb0),timer=at<P>(ui,0xb4);if(!button||!timer)return;
+ if(!r.loaded||r.user!=owner(b)||!r.state.initialized||r.state.upgradeKind!=kind||r.state.upgradeDue<=realNow(b)){
+  // The parent paints the normal upgrade cost/caption itself. Its clickable
+  // child must stop carrying the temporary gem caption when the queue ends.
+  const U empty[1]={0};P wide=nullptr;char allocator=0;
+  call<void>(b,0x14eb451,&wide,empty,&allocator);
+  call<void>(b,0x14eae75,button+0xa4,&wide);release(b,wide,true);return;
+ }
+#else
  if(!regular(b)||kind<1||kind>3||!r.loaded||r.user!=owner(b)||!r.state.initialized||r.state.upgradeKind!=kind)return;
  P button=at<P>(ui,0xb0),timer=at<P>(ui,0xb4);if(!button||!timer)return;
+#endif
  U now=realNow(b),seconds=r.state.upgradeDue>now?r.state.upgradeDue-now:0,minutes=(seconds+59)/60;if(!minutes)return;
  U price=call<U>(b,0x1086e0c,timer,minutes);at<U>(timer,0x1f4)=minutes;
  call<void>(0,at<U>(at<P>(timer,0),0x8c),timer,0);
@@ -147,3 +159,19 @@ extern "C" void offlineUpgradeDisplay(U b,P ui){
  P wide=nullptr;char allocator=0;call<void>(b,0x14eb451,&wide,text,&allocator);
  call<void>(b,0x14eae75,button+0xa4,&wide);release(b,wide,true);
 }
+#ifdef PVP_UPGRADE_VISUAL_FIX
+extern "C" void offlineUpgradePanelDraw(U b,P ui,P graphics){
+ offlineUpgradeDisplay(b,ui);
+ U kind=at<U>(ui,0xac);const EconomyRuntime&r=economyRuntime;
+ if(!graphics||!regular(b)||kind<1||kind>3||!r.loaded||r.user!=owner(b)||!r.state.initialized||r.state.upgradeKind!=kind||r.state.upgradeDue<=realNow(b))return;
+ // Same loaded frame and independently truncated, scaled rectangle as the
+ // original normal-upgrade footer at 0x1076ff0. Only the frame is drawn here;
+ // the child paints the gem caption after the parent's Draw returns.
+ P image=call<P>(b,0x1dd8f0,reinterpret_cast<P>(b)+0x18a5bd0);if(!image)return;
+ P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);if(!app)return;
+ float scale=at<float>(app,0x698);if(!(scale>0&&scale<=4))return;
+ I width=I(230*scale),height=I(66*scale),gap=I(12*scale);
+ I rect[4]={at<I>(ui,0xa4)+I(780*scale)-gap-width,at<I>(ui,0xa8)+I(490*scale)-gap-height,width,height};
+ call<void>(b,0x9734b0,graphics,rect,image);
+}
+#endif

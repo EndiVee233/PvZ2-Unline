@@ -13,6 +13,7 @@ if '--v88' in sys.argv:VERSION=88
 if '--v89' in sys.argv:VERSION=89
 if '--v90' in sys.argv:VERSION=90
 if '--v91' in sys.argv:VERSION=91
+if '--v92' in sys.argv:VERSION=92
 OUT=ROOT/(f'work/pvp-v{VERSION}-test' if '--shop-clock-test' in sys.argv else f'work/pvp-v{VERSION}');OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -144,6 +145,7 @@ if VERSION>=82:flags.append('-DPVP_GARRISON_REPOSITION')
 if VERSION>=84:flags.append('-DPVP_DEFENSE_DESKTOP_CURSOR')
 if VERSION>=90:flags.append('-DPVP_BUSINESS_PRODUCTION')
 if VERSION>=91:flags.append('-DPVP_BUSINESS_COLLECTION')
+if VERSION>=92:flags.append('-DPVP_UPGRADE_VISUAL_FIX')
 if '--shop-clock-test' in sys.argv:flags.append('-DPVP_EXCHANGE_CLOCK_TEST')
 subprocess.run([compiler,*flags,'-c',str(ROOT/'src/offline-pvp/offline.cpp'),'-o',str(OUT/'offline.o')],check=True)
 # A flat payload has no dynamic relocation table. Absolute pointer constants
@@ -300,7 +302,10 @@ if VERSION>=53:
 if VERSION>=54:
  patch(0x107483c,'offlineTrainingFinishPrompt',bl(0x107483c,0x108737c),True)
  site=0x1078334;first=struct.unpack_from('<I',b,site)[0];assert first==0xe92d4ff0
- target=custom_stub('push {r4,lr}\nmov r4,r0\nbl upgrade_draw_original\nmov r1,r4\n'+baseasm()+f'bl #{symbols["offlineUpgradeDisplay"]}\npop {{r4,pc}}\nupgrade_draw_original: .word {first}\nb #{site+4}')
+ if VERSION>=92:
+  target=custom_stub('push {r4-r6,lr}\nmov r4,r0\nmov r5,r1\nbl upgrade_draw_original\nmov r1,r4\nmov r2,r5\n'+baseasm()+f'bl #{symbols["offlineUpgradePanelDraw"]}\npop {{r4-r6,pc}}\nupgrade_draw_original: .word {first}\nb #{site+4}')
+ else:
+  target=custom_stub('push {r4,lr}\nmov r4,r0\nbl upgrade_draw_original\nmov r1,r4\n'+baseasm()+f'bl #{symbols["offlineUpgradeDisplay"]}\npop {{r4,pc}}\nupgrade_draw_original: .word {first}\nb #{site+4}')
  redirect(site,target)
  site=0x107486c;first=struct.unpack_from('<I',b,site)[0];assert first==0xe92d4818
  target=custom_stub('push {r0-r4,lr}\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlineUpgradeClick"]}\ncmp r0,#0\npop {{r0-r4,lr}}\nbne upgrade_handled\n.word {first}\nb #{site+4}\nupgrade_handled: bx lr')
@@ -493,6 +498,7 @@ if VERSION>=84:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pv
 if VERSION>=85:subprocess.run([sys.executable,str(ROOT/'scripts/check_input_v23_native.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=88:subprocess.run([sys.executable,str(ROOT/'scripts/check_resource_index_v88.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=89:subprocess.run([sys.executable,str(ROOT/'scripts/check_map_buffer_v89.py'),str(OUT)],cwd=ROOT,check=True)
+if VERSION>=92:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v92_visual.py'),str(OUT)],cwd=ROOT,check=True)
 if '--native-only' in sys.argv:raise SystemExit(0)
 scratch=Path(sys.argv[sys.argv.index('--intermediate-dir')+1]).resolve() if '--intermediate-dir' in sys.argv else OUT
 scratch.mkdir(parents=True,exist_ok=True)
