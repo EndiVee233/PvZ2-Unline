@@ -7,3 +7,7 @@ v86 用户报告 WSA USER → 全一 TEST 切换可复现闪退；33 文件已�
 - APK：`work/pvp-v87/PvZ2-v87-preset-resource-diagnostic.apk`
 - SHA-256：`066465f4b42125e5867cfee325fae8ae51f9a409ef4f99a25a04ec845995e462`
 - 状态：诊断包，不声称崩溃已修复。用户复现后读取末尾资源查找记录，再关闭、回档；实际日志不得上传。
+
+## 用户复现结果
+
+用户确认切换用户后进入游戏时闪退。崩溃前资源为 `images/1536/future/worldmap/gate_future/gate_future.pam`，对应 `WorldMap_Future_NonPVR_Common` 文件索引，长度139个字。该同一记录/指针先前已成功处理三个未来地图动画，再次切回时崩溃。磁盘公开资源的索引可由原生 ARM 查询三个条目，均返回正确类型/偏移/长度，因此候选修复方向为索引内存生命周期，而非改动预设或磁盘资源内容。33 文件已再次回档校验，未将复现当作功能通过。
