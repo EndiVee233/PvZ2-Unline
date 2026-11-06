@@ -478,6 +478,9 @@ static U defenseSessionUser;
 #ifdef PVP_BUSINESS_DEFENSE
 #include "garrison_editor.h"
 #endif
+#ifdef PVP_TUTORIAL_DEFENSE
+#include "tutorial_defense.h"
+#endif
 extern "C" void offlineOwn(U b){
 #ifdef PVP_BUSINESS_DEFENSE
  if(regular(b)){openLocalDefense(b,0);return;}
@@ -601,6 +604,9 @@ extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
 // The offline session acknowledges the original three-second heartbeat using
 // the same monotonic clock as ArenaBattleModule's native timeout check.
 extern "C" void offlineBattleRequest(U b,P m,U action){
+#ifdef PVP_TUTORIAL_DEFENSE
+ if(tutorialDefenseRequest(b,action))return;
+#endif
 #ifdef PVP_LOCAL_DEFENSE_SESSION
  if(regular(b)&&defenseSessionUser==owner(b)
 #ifdef PVP_BUSINESS_DEFENSE
@@ -783,6 +789,9 @@ extern "C" void __aeabi_memcpy4(void* dst,const void* src,U n){__aeabi_memcpy8(d
 
 // Record the actual level passed to Board::Load, beyond the request boundary.
 extern "C" void offlineBoardLoad(U b,P board,P name,U seed){
+#ifdef PVP_TUTORIAL_DEFENSE
+ prepareTutorialDefense(b,name);
+#endif
  if(regular(b)){
   P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);P m=manager(b);
   call<I>(b,0x147adc,4,"OfflinePvP","board-load name=%s mode=%u view=%u kind=%u",at<P>(name,0),at<U>(app,0x1218),U(at<unsigned char>(m,0x100)),at<U>(m,0xa8));

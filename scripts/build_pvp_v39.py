@@ -18,6 +18,7 @@ if '--v93' in sys.argv:VERSION=93
 if '--v94' in sys.argv:VERSION=94
 if '--v95' in sys.argv:VERSION=95
 if '--v96' in sys.argv:VERSION=96
+if '--v97' in sys.argv:VERSION=97
 OUT=ROOT/(f'work/pvp-v{VERSION}-test' if '--shop-clock-test' in sys.argv else f'work/pvp-v{VERSION}');OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -162,6 +163,7 @@ if VERSION>=93:flags.append('-DPVP_REGIONS')
 if VERSION>=94:flags+=['-DPVP_REGION_BALANCE_ONLY','-DPVP_HISTORY']
 if VERSION>=95:flags.append('-DPVP_RANDOM_NEIGHBORS')
 if VERSION>=96:flags.append('-DPVP_UNIQUE_NEIGHBORS')
+if VERSION>=97:flags.append('-DPVP_TUTORIAL_DEFENSE')
 if '--shop-clock-test' in sys.argv:flags.append('-DPVP_EXCHANGE_CLOCK_TEST')
 subprocess.run([compiler,*flags,'-c',str(ROOT/'src/offline-pvp/offline.cpp'),'-o',str(OUT/'offline.o')],check=True)
 # A flat payload has no dynamic relocation table. Absolute pointer constants
@@ -526,7 +528,7 @@ if VERSION==69:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pv
 if VERSION==70:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v70_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION==71:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v71_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION==72:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v72_arm.py'),str(OUT)],cwd=ROOT,check=True)
-if VERSION>=73:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v96_focused.py' if VERSION>=96 else 'scripts/check_offline_pvp_v95_focused.py' if VERSION>=95 else 'scripts/check_offline_pvp_v94_focused.py' if VERSION>=94 else 'scripts/check_offline_pvp_v93_focused.py' if VERSION>=93 else 'scripts/check_offline_pvp_v91_focused.py' if VERSION>=91 else 'scripts/check_offline_pvp_v90_focused.py' if VERSION>=90 else 'scripts/check_offline_pvp_v82_focused.py' if VERSION>=82 else 'scripts/check_offline_pvp_v81_focused.py' if VERSION>=81 else 'scripts/check_offline_pvp_v80_focused.py' if VERSION>=80 else 'scripts/check_offline_pvp_v79_focused.py' if VERSION>=79 else 'scripts/check_offline_pvp_v78_focused.py' if VERSION>=78 else 'scripts/check_offline_pvp_v77_focused.py' if VERSION>=77 else 'scripts/check_offline_pvp_v76_focused.py' if VERSION==76 else 'scripts/check_offline_pvp_v75_arm.py' if VERSION>=75 else 'scripts/check_offline_pvp_v74_arm.py' if VERSION>=74 else 'scripts/check_offline_pvp_v73_arm.py')),str(OUT)],cwd=ROOT,check=True)
+if VERSION>=73:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v97_focused.py' if VERSION>=97 else 'scripts/check_offline_pvp_v96_focused.py' if VERSION>=96 else 'scripts/check_offline_pvp_v95_focused.py' if VERSION>=95 else 'scripts/check_offline_pvp_v94_focused.py' if VERSION>=94 else 'scripts/check_offline_pvp_v93_focused.py' if VERSION>=93 else 'scripts/check_offline_pvp_v91_focused.py' if VERSION>=91 else 'scripts/check_offline_pvp_v90_focused.py' if VERSION>=90 else 'scripts/check_offline_pvp_v82_focused.py' if VERSION>=82 else 'scripts/check_offline_pvp_v81_focused.py' if VERSION>=81 else 'scripts/check_offline_pvp_v80_focused.py' if VERSION>=80 else 'scripts/check_offline_pvp_v79_focused.py' if VERSION>=79 else 'scripts/check_offline_pvp_v78_focused.py' if VERSION>=78 else 'scripts/check_offline_pvp_v77_focused.py' if VERSION>=77 else 'scripts/check_offline_pvp_v76_focused.py' if VERSION==76 else 'scripts/check_offline_pvp_v75_arm.py' if VERSION>=75 else 'scripts/check_offline_pvp_v74_arm.py' if VERSION>=74 else 'scripts/check_offline_pvp_v73_arm.py')),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=83:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v83_drag.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=84:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v84_cursor.py'),str(OUT),*(['--legacy-regions-fixture'] if VERSION>=93 else [])],cwd=ROOT,check=True)
 if VERSION>=85:subprocess.run([sys.executable,str(ROOT/'scripts/check_input_v23_native.py'),str(OUT)],cwd=ROOT,check=True)
