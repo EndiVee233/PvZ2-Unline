@@ -58,6 +58,10 @@ static U finishResearchWithGems(U b,P timer);
 static bool researchFinishPrompt;
 #endif
 #include "economy.h"
+#ifdef PVP_BUSINESS_PRODUCTION
+static bool produceBusinesses(Economy& next,U now);
+static void projectBusinessStocks(U b,P m);
+#endif
 #ifdef PVP_BUSINESS_BATTLE
 static U businessProjectionIdentity;
 static void projectBusinessOwners(U b,P m){
@@ -71,9 +75,15 @@ static void projectBusinessOwners(U b,P m){
   at<U64>(p,8)=economyRuntime.state.businessOwnedMask&businessBit(s->id)?identity:0;
  }
  businessProjectionIdentity=identity;
+#ifdef PVP_BUSINESS_PRODUCTION
+ projectBusinessStocks(b,m);
+#endif
 }
 #endif
 #include "progression.h"
+#ifdef PVP_BUSINESS_PRODUCTION
+#include "business_production.h"
+#endif
 #ifdef PVP_EXCHANGE
 #include "exchange.h"
 #endif
@@ -611,7 +621,13 @@ static bool persistBattleArmy(U b,P m,bool daveVictory=false,U stars=0){
  bool rewarded=n&&!n->evil;
 #ifdef PVP_BUSINESS_BATTLE
  if(businessId(arenaNpc)){
-  if(stars==3)next.businessOwnedMask|=businessBit(arenaNpc);
+  if(stars==3){
+#ifdef PVP_BUSINESS_PRODUCTION
+   U bit=businessBit(arenaNpc);
+   if(!(next.businessOwnedMask&bit))next.businessStocks[bit==1?0:1].producedAt=realNow(b);
+#endif
+   next.businessOwnedMask|=businessBit(arenaNpc);
+  }
   rewarded=true;
  }
 #endif

@@ -11,6 +11,7 @@ from prepare_offline_neighbors import generate
 ROOT=Path(__file__).resolve().parents[1];VERSION=86 if '--v86' in sys.argv else 85 if '--v85' in sys.argv else 84 if '--v84' in sys.argv else 83 if '--v83' in sys.argv else 82 if '--v82' in sys.argv else 81 if '--v81' in sys.argv else 80 if '--v80' in sys.argv else 79 if '--v79' in sys.argv else 78 if '--v78' in sys.argv else 77 if '--v77' in sys.argv else 76 if '--v76' in sys.argv else 75 if '--v75' in sys.argv else 74 if '--v74' in sys.argv else 73 if '--v73' in sys.argv else 72 if '--v72' in sys.argv else 71 if '--v71' in sys.argv else 70 if '--v70' in sys.argv else 69 if '--v69' in sys.argv else 68 if '--v68' in sys.argv else 67 if '--v67' in sys.argv else 66 if '--v66' in sys.argv else 65 if '--v65' in sys.argv else 64 if '--v64' in sys.argv else 63 if '--v63' in sys.argv else 62 if '--v62' in sys.argv else 61 if '--v61' in sys.argv else 60 if '--v60' in sys.argv else 59 if '--v59' in sys.argv else 58 if '--v58' in sys.argv else 57 if '--v57' in sys.argv else 56 if '--v56' in sys.argv else 55 if '--v55' in sys.argv else 54 if '--v54' in sys.argv else 53 if '--v53' in sys.argv else 52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
 if '--v88' in sys.argv:VERSION=88
 if '--v89' in sys.argv:VERSION=89
+if '--v90' in sys.argv:VERSION=90
 OUT=ROOT/(f'work/pvp-v{VERSION}-test' if '--shop-clock-test' in sys.argv else f'work/pvp-v{VERSION}');OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -140,6 +141,7 @@ if VERSION>=80:flags.append('-DPVP_BUSINESS_BATTLE')
 if VERSION>=81:flags.append('-DPVP_BUSINESS_DEFENSE')
 if VERSION>=82:flags.append('-DPVP_GARRISON_REPOSITION')
 if VERSION>=84:flags.append('-DPVP_DEFENSE_DESKTOP_CURSOR')
+if VERSION>=90:flags.append('-DPVP_BUSINESS_PRODUCTION')
 if '--shop-clock-test' in sys.argv:flags.append('-DPVP_EXCHANGE_CLOCK_TEST')
 subprocess.run([compiler,*flags,'-c',str(ROOT/'src/offline-pvp/offline.cpp'),'-o',str(OUT/'offline.o')],check=True)
 # A flat payload has no dynamic relocation table. Absolute pointer constants
@@ -483,7 +485,7 @@ if VERSION==69:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pv
 if VERSION==70:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v70_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION==71:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v71_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION==72:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v72_arm.py'),str(OUT)],cwd=ROOT,check=True)
-if VERSION>=73:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v82_focused.py' if VERSION>=82 else 'scripts/check_offline_pvp_v81_focused.py' if VERSION>=81 else 'scripts/check_offline_pvp_v80_focused.py' if VERSION>=80 else 'scripts/check_offline_pvp_v79_focused.py' if VERSION>=79 else 'scripts/check_offline_pvp_v78_focused.py' if VERSION>=78 else 'scripts/check_offline_pvp_v77_focused.py' if VERSION>=77 else 'scripts/check_offline_pvp_v76_focused.py' if VERSION==76 else 'scripts/check_offline_pvp_v75_arm.py' if VERSION>=75 else 'scripts/check_offline_pvp_v74_arm.py' if VERSION>=74 else 'scripts/check_offline_pvp_v73_arm.py')),str(OUT)],cwd=ROOT,check=True)
+if VERSION>=73:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v90_focused.py' if VERSION>=90 else 'scripts/check_offline_pvp_v82_focused.py' if VERSION>=82 else 'scripts/check_offline_pvp_v81_focused.py' if VERSION>=81 else 'scripts/check_offline_pvp_v80_focused.py' if VERSION>=80 else 'scripts/check_offline_pvp_v79_focused.py' if VERSION>=79 else 'scripts/check_offline_pvp_v78_focused.py' if VERSION>=78 else 'scripts/check_offline_pvp_v77_focused.py' if VERSION>=77 else 'scripts/check_offline_pvp_v76_focused.py' if VERSION==76 else 'scripts/check_offline_pvp_v75_arm.py' if VERSION>=75 else 'scripts/check_offline_pvp_v74_arm.py' if VERSION>=74 else 'scripts/check_offline_pvp_v73_arm.py')),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=83:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v83_drag.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=84:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v84_cursor.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=85:subprocess.run([sys.executable,str(ROOT/'scripts/check_input_v23_native.py'),str(OUT)],cwd=ROOT,check=True)

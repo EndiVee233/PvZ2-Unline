@@ -90,7 +90,8 @@ def check_capture():
  r=CaptureEngine();r.copy_state(legacy);r.enter();r.run('offlineGarden')
  assert r.get(M+4)==legacy.get(M+4) and r.held()==3 and r.owned()==0
  r.attack_shop(0);board(r);r.run(0x1030a50,M+0x14300,3);r.deaths(0);result(r,0,0x71000001)
- assert len(r.files[key])==416 and struct.unpack_from('<I',r.files[key],4)[0]==10
+ production='offlineBusinessProductionMode' in r.exports
+ assert len(r.files[key])==(456 if production else 416) and struct.unpack_from('<I',r.files[key],4)[0]==(11 if production else 10)
  report=dict(native_direct_request_tail_and_preview_start=True,
  fee_once_and_free_scout=True,zero_through_three_star_rewards=[0,33,66,100],only_three_stars_occupies=True,
  ownership_reward_army_atomic_and_duplicate_safe=True,live_recall_dead_only_consumption=True,

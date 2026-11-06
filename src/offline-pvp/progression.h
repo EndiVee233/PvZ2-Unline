@@ -30,6 +30,9 @@ static void applyProgression(U b,P m){
  U now=realNow(b);at<U>(m,0x6c)=s.upgradeKind;at<U>(m,0x70)=0;
  at<float>(m,0x74)=s.upgradeKind?at<float>(call<P>(b,0x1f7380),0x24)+float(s.upgradeDue>now?s.upgradeDue-now:0):0x1.fffffep127f;
  at<U>(m,0x15c)=s.daveWins;ownBaseRecord(b,m);
+#ifdef PVP_BUSINESS_PRODUCTION
+ projectBusinessStocks(b,m);
+#endif
 }
 static bool commitProgression(U b,P m,Economy&next){
  ++next.sequence;if(!saveEconomy(b,next)){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return false;}
@@ -52,7 +55,12 @@ static void produce(U&balance,U&fraction,U rate,U cap,U elapsed){
 static void tickProgression(U b){
  EconomyRuntime&r=economyRuntime;if(!r.loaded||r.blocked||!r.state.initialized||r.user!=owner(b))return;
  U now=realNow(b);Economy next=r.state;if(now<next.producedAt)return;
- U elapsed=now-next.producedAt;if(!elapsed&&(!next.upgradeKind||now<next.upgradeDue))return;
+#ifdef PVP_BUSINESS_PRODUCTION
+ bool businessChanged=produceBusinesses(next,now);
+#else
+ bool businessChanged=false;
+#endif
+ U elapsed=now-next.producedAt;if(!elapsed&&(!next.upgradeKind||now<next.upgradeDue)&&!businessChanged)return;
  bool completed=next.upgradeKind&&now>=next.upgradeDue;
  U before=completed&&next.upgradeDue>next.producedAt?next.upgradeDue-next.producedAt:completed?0:elapsed;
  const BaseSpec&base=BASE_SPECS[next.baseLevel-1];
@@ -64,7 +72,7 @@ static void tickProgression(U b){
  }
  next.producedAt=now;
  // Persist at most once per minute unless a whole currency unit or an upgrade changes.
- if(next.coins==r.state.coins&&next.medals==r.state.medals&&!completed&&elapsed<60)return;
+ if(next.coins==r.state.coins&&next.medals==r.state.medals&&!completed&&!businessChanged&&elapsed<60)return;
  if(commitProgression(b,manager(b),next)&&completed)log(b,"building-upgrade-completed",next.baseLevel,next.campLevel);
 }
 extern "C" void offlineProgressionInit(U b){
