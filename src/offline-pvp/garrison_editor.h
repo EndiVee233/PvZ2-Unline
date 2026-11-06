@@ -1,5 +1,18 @@
 static U defenseSessionTarget;
 static bool defenseSessionActive;
+#ifdef PVP_DEFENSE_DESKTOP_CURSOR
+// Board creates ArenaEditPlantCursor with a zero rectangle, so its ordinary
+// release handler always drops it. A small logical-coordinate click rectangle
+// enables the existing BaseCursor retain/promotion/cancel lifecycle. The
+// desktop hover, preview draw and crosshair passes already handle that slot.
+extern "C" void offlineDefenseCursorReady(U b,P board,P cursor){
+ if(!defenseSessionActive||!cursor||!board||defenseSessionUser!=owner(b)||!regular(b)||
+    !sameText(at<P>(board,0xc4),"arena_plant_test")||at<U>(board,0xc0)==9)return;
+ I x=at<I>(cursor,4),y=at<I>(cursor,8);
+ at<I>(cursor,12)=x-10;at<I>(cursor,16)=y-10;
+ at<I>(cursor,20)=20;at<I>(cursor,24)=20;
+}
+#endif
 #ifdef PVP_GARRISON_REPOSITION
 extern "C" U offlineGarrisonRepositionMode(){return 1;}
 #include "garrison_roster.h"

@@ -60,7 +60,7 @@ def native_case(edit, *, state=5, overlay=0, ui=0, tutorial=0, plant=True):
     made=[]; added=[]; calls=[]
     def hook(em,a,size,_):
         off=a-BASE
-        if 0x22a2c8<=off<0x22a4c8: return
+        if 0x22a2c8<=off<0x22a4c8 or 0x1a00000<=off<0x2000000: return
         if a==END: return
         r=[em.reg_read(x) for x in (UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3)]
         x,y,z,w=r; result=0; calls.append(off)
