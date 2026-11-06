@@ -194,6 +194,9 @@ static bool readStore(U b,Store&s){
  char tail;I extra=call<I>(b,0x148460,fd,&tail,1);call<I>(b,0x147b90,fd);
  return done==sizeof(s)&&extra==0&&valid(s,owner(b));
 }
+#ifdef PVP_BUSINESS_DEFENSE
+#include "garrison_storage.h"
+#endif
 static void clear(U b,P d){
  P p=at<P>(d,4),i=at<P>(d,16),ie=at<P>(d,20);
  if(i&&ie>=i&&U(ie-i)<=128*16)for(P q=i;q<ie;q+=16)release(b,at<P>(q,12));
@@ -394,7 +397,13 @@ extern "C" __attribute__((section(".text.entry"))) void offlineGarden(U b){neigh
 #ifdef PVP_LOCAL_DEFENSE_SESSION
 static U defenseSessionUser;
 #endif
+#ifdef PVP_BUSINESS_DEFENSE
+#include "garrison_editor.h"
+#endif
 extern "C" void offlineOwn(U b){
+#ifdef PVP_BUSINESS_DEFENSE
+ if(regular(b)){openLocalDefense(b,0);return;}
+#endif
 #ifdef PVP_DEFENSE_FINISH
  if(regular(b))finishArenaBoard(b);
 #endif
@@ -408,6 +417,9 @@ extern "C" void offlineOwn(U b){
  call<void>(b,0x85e7d8);}
 extern "C" void offlineSave(U b,P network,P json,U zone,U type){
  if(!regular(b)){call<void>(b,0xf87cc4,network,json,zone,type);return;}
+#ifdef PVP_BUSINESS_DEFENSE
+ saveLocalDefense(b);return;
+#endif
  Store s{};if(capture(b,manager(b)+0x80,s)&&writeStore(b,s)){log(b,"defense-saved",s.positions,s.infos);
 #ifdef PVP_DEFENSE_FINISH
   // Removing only the editor widget keeps the live board/module listeners
@@ -418,6 +430,9 @@ extern "C" void offlineSave(U b,P network,P json,U zone,U type){
   scene(b,25);}else log(b,"defense-save-failed");
 }
 extern "C" void offlineInfo(U b,P m,U a,U id,U kind){
+#ifdef PVP_BUSINESS_DEFENSE
+ if(regular(b)&&kind==2){const BusinessPlot*s=businessId(id);if(s&&ownedGarrison(b,id)){defendBusiness(b,*s);return;}}
+#endif
 #ifdef PVP_BUSINESS_SCOUT
  if(regular(b)&&kind==2){const BusinessPlot*s=businessId(id);if(s){scoutBusiness(b,*s);return;}}
 #endif
@@ -509,7 +524,11 @@ extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
 // the same monotonic clock as ArenaBattleModule's native timeout check.
 extern "C" void offlineBattleRequest(U b,P m,U action){
 #ifdef PVP_LOCAL_DEFENSE_SESSION
- if(regular(b)&&defenseSessionUser==owner(b)){
+ if(regular(b)&&defenseSessionUser==owner(b)
+#ifdef PVP_BUSINESS_DEFENSE
+ &&defenseSessionActive
+#endif
+ ){
   P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0),board=at<P>(app,0x6bc);
   bool editor=board&&sameText(at<P>(board,0xc4),"arena_plant_test");
   if(action==1&&editor){
@@ -521,7 +540,12 @@ extern "C" void offlineBattleRequest(U b,P m,U action){
   if(action==3){
    // Only ArenaPlant's native destructor sends action 3. Keep this scoped
    // token through scene teardown, when the app may already detach its board.
-   defenseSessionUser=0;log(b,"defense-session-closed");return;
+   defenseSessionUser=0;
+#ifdef PVP_BUSINESS_DEFENSE
+   defenseSessionTarget=0;
+   defenseSessionActive=false;
+#endif
+   log(b,"defense-session-closed");return;
   }
  }
 #endif
