@@ -23,6 +23,12 @@ SUPPORT={'sunflower','twinsunflower','sunshroom','birthsunflower','turnip','peac
 PEA={'peashooter','repeater','threepeater','snowpea','splitpea','peapod','torchwood','peanut','oakshooter','firepeashooter','xshot'}
 COLD={'snowpea','wintermelon','iceburg','iceshroom','wintersweet','stallia'}
 THROW={'cabbagepult','kernelpult','melonpult','wintermelon','bloomerang','carrotlauncher','pepperpult','bowlingbulb','acorn','asparagus','banana'}
+DEFENSE_EXCLUDED={
+ 'sunflower':'sun producer','twinsunflower':'sun producer',
+ 'sunshroom':'sun producer','birthsunflower':'sun producer',
+ 'sunbean':'sun producer','toadstool':'sun-producing attacker',
+ 'saucer':'instant disappearing plant (user observed)',
+}
 
 def extract(bundle,suffix):
  for i in range(len(bundle.groups)):
@@ -73,7 +79,7 @@ def matrix(name,values,width):
  assert all(len(s)<width for s in values)
  return ['static const unsigned '+name+'[]['+str(width)+']={']+['{'+','.join(map(str,[ord(c) for c in s]+[0]))+'},' for s in values]+['};']
 
-def prepare(resource,native,out):
+def prepare(resource,native,out,restrict=False):
  bundle=Bundle(resource);types=decode(extract(bundle,'\\PLANTTYPES.RTON'))['objects']
  props=decode(extract(bundle,'\\PROPERTYSHEETS.RTON'))['objects']
  aliases={a:o['objdata'] for o in props for a in o.get('aliases',[]) if 'objdata' in o}
@@ -90,6 +96,11 @@ def prepare(resource,native,out):
   flags=(1 if name in PEA else 0)|(2 if latest else 0)|(4 if name=='lemon' else 0)|(8 if name in COLD else 0)|(16 if name in THROW else 0)|(32 if name in TANK else 0)
   catalogue.append(dict(id=mapping[name],name=name,cost=p['Cost'],max_level=p.get('MaxLevel',1),role=1 if name in TANK else 2 if name in SUPPORT else 0,flags=flags))
  assert len({p['id'] for p in catalogue})==len(catalogue)
+ legacy=catalogue[:]
+ if restrict:
+  for plant in catalogue:
+   if plant['name'] in DEFENSE_EXCLUDED:omitted[plant['name']]=DEFENSE_EXCLUDED[plant['name']]
+  catalogue=[p for p in catalogue if p['name'] not in DEFENSE_EXCLUDED]
  names=extract(bundle,'PROPERTIES\\RANDOMSTRINGS.TXT').decode('utf8').splitlines()
  prefixes,suffixes=[s.strip().split(',') for s in names if s.strip()]
  special=['','FBI探员追风','妙趣横生的刘琨','迷路的柠小檬','','寒潮预报员小雪','坚果评审员阿橡','投手教练玉米叔']
@@ -98,6 +109,10 @@ def prepare(resource,native,out):
  lines=['static constexpr unsigned NEIGHBOR_MAX_SUN='+str(max_sun)+';','struct NeighborPlantSpec {unsigned id,cost,maxLevel,role,flags;};','static const NeighborPlantSpec NEIGHBOR_PLANTS[]={']
  lines+=['{%d,%d,%d,%d,%d},'%(p['id'],p['cost'],p['max_level'],p['role'],p['flags']) for p in catalogue]
  lines+=['};','static constexpr unsigned NEIGHBOR_PLANT_COUNT=sizeof(NEIGHBOR_PLANTS)/sizeof(NEIGHBOR_PLANTS[0]);']
+ if restrict:
+  lines+=['static const NeighborPlantSpec NEIGHBOR_LEGACY_PLANTS[]={']
+  lines+=['{%d,%d,%d,%d,%d},'%(p['id'],p['cost'],p['max_level'],p['role'],p['flags']) for p in legacy]
+  lines+=['};','static constexpr unsigned NEIGHBOR_LEGACY_PLANT_COUNT=sizeof(NEIGHBOR_LEGACY_PLANTS)/sizeof(NEIGHBOR_LEGACY_PLANTS[0]);']
  lines+=matrix('NEIGHBOR_PREFIXES',prefixes,24)+matrix('NEIGHBOR_SUFFIXES',suffixes,24)+matrix('NEIGHBOR_SPECIAL_NAMES',special,40)
  lines+=matrix('NEIGHBOR_BOWL_SUFFIX',['的小碗碗'],8)
  for family in ('PREFIXES','SUFFIXES'):lines+=['static constexpr unsigned NEIGHBOR_'+family+'_COUNT=sizeof(NEIGHBOR_'+family+')/sizeof(NEIGHBOR_'+family+'[0]);']
