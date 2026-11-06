@@ -211,6 +211,14 @@ static void apply(U b,P d,const Store&s){
  }
  at<U>(d,28)=1;
 }
+#ifdef PVP_BUSINESS_SCOUT
+static void initialBusinessFormation(U b,const BusinessPlot&s,Store&formation){
+ formation=Store{};formation.user=owner(b);formation.positions=5;formation.infos=1;
+ U plant=s.id==BUSINESSES[0].id?2:6;
+ for(U row=0;row<5;++row)formation.pos[row]={plant,row,0};
+ formation.info[0].type=plant;formation.info[0].level=1;
+}
+#endif
 static U arenaDaveRound;
 static bool localDaveAllowed(U b,P m,const NpcPreset&n){
 #ifdef PVP_DAVE_ROUNDS
@@ -357,10 +365,7 @@ static bool scoutBusiness(U b,const BusinessPlot&s,bool attack){
  at<unsigned char>(m,0x101)=at<unsigned char>(m,0x102)=at<unsigned char>(m,0x103)=0;
  // Independent local neutral defenses, not recovered server formations.
  // The two shops deliberately differ to expose stale-board/stacking bugs.
- Store formation{};formation.user=owner(b);formation.positions=5;formation.infos=1;
- U plant=s.id==BUSINESSES[0].id?2:6;
- for(U row=0;row<5;++row)formation.pos[row]={plant,row,0};
- formation.info[0].type=plant;formation.info[0].level=1;
+ Store formation{};initialBusinessFormation(b,s,formation);U plant=formation.info[0].type;
  apply(b,m+0x80,formation);arenaNpc=s.id;arenaUser=owner(b);
  loadArena(b,m,"arena_battle_test",0);log(b,"business-scout",s.id,plant);return true;
 }
@@ -544,6 +549,9 @@ extern "C" void offlineBattleRequest(U b,P m,U action){
 #ifdef PVP_BUSINESS_DEFENSE
    defenseSessionTarget=0;
    defenseSessionActive=false;
+#ifdef PVP_GARRISON_REPOSITION
+   garrisonRosterSize=0;garrisonPlantCount=0;
+#endif
 #endif
    log(b,"defense-session-closed");return;
   }

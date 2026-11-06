@@ -1,5 +1,9 @@
 static U defenseSessionTarget;
 static bool defenseSessionActive;
+#ifdef PVP_GARRISON_REPOSITION
+extern "C" U offlineGarrisonRepositionMode(){return 1;}
+#include "garrison_roster.h"
+#endif
 static bool ownedGarrison(U b,U target){
  P m=manager(b);if(!regular(b)||!businessId(target)||!ensureEconomy(b,m)||
   !(economyRuntime.state.businessOwnedMask&businessBit(target)))return false;
@@ -13,11 +17,22 @@ static bool openLocalDefense(U b,U target){
  if(target&&!ownedGarrison(b,target))return false;
  P m=manager(b);Store saved{};I found=target?readGarrison(b,target,saved):I(readStore(b,saved));
  if(found<0){economyNotice(b,"[V38_PVP_SAVE_ERROR]");log(b,"garrison-invalid",target);return false;}
+#ifdef PVP_GARRISON_REPOSITION
+ // v81 incorrectly started shops empty. Restore the full neutral roster on
+ // first entry (or a valid v81 empty file), without writing until normal save.
+ if(target&&(!found||!saved.positions)){
+  initialBusinessFormation(b,*businessId(target),saved);found=1;
+  log(b,"garrison-roster-restored",target,saved.positions);
+ }
+#endif
  // Serialize/read before ending the old editor; bind the new target only
  // after Board::Finish has sent its old module's teardown callback.
  finishArenaBoard(b);
  if(found){apply(b,m+0x80,saved);log(b,target?"garrison-loaded":"defense-loaded",saved.positions,saved.infos);}
  else {clear(b,m+0x80);at<U>(m+0x80,28)=1;log(b,target?"garrison-new":"defense-new",target);}
+#ifdef PVP_GARRISON_REPOSITION
+ if(target)bindGarrisonRoster(saved);else {garrisonRosterSize=0;garrisonPlantCount=0;}
+#endif
  defenseSessionUser=owner(b);defenseSessionTarget=target;defenseSessionActive=true;
  at<U>(m,0xa8)=target?2:1;at<U>(m,0xf4)=target;
  const BusinessPlot*s=businessId(target);
@@ -40,7 +55,13 @@ static bool saveLocalDefense(U b){
  P m=manager(b);U target=defenseSessionTarget;
  if(!defenseSessionActive||defenseSessionUser!=owner(b)||(target&&(!ownedGarrison(b,target)||at<U>(m,0xa8)!=2||at<U>(m,0xf4)!=target))||
   (!target&&at<U>(m,0xa8)!=1)){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return false;}
- Store saved{};bool ok=capture(b,m+0x80,saved)&&(target?writeGarrison(b,target,saved):writeStore(b,saved));
+ Store saved{};bool captured=capture(b,m+0x80,saved);
+#ifdef PVP_GARRISON_REPOSITION
+ if(captured&&target&&!validGarrisonMove(saved)){
+  economyNotice(b,"[V82_REPOSITION_ONLY]");log(b,"garrison-roster-change-denied",target,saved.positions);return false;
+ }
+#endif
+ bool ok=captured&&(target?writeGarrison(b,target,saved):writeStore(b,saved));
  if(!ok){economyNotice(b,"[V38_PVP_SAVE_ERROR]");log(b,"defense-save-failed",target);return false;}
  log(b,target?"garrison-saved":"defense-saved",saved.positions,saved.infos);
  log(b,"defense-saved-target",target);
