@@ -6,7 +6,14 @@ static U historyUiUser;
 extern "C" U offlineHistoryMode(){return 1;}
 static void appendHistory(U b,Economy&next,U target,U stars,U coins){
  U count=next.historyCount<10?next.historyCount:9;
- for(U i=count;i>0;--i)next.history[i]=next.history[i-1];
+ for(U i=count;i>0;--i){next.history[i]=next.history[i-1];
+#ifdef PVP_RANDOM_NEIGHBORS
+  next.historySeeds[i]=next.historySeeds[i-1];next.historyKinds[i]=next.historyKinds[i-1];
+#endif
+ }
+#ifdef PVP_RANDOM_NEIGHBORS
+ bool rich=target==activeEncounterId;next.historySeeds[0]=rich?activeEncounterSeed:0;next.historyKinds[0]=rich?activeEncounterKind:0;
+#endif
  next.history[0]={next.sequence+1,realNow(b),target,stars,coins,businessId(target)?2u:1u};
  if(next.historyCount<10)++next.historyCount;
 }
@@ -31,6 +38,10 @@ extern "C" P offlineHistoryLookup(U b,U serial,U high){
  at<U>(historyBrief,0xc8)=h->time;
  const NpcPreset*n=npc(h->target);const BusinessPlot*s=businessId(h->target);
  const U*name=n?n->name:s?s->name:nullptr;
+#ifdef PVP_RANDOM_NEIGHBORS
+ U title[40]{};U index=U(h-economyRuntime.state.history);
+ if(economyRuntime.state.historySeeds[index]){neighborName(economyRuntime.state.historySeeds[index],economyRuntime.state.historyKinds[index],title);name=title;}
+#endif
  if(name){char alloc=0;call<void>(b,0x14eb451,historyBrief+0x9c,name,&alloc);}
  return historyBrief;
 }

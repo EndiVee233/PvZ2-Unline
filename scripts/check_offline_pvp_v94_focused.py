@@ -12,6 +12,8 @@ def check_history(c):
  class History(GarrisonEngine):
   def __init__(self):super().__init__();self.views=[];self.ui_actions=[];self.original_rows=0
   def hook(self,em,a,size,d):
+   if a==BASE+0x1019668 and 'offlineRandomNeighborsMode' in self.exports:
+    em.reg_write(UC_ARM_REG_PC,em.reg_read(UC_ARM_REG_LR)&~1);return
    if a==BASE+0x105b774:
     ui,v=[em.reg_read(r) for r in (UC_ARM_REG_R0,UC_ARM_REG_R1)]
     ids=[struct.unpack('<II',em.mem_read(p,8)) for p in range(self.get(v),self.get(v+4),8)]
@@ -68,6 +70,16 @@ def check_history(c):
  assert e.lookup(h[0][0],0)==0x1234,'foreign lookup no longer follows original table'
  assert e.lookup(0xffffffff)==0,'unknown local record leaked a prior brief'
  r=History();r.copy_state(e);r.enter();r.open();assert r.history()==h and r.views[-1][1]==ids
+ if 'offlineRandomNeighborsMode' in e.exports:
+  original_name=bytes(e.u.mem_read(name,e.get(name-12)*4))
+  record=next(p for p in e.residents() if e.get(p)==target);panel=e.alloc(0x150)
+  for o,v in [(0xa4,5),(0xac,e.get(record+28)),(0xa8,e.get(record+32)),(0xc0,M+0x18000)]:e.put(panel+o,v)
+  e.run('offlinePvpPanelReady',panel);e.run('offlineBusinessAction',panel,204)
+  ptr=e.lookup(h[0][0]);new=e.get(ptr+0x9c)
+  assert bytes(e.u.mem_read(new,e.get(new-12)*4))==original_name,'refresh renamed a completed battle'
+  old=bytearray(e.files[key(e)][:708]);struct.pack_into('<I',old,4,13);crc(old)
+  migrated=History();migrated.files={key(e):old};migrated.enter();migrated.open()
+  assert migrated.history()==h and migrated.lookup(h[0][0]),'v13 history migration lost rows'
  # Each completed result commits exactly once with its reward; newest ten win.
  for i in range(13):
   e.advance(1);attack(e,i%4);return_map(e);e.reset_map()

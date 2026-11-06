@@ -42,7 +42,7 @@ def check_production(c):
  assert old.owned()==3 and stock(old,0)==stock(old,1)==(old.now,0,0,0,0)
  regions='offlineRegionMode' in old.exports
  history='offlineHistoryMode' in old.exports
- assert len(old.files[key(old)])==(708 if history else 464 if regions else 456) and struct.unpack_from('<I',old.files[key(old)],4)[0]==(13 if history else 12 if regions else 11)
+ assert len(old.files[key(old)])==(788 if 'offlineRandomNeighborsMode' in old.exports else 708 if history else 464 if regions else 456) and struct.unpack_from('<I',old.files[key(old)],4)[0]==(14 if 'offlineRandomNeighborsMode' in old.exports else 13 if history else 12 if regions else 11)
  # Other profiles do not inherit stores; switching back keeps the saved stock.
  f.put(PM+0x74,43);f.put(M+0x20,0);tick(f);assert f.owned()==0 and stock(f,0)==stock(f,1)==(0,0,0,0,0)
  f.put(PM+0x74,42);f.put(M+0x20,0);tick(f);assert f.owned()==1 and stock(f,0)[1:3]==(2,1)

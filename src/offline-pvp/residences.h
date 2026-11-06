@@ -18,6 +18,9 @@ static void removeLocalBusinessRecords(U b,P m){
  at<P>(m,0x114)=out;
 }
 static void residentialNeighbor(U b,P m,const NpcPreset&n){
+#ifdef PVP_RANDOM_NEIGHBORS
+ projectDynamicNeighbor(b,m,n);return;
+#endif
  // +10 cups shown on the map; +14 cups obtainable; +18 obtainable coins.
  // Ranking was removed and medal/gem/cup rewards were not authorized.
  alignas(8) U record[16]={n.id,0,0,n.level,0,0,100,n.zone,n.position,1,0,0,0,0,1,0};

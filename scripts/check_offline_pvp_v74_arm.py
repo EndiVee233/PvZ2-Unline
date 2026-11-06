@@ -43,19 +43,20 @@ def check_residences():
   rows=range(e.get(M+0x110),e.get(M+0x114),64)
   assert all(e.get(p) in (0x71000001,0x71000002) for p in rows),'residences leaked into businesses'
  only_businesses()
- rows=e.residents();assert len(rows)==7
+ rich='offlineRandomNeighborsMode' in e.exports
+ rows=e.residents();assert len(rows)==7+int(rich)
  for i,p in enumerate(rows):
   id=e.get(p);kind=e.get(p+36)
   e.run(0x1060b68,p);slot=e.u.reg_read(UC_ARM_REG_R0);assert slot<20 and slot!=1
   e.run(0x1060ba0,p);assert e.u.reg_read(UC_ARM_REG_R0)==int(id==0x70000007)
   assert e.get(e.get(p+8)-12)>0,'empty residential name'
   if id==0x70000007:assert kind==4 and e.get(p+48)==6;continue
-  assert kind==1 and e.get(p+16)==e.get(p+20)==0 and e.get(p+24)==100
+  assert kind==1 and (rich or e.get(p+16)==0) and e.get(p+20)==0 and e.get(p+24)==100
   assert e.native_panel(p)==[100,0,0,0,0,0,1,0],'merchant production/capacity fields shown'
   # Execute the real map-click branch into the native kind-5 panel opener.
   e.u.reg_write(UC_ARM_REG_R8,M);e.u.reg_write(UC_ARM_REG_R5,i*64);e.u.reg_write(UC_ARM_REG_R6,e.alloc(0x300))
   e.run(0x101a20c);assert e.opened[-1]==(5,e.get(p+28),e.get(p+32))
- e.run('offlineGarden');assert len(e.residents())==7;only_businesses()
+ e.run('offlineGarden');assert len(e.residents())==7+int(rich);only_businesses()
  # Migration removes only our former fake businesses, retaining foreign shops.
  first=rows[0];old=e.alloc(64*3);e.u.mem_write(old,bytes(64*3))
  e.put(old,e.get(first));e.put(old+48,e.get(first+28));e.put(old+52,e.get(first+32));e.string(old+16,'old fake',True)

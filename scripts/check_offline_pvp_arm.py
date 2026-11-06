@@ -16,7 +16,7 @@ class Engine:
    if segment['p_type']=='PT_LOAD':self.u.mem_write(BASE+segment['p_vaddr'],segment.data())
   assert bytes(self.u.mem_read(BASE+s['sh_addr'],s['sh_size']))==s.data(),'embedded payload alignment'
   self.exports={s.name:s['st_value'] for s in e.get_section_by_name('.symtab').iter_symbols()};self.heap=M+0x10000
-  self.records=[];self.loaded=[];self.scenes=[];self.files={};self.fds={};self.counter=3;self.failwrite=False
+  self.records=[];self.loaded=[];self.scenes=[];self.files={};self.fds={};self.counter=3;self.failwrite=False;self.malloc_blocks={};self.free_blocks=[]
   self.put(BASE+0x1835eec,GM);self.put(PM+0x74,42);self.put(PROFILE+0x75c,9);self.put(M+0x15c,0xffffffff)
   self.payload_range=(BASE+s['sh_addr'],BASE+s['sh_addr']+s['sh_size'])
   self.u.mem_write(END,b'\x1e\xff\x2f\xe1');self.u.hook_add(UC_HOOK_CODE,self.dispatch)
@@ -42,7 +42,7 @@ class Engine:
    else:self.put(sp+(i-4)*4,a)
   self.u.reg_write(UC_ARM_REG_CPSR,0x10);self.u.reg_write(UC_ARM_REG_SP,sp);self.u.reg_write(UC_ARM_REG_LR,END)
   self.u.reg_write(UC_ARM_REG_C1_C0_2, 0xf << 20);self.u.reg_write(UC_ARM_REG_FPEXC, 0x40000000)
-  try:self.u.emu_start(BASE+address,END,count=2000000)
+  try:self.u.emu_start(BASE+address,END,count=12000000 if 'offlineRandomNeighborsMode' in self.exports else 2000000)
   except Exception:print("FAULT PC",hex(self.u.reg_read(UC_ARM_REG_PC)));raise
   assert self.u.reg_read(UC_ARM_REG_PC)==END,'backend did not return'
   assert self.u.reg_read(UC_ARM_REG_SP)==sp,'stack not restored'
@@ -69,6 +69,12 @@ class Engine:
    self.string(x,data,off==0x14eb450);result=x
   elif off in (0x14ebf58,0x14ea238,0x14c2e94):pass
   elif off==0x14c1a7c:result=self.alloc(x)
+  elif off==0x147938:
+   block=next((q for q in self.free_blocks if self.malloc_blocks[q]>=x),None)
+   if block is not None:self.free_blocks.remove(block);result=block
+   else:result=self.alloc(x);self.malloc_blocks[result]=x
+  elif off==0x147950:
+   if x:assert x in self.malloc_blocks and x not in self.free_blocks;self.free_blocks.append(x)
   elif off==0x1046a04:
    assert x==M;self.records.append(bytes(em.mem_read(y,64)))
    p=self.alloc(len(self.records)*64)

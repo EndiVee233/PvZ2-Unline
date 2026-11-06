@@ -17,8 +17,8 @@ class BusinessEngine(LifecycleEngine):
   return ui,[self.get(ui+o) for o in (0x12c,0x130,0x134,0x138,0x13c,0x140,0x148)]
 
 def check_businesses():
- e=BusinessEngine();e.enter();funds=(e.get(M+4),e.get(M+8),e.gems,dict(e.files))
- e.run('offlineGarden');assert len(e.shops())==2 and len(e.residents())==7
+ e=BusinessEngine();e.enter();funds=(e.get(M+4),e.get(M+8),e.gems,{k:bytes(v) for k,v in e.files.items() if not k.endswith('.neighbors')})
+ e.run('offlineGarden');assert len(e.shops())==2 and len(e.residents())==7+int('offlineRandomNeighborsMode' in e.exports)
  houseplots={(e.get(p+28),e.get(p+32)) for p in e.residents()}|{(1,2)}
  slots=[]
  for i,p in enumerate(e.shops()):
@@ -37,8 +37,8 @@ def check_businesses():
    count=len(e.messages);e.stub(0x101a564,ui,0)
    assert e.messages[count:]==['business-raid-pending']
  assert slots==[9,10] and len(set(slots))==2
- e.run('offlineGarden');assert len(e.shops())==2 and len(e.residents())==7
- assert (e.get(M+4),e.get(M+8),e.gems,e.files)==funds
+ e.run('offlineGarden');assert len(e.shops())==2 and len(e.residents())==7+int('offlineRandomNeighborsMode' in e.exports)
+ assert (e.get(M+4),e.get(M+8),e.gems,{k:bytes(v) for k,v in e.files.items() if not k.endswith('.neighbors')})==funds
  # A residence/own base is never intercepted by the shop-only button guard.
  for kind,zone,pos in ((5,1,3),(4,1,2),(5,1,1),(3,6,3)):
   ui=e.alloc(0x160);e.put(ui+0xa4,kind);e.put(ui+0xac,zone);e.put(ui+0xa8,pos)
@@ -50,7 +50,7 @@ def check_businesses():
  ui,_=e.shop_panel(e.shops()[0]);e.run('offlineBusinessAction',ui,205)
  assert e.u.reg_read(UC_ARM_REG_R0)==0
  r=BusinessEngine();r.copy_state(e);r.enter();r.run('offlineGarden')
- assert len(r.shops())==2 and len(r.residents())==7
+ assert len(r.shops())==2 and len(r.residents())==7+int('offlineRandomNeighborsMode' in r.exports)
  early=BusinessEngine();early.put(PROFILE+0x75c,1);early.run('offlineGarden')
  assert not early.shops() and not early.residents(),'tutorial map changed'
  report=dict(independent_unowned_shop_records=True,native_slot_mapping_executed=True,

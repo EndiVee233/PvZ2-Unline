@@ -90,6 +90,9 @@ static bool localBusinessPanel(U b,P panel){
 // through into old server requests. Closing the panel remains the original
 // handler; residence and own-base events pass.
 extern "C" U offlineBusinessAction(U b,P panel,U button){
+#ifdef PVP_RANDOM_NEIGHBORS
+ if(neighborAction(b,panel,button))return 1;
+#endif
 #ifdef PVP_REGIONS
  if(regionAction(b,panel,button))return 1;
 #endif

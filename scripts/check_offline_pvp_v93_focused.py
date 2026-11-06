@@ -40,6 +40,7 @@ def check_regions(c):
  def legacy(level=7,coins=50000):
   e=Regions();e.enter();r=Regions();r.files={key(e):old_record(e,level,coins)};r.enter();r.run('offlineGarden');return r
  e=Regions();e.enter();e.run('offlineGarden')
+ rich='offlineRandomNeighborsMode' in e.exports
  balance_only='offlineRegionBalanceOnlyMode' in e.exports
  assert e.mask()==1 and e.get(M+4)==1000 and len(e.residents())==4 and not e.shops()
  assert e.regions()=={2:(10000,1),3:(16500,1),4:(23500,1),5:(31000,1),6:(39000,1)}
@@ -47,7 +48,7 @@ def check_regions(c):
  e.run('offlineBusinessAction',p,203);assert e.u.reg_read(UC_ARM_REG_R0)==0 and bytes(e.files[key(e)])==saved
  e.unlock(2);assert e.mask()==1 and ('[V93_REGION_COINS_REQUIRED]' if balance_only else '[V93_REGION_2_REQUIRED]') in e.notices[-1]
  # Legacy v11 is read at its historical length/checksum and keeps areas 1-3.
- old=legacy();assert old.mask()==7 and old.get(M+4)==50000 and len(old.residents())==7 and len(old.shops())==2
+ old=legacy();assert old.mask()==7 and old.get(M+4)==50000 and len(old.residents())==(7+int(rich)) and len(old.shops())==2
  assert old.regions()[2]==(10000,0) and old.regions()[3]==(16500,0)
  old.unlock(4)
  if balance_only:assert old.mask()==15 and old.get(M+4)==26500
@@ -69,24 +70,24 @@ def check_regions(c):
  f=legacy(8,23500);saved=bytes(f.files[key(f)]);f.failwrite=True;f.unlock(4)
  assert f.mask()==7 and f.get(M+4)==23500 and f.regions()[4][1]==1 and bytes(f.files[key(f)])==saved
  f.failwrite=False;p=f.unlock(4)
- assert f.mask()==15 and f.get(M+4)==0 and f.regions()[4]==(23500,0) and len(f.residents())==10
+ assert f.mask()==15 and f.get(M+4)==0 and f.regions()[4]==(23500,0) and len(f.residents())==(10+int(rich))
  r=Regions();r.copy_state(f);r.enter();r.run('offlineGarden')
- assert r.mask()==15 and r.get(M+4)==0 and len(r.residents())==10
+ assert r.mask()==15 and r.get(M+4)==0 and len(r.residents())==(10+int(rich))
  r.unlock(5);assert r.mask()==15 and ('[V93_REGION_COINS_REQUIRED]' if balance_only else '[V93_REGION_5_REQUIRED]') in r.notices[-1]
  # Finish remaining areas with a capacity-appropriate synthetic wallet.
  raw=bytearray(r.files[key(r)])
  for o,v in [(12,70000),(16,9),(184,9)]:struct.pack_into('<I',raw,o,v)
  all_=Regions();all_.files={key(r):crc(raw)};all_.enter();all_.run('offlineGarden')
- all_.unlock(5);assert all_.mask()==31 and all_.get(M+4)==39000 and len(all_.residents())==13
- all_.unlock(6);assert all_.mask()==63 and all_.get(M+4)==0 and len(all_.residents())==16
- assert len({(all_.get(p+28),all_.get(p+32)) for p in all_.residents()})==16
+ all_.unlock(5);assert all_.mask()==31 and all_.get(M+4)==39000 and len(all_.residents())==(13+int(rich))
+ all_.unlock(6);assert all_.mask()==63 and all_.get(M+4)==0 and len(all_.residents())==(16+int(rich))
+ assert len({(all_.get(p+28),all_.get(p+32)) for p in all_.residents()})==(16+int(rich))
  # Stale confirmation from another player must neither debit nor close it.
  p=all_.panel_region(4);all_.put(PM+0x74,43);all_.put(M+0x20,0);all_.enter();all_.run('offlineGarden')
  assert all_.mask()==1 and len(all_.residents())==4 and not all_.shops(),(all_.mask(),[(all_.get(p),all_.get(p+28),all_.get(p+32)) for p in all_.residents()],all_.shops())
  before=all_.get(M+4),len(all_.dismissed);all_.stub(0x100b3d8,p,202)
  assert (all_.get(M+4),len(all_.dismissed))==before
  all_.put(PM+0x74,42);all_.put(M+0x20,0);all_.enter();all_.run('offlineGarden')
- assert all_.mask()==63 and len(all_.residents())==16 and all_.get(M+4)==0
+ assert all_.mask()==63 and len(all_.residents())==(16+int(rich)) and all_.get(M+4)==0
  # Reject a malformed, noncontiguous unlock mask, without replacing its file.
  corrupt=bytearray(f.files[key(f)]);struct.pack_into('<I',corrupt,460,9);crc(corrupt)
  bad=Regions();bad.files={key(f):corrupt};bad.enter();assert bytes(bad.files[key(f)])==bytes(corrupt)
@@ -108,7 +109,7 @@ def accepted_legacy_fixtures():
   if user in marker:return
   marker.add(user);e.legacy_region_users=marker
   raw=e.files.get(key(e))
-  if not raw or len(raw) not in (464,708) or struct.unpack_from('<I',raw,460)[0]!=1:return
+  if not raw or len(raw) not in (464,708,788) or struct.unpack_from('<I',raw,460)[0]!=1:return
   e.files[key(e)]=old_record(e,struct.unpack_from('<I',raw,184)[0],struct.unpack_from('<I',raw,12)[0])
   symbol=next(v for k,v in e.exports.items() if k.endswith('economyRuntime'))
   e.u.mem_write(BASE+symbol+8,b'\0');original(e)

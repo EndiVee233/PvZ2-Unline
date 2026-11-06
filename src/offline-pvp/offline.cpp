@@ -18,6 +18,11 @@ static U owner(U b){return at<U>(call<P>(b,0x1df738),0x74);}
 static void scene(U b,U s){P g=at<P>(reinterpret_cast<P>(b),0x1835eec);call<void>(b,0x352498,g,s,0,1);}
 static bool regular(U b){P p=profile(b);return p&&at<U>(p,0x75c)>=9;}
 static const NpcPreset* npc(U id){for(U i=0;i<NPC_COUNT;++i)if(NPCS[i].id==id)return NPCS+i;return nullptr;}
+#ifdef PVP_RANDOM_NEIGHBORS
+#include "neighbor_generator.h"
+static void projectDynamicNeighbor(U b,P m,const NpcPreset&n);
+static U neighborAction(U b,P panel,U button);
+#endif
 static void bytes(P d,const unsigned char*s,U n){for(U i=0;i<n;++i)d[i]=s[i];}
 static void narrow(U b,P dst,const char*src){char a=0;call<void>(b,0x14ed0e1,dst,src,&a);}
 static void release(U b,P value,bool wide=false){if(value){char a=0;call<void>(b,wide?0x14ea239:0x14ebf59,value-12,&a);}}
@@ -93,6 +98,9 @@ static void projectBusinessOwners(U b,P m){
 #ifdef PVP_REGIONS
 #include "regions.h"
 #endif
+#ifdef PVP_RANDOM_NEIGHBORS
+#include "neighbor_roster.h"
+#endif
 #ifdef PVP_HISTORY
 #include "history.h"
 #endif
@@ -136,6 +144,9 @@ static void bindBattleArmy(U b,P m){
 }
 static void neighbors(U b,P m){
  if(!regular(b))return;
+#ifdef PVP_RANDOM_NEIGHBORS
+ if(!ensureNeighborRoster(b,m))return;
+#endif
 #ifdef PVP_REGIONS
  removeLockedNeighbors(b,m);
 #endif
@@ -282,16 +293,30 @@ extern "C" void offlineDaveLabel(U b,P record){
  }
 }
 #endif
-static void preset(U b,P m,const NpcPreset&n){
+static bool preset(U b,P m,const NpcPreset&n){
  const U (*plants)[3]=n.plants;U count=n.count;
 #ifdef PVP_DAVE_ROUNDS
  if(n.evil){arenaDaveRound=economyRuntime.state.daveWins;const DaveRound&r=DAVE_ROUNDS[arenaDaveRound<DAVE_ROUND_COUNT?arenaDaveRound:DAVE_ROUND_COUNT-1];plants=r.plants;count=r.count;log(b,"dave-round-prepared",arenaDaveRound+1,count);}
 #endif
  Store s{};s.user=owner(b);s.positions=count;
- for(U k=0;k<count;++k){s.pos[k]={plants[k][0],plants[k][1],plants[k][2]};bool seen=false;for(U j=0;j<s.infos;++j)if(s.info[j].type==s.pos[k].type)seen=true;
-  if(!seen){Info&v=s.info[s.infos++];v.type=s.pos[k].type;v.level=1;}
+#ifdef PVP_RANDOM_NEIGHBORS
+ const NeighborEncounter* rich=nullptr;activeEncounterId=activeEncounterSeed=activeEncounterKind=0;
+ if(!n.evil){rich=encounter(b,n.id);if(!rich||!rich->seed)return false;count=s.positions=rich->count;
+  activeEncounterId=n.id;activeEncounterSeed=rich->seed;activeEncounterKind=rich->kind;}
+#endif
+ for(U k=0;k<count;++k){
+#ifdef PVP_RANDOM_NEIGHBORS
+  if(rich)s.pos[k]={rich->plants[k].type,rich->plants[k].row,rich->plants[k].col};else
+#endif
+  s.pos[k]={plants[k][0],plants[k][1],plants[k][2]};
+  bool seen=false;for(U j=0;j<s.infos;++j)if(s.info[j].type==s.pos[k].type)seen=true;
+  if(!seen){Info&v=s.info[s.infos++];v.type=s.pos[k].type;v.level=1;
+#ifdef PVP_RANDOM_NEIGHBORS
+   if(rich)v.level=rich->plants[k].level;
+#endif
+  }
  }
- apply(b,m+0x80,s);
+ apply(b,m+0x80,s);return true;
 }
 static U arenaNpc,arenaUser;
 static bool resultAck,exitAck;
@@ -495,7 +520,7 @@ extern "C" void offlineInfo(U b,P m,U a,U id,U kind){
   at<unsigned char>(m,0x100)=1;
 #endif
   if(n->evil){at<unsigned char>(m,0x100)=1;at<unsigned char>(m,0x102)=0;at<unsigned char>(m,0x103)=0;at<U>(m,0xa8)=1;}
-  if(arenaPending(b,"arena_battle_test",0)){log(b,"view-duplicate",id);return;}log(b,"view-neighbor",id,n->count);arenaNpc=n->id;arenaUser=owner(b);preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;}
+  if(arenaPending(b,"arena_battle_test",0)){log(b,"view-duplicate",id);return;}log(b,"view-neighbor",id,n->count);arenaNpc=n->id;arenaUser=owner(b);if(!preset(b,m,*n))return;loadArena(b,m,"arena_battle_test",0);return;}
  call<void>(b,0xf79d74);P net=call<P>(b,0xf7a070);call<void>(b,0xf87154,net,a,id,kind);
 }
 extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
@@ -563,14 +588,14 @@ extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
   // ArenaPlant is the editor even when the App mode is changed.
   if(reason==3||(n->evil&&reason==4)){
    if(arenaPending(b,"arena_battle_test",0)){log(b,"view-duplicate",id);return;}
-   arenaNpc=n->id;arenaUser=owner(b);preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;
+   arenaNpc=n->id;arenaUser=owner(b);if(!preset(b,m,*n))return;loadArena(b,m,"arena_battle_test",0);return;
   }
   if(arenaPending(b,"arena_battle_test",0)){log(b,"attack-duplicate",id);return;}
 #ifdef PVP_BATTLE_ECONOMY
   if(reason!=1&&reason!=2&&reason!=4){log(b,"unknown-battle-reason",reason);return;}
   if(!beginBattleFee(b,m,*n,false))return;
 #endif
-  log(b,"attack-neighbor",id,n->count);arenaNpc=n->id;arenaUser=owner(b);preset(b,m,*n);loadArena(b,m,"arena_battle_test",0);return;}
+  log(b,"attack-neighbor",id,n->count);arenaNpc=n->id;arenaUser=owner(b);if(!preset(b,m,*n))return;loadArena(b,m,"arena_battle_test",0);return;}
  call<void>(b,0xf79d74);P net=call<P>(b,0xf7a070);call<void>(b,0xf87710,net,id,reason,at<U>(m,0x104),at<U64>(m,0x108));
 }
 // The offline session acknowledges the original three-second heartbeat using

@@ -37,6 +37,9 @@ struct Economy {U magic,version,user,coins,home,sequence,checksum,reserved;Local
 #ifdef PVP_HISTORY
  struct BattleHistory {U serial,time,target,stars,coins,kind;};
  U historyCount;BattleHistory history[10];
+#ifdef PVP_RANDOM_NEIGHBORS
+ U historySeeds[10],historyKinds[10];
+#endif
 #endif
 };
 static constexpr U LEGACY_ECONOMY_SIZE=32+12*TRAIN_COUNT;
@@ -51,6 +54,7 @@ static constexpr U V9_ECONOMY_SIZE=V8_ECONOMY_SIZE+12;
 static constexpr U V10_ECONOMY_SIZE=V9_ECONOMY_SIZE+4;
 static constexpr U V11_ECONOMY_SIZE=V10_ECONOMY_SIZE+40;
 static constexpr U V12_ECONOMY_SIZE=V11_ECONOMY_SIZE+8;
+static constexpr U V13_ECONOMY_SIZE=V12_ECONOMY_SIZE+244;
 #ifdef PVP_DAVE_ROUNDS
 static constexpr U DAVE_WINS_LIMIT=6;
 #else
@@ -59,7 +63,7 @@ static constexpr U DAVE_WINS_LIMIT=1;
 struct EconomyRuntime {U user,lastTick;bool loaded,blocked,busy,loadedFromDisk;P camp;Economy state;};
 static EconomyRuntime economyRuntime;
 static bool same(const char*a,const char*b){while(*a&&*a==*b){++a;++b;}return *a==*b;}
-static U checkEconomy(const Economy&s){const unsigned char*p=reinterpret_cast<const unsigned char*>(&s);U h=2166136261u;for(U i=0;i<(s.version==1?LEGACY_ECONOMY_SIZE:s.version==2?V2_ECONOMY_SIZE:s.version==3?V3_ECONOMY_SIZE:s.version==4?V4_ECONOMY_SIZE:s.version==5?V5_ECONOMY_SIZE:s.version==6?V6_ECONOMY_SIZE:s.version==7?V7_ECONOMY_SIZE:s.version==8?V8_ECONOMY_SIZE:s.version==9?V9_ECONOMY_SIZE:s.version==10?V10_ECONOMY_SIZE:s.version==11?V11_ECONOMY_SIZE:s.version==12?V12_ECONOMY_SIZE:sizeof(s));++i)if(i<24||i>=28)h=(h^p[i])*16777619u;return h;}
+static U checkEconomy(const Economy&s){const unsigned char*p=reinterpret_cast<const unsigned char*>(&s);U h=2166136261u;for(U i=0;i<(s.version==1?LEGACY_ECONOMY_SIZE:s.version==2?V2_ECONOMY_SIZE:s.version==3?V3_ECONOMY_SIZE:s.version==4?V4_ECONOMY_SIZE:s.version==5?V5_ECONOMY_SIZE:s.version==6?V6_ECONOMY_SIZE:s.version==7?V7_ECONOMY_SIZE:s.version==8?V8_ECONOMY_SIZE:s.version==9?V9_ECONOMY_SIZE:s.version==10?V10_ECONOMY_SIZE:s.version==11?V11_ECONOMY_SIZE:s.version==12?V12_ECONOMY_SIZE:s.version==13?V13_ECONOMY_SIZE:sizeof(s));++i)if(i<24||i>=28)h=(h^p[i])*16777619u;return h;}
 static bool validEconomy(const Economy&s,U user){
  bool version=s.version==1||s.version==2;
 #ifdef PVP_BATTLE_ECONOMY
@@ -128,6 +132,14 @@ static bool validEconomy(const Economy&s,U user){
 #endif
 #ifdef PVP_HISTORY
  version=version||s.version==13;
+#ifdef PVP_RANDOM_NEIGHBORS
+ version=version||s.version==14;
+ if(s.version>=14)for(U i=0;i<10;++i){
+  if(s.historyKinds[i]>7||!s.historySeeds[i]&&s.historyKinds[i])return false;
+  if(i>=s.historyCount&&(s.historySeeds[i]||s.historyKinds[i]))return false;
+  if(s.historySeeds[i]){const NpcPreset*n=npc(s.history[i].target);if(!n||n->evil)return false;}
+ }
+#endif
  if(s.version>=13){
   if(s.historyCount>10)return false;
   for(U i=0;i<s.historyCount;++i){const auto& h=s.history[i];
@@ -182,6 +194,9 @@ static bool saveEconomy(U b,Economy&s){
 #ifdef PVP_HISTORY
  s.version=13;
 #endif
+#ifdef PVP_RANDOM_NEIGHBORS
+ s.version=14;
+#endif
  s.checksum=checkEconomy(s);if(!validEconomy(s,s.user))return false;
  char dst[160],tmp[160];economyPath(s.user,dst,false);economyPath(s.user,tmp,true);
  I fd=call<I>(b,0x148448,tmp,0x241,0600);if(fd<0)return false;U done=0;
@@ -225,7 +240,10 @@ static I loadEconomy(U b,Economy&s){
  length=length||(s.version==12&&done==V12_ECONOMY_SIZE);
 #endif
 #ifdef PVP_HISTORY
- length=length||(s.version==13&&done==sizeof(s));
+ length=length||(s.version==13&&done==V13_ECONOMY_SIZE);
+#endif
+#ifdef PVP_RANDOM_NEIGHBORS
+ length=length||(s.version==14&&done==sizeof(s));
 #endif
  return length&&extra==0&&validEconomy(s,owner(b))?1:-1;
 }
