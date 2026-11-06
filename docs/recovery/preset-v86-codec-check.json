@@ -1,0 +1,14 @@
+{
+  "public_source_sha256": "ee08d895f7fb56670f8cb834896e6c90d8f67ab37a28f7404dd35425ae73b0c6",
+  "source_plant_count": 109,
+  "all_tiers_one": true,
+  "real_android_shipped_codec": true,
+  "synthetic_existing_players_preserved": 2,
+  "uid_collision_avoided": true,
+  "repeated_import_unchanged": true,
+  "interrupted_marker_recovery": true,
+  "native_backup_unchanged": true,
+  "corrupt_input_unchanged": true,
+  "actual_user_profiles_used": false,
+  "game_runtime_verified": false
+}

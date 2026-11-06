@@ -8,7 +8,7 @@ from rebuild_bootstrap_dex import rebuild_bootstrap
 from elftools.elf.elffile import ELFFile
 from keystone import Ks,KS_ARCH_ARM,KS_MODE_ARM
 from prepare_offline_neighbors import generate
-ROOT=Path(__file__).resolve().parents[1];VERSION=85 if '--v85' in sys.argv else 84 if '--v84' in sys.argv else 83 if '--v83' in sys.argv else 82 if '--v82' in sys.argv else 81 if '--v81' in sys.argv else 80 if '--v80' in sys.argv else 79 if '--v79' in sys.argv else 78 if '--v78' in sys.argv else 77 if '--v77' in sys.argv else 76 if '--v76' in sys.argv else 75 if '--v75' in sys.argv else 74 if '--v74' in sys.argv else 73 if '--v73' in sys.argv else 72 if '--v72' in sys.argv else 71 if '--v71' in sys.argv else 70 if '--v70' in sys.argv else 69 if '--v69' in sys.argv else 68 if '--v68' in sys.argv else 67 if '--v67' in sys.argv else 66 if '--v66' in sys.argv else 65 if '--v65' in sys.argv else 64 if '--v64' in sys.argv else 63 if '--v63' in sys.argv else 62 if '--v62' in sys.argv else 61 if '--v61' in sys.argv else 60 if '--v60' in sys.argv else 59 if '--v59' in sys.argv else 58 if '--v58' in sys.argv else 57 if '--v57' in sys.argv else 56 if '--v56' in sys.argv else 55 if '--v55' in sys.argv else 54 if '--v54' in sys.argv else 53 if '--v53' in sys.argv else 52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
+ROOT=Path(__file__).resolve().parents[1];VERSION=86 if '--v86' in sys.argv else 85 if '--v85' in sys.argv else 84 if '--v84' in sys.argv else 83 if '--v83' in sys.argv else 82 if '--v82' in sys.argv else 81 if '--v81' in sys.argv else 80 if '--v80' in sys.argv else 79 if '--v79' in sys.argv else 78 if '--v78' in sys.argv else 77 if '--v77' in sys.argv else 76 if '--v76' in sys.argv else 75 if '--v75' in sys.argv else 74 if '--v74' in sys.argv else 73 if '--v73' in sys.argv else 72 if '--v72' in sys.argv else 71 if '--v71' in sys.argv else 70 if '--v70' in sys.argv else 69 if '--v69' in sys.argv else 68 if '--v68' in sys.argv else 67 if '--v67' in sys.argv else 66 if '--v66' in sys.argv else 65 if '--v65' in sys.argv else 64 if '--v64' in sys.argv else 63 if '--v63' in sys.argv else 62 if '--v62' in sys.argv else 61 if '--v61' in sys.argv else 60 if '--v60' in sys.argv else 59 if '--v59' in sys.argv else 58 if '--v58' in sys.argv else 57 if '--v57' in sys.argv else 56 if '--v56' in sys.argv else 55 if '--v55' in sys.argv else 54 if '--v54' in sys.argv else 53 if '--v53' in sys.argv else 52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
 OUT=ROOT/(f'work/pvp-v{VERSION}-test' if '--shop-clock-test' in sys.argv else f'work/pvp-v{VERSION}');OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -88,6 +88,15 @@ if VERSION>=58:
   art_extra+=f'\n\n    const-string v0, "{art_predecessor}"\n    invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z\n    move-result v0\n    if-eqz v0, :v61_art_predecessors\n    const/4 v0, 0x1\n    return v0\n    :v61_art_predecessors'
  art_marker=('.pvp-seagull-v61-' if VERSION>=61 else '.pvp-art-v58-')+new_art_sha[:12]
  dex=rebuild_bootstrap(dex,OUT/'bootstrap-art',{old_art_sha:new_art_sha,art_method:art_method+art_extra,'.pvp-skills-v32-'+old_art_sha[:12]:art_marker,hex(len(old_art)):hex(len(skill_art))},ROOT/'tools/apktool.jar')
+if VERSION>=86:
+ from build_preset_importer import build as build_profile_importer
+ importer_dex=build_profile_importer(OUT/'profile-importer')
+ call_import='    invoke-direct {p0}, Lcom/popcap/pvz2cthd/BootActivity;->applyPvpSkillResource()V'
+ dex=rebuild_bootstrap(dex,OUT/'bootstrap-profile-import',{call_import:call_import+'\n\n    invoke-static {p0}, Lcom/popcap/pvz2cthd/PresetProfileImporter;->apply(Landroid/content/Context;)V'},ROOT/'tools/apktool.jar')
+ with zipfile.ZipFile(BASE) as preset_src:
+  assert 'classes9.dex' not in preset_src.namelist()
+  assert hashlib.sha256(preset_src.read('assets/pvz2tool/saves/save_1/pp.dat')).hexdigest()=='ee08d895f7fb56670f8cb834896e6c90d8f67ab37a28f7404dd35425ae73b0c6'
+
 strings.update(V39_ADMIN_GRANTED='获得100钻石和10000金币，可再次输入 admin 领取',
  V39_ADMIN_LIMIT='金币或钻石已接近上限，暂时无法领取',
  GEMS_RESTORE_TITLE='兑换码',GEMS_RESTORE_TIP='请输入兑换码',
@@ -478,6 +487,8 @@ with zipfile.ZipFile(BASE) as src,zipfile.ZipFile(unsigned,'w',allowZip64=True) 
   elif item.filename=='assets/reconstruction/dynamic-original-speed.rsb.smf':dst.writestr(item,resource)
   else:
    with src.open(item) as a,dst.open(item,'w') as z:shutil.copyfileobj(a,z,1048576)
+if VERSION>=86:
+ with zipfile.ZipFile(unsigned,'a') as dst:dst.writestr('classes9.dex',importer_dex)
 subprocess.run(['K:/pvz2-tools/android-build-tools/android-14/zipalign.exe','-f','4',str(unsigned),str(aligned)],check=True)
 subprocess.run(['java','-jar','K:/pvz2-tools/android-build-tools/android-14/lib/apksigner.jar','sign','--ks',str(ROOT/'work/keys/recovered-debug.keystore'),'--ks-pass','pass:android','--key-pass','pass:android','--ks-key-alias','androiddebugkey','--out',str(final),str(aligned)],check=True)
 subprocess.run(['java','-jar','K:/pvz2-tools/android-build-tools/android-14/lib/apksigner.jar','verify',str(final)],check=True)
@@ -488,5 +499,6 @@ with zipfile.ZipFile(BASE) as src,zipfile.ZipFile(final) as dst:
   assert dst.getinfo(item.filename).CRC==item.CRC and dst.getinfo(item.filename).file_size==item.file_size,item.filename
 record=dict(apk=str(final.relative_to(ROOT)),sha256=hashlib.file_digest(final.open('rb'),'sha256').hexdigest(),patches=patches,economy=economy_record,localization=localization,entry=hex(entry),symbols={k:hex(v) for k,v in symbols.items() if k.startswith('offline')},runtime_verified=False)
 if VERSION>=85:record['desktop_input']=dict(previous_entry='0x1a010a4',entry=hex(symbols['desktopInput']),source='src/desktop-input/shortcuts.cpp',source_sha256=hashlib.sha256((ROOT/'src/desktop-input/shortcuts.cpp').read_bytes()).hexdigest(),scope='home defense visible plant bank; original UI click routing')
+if VERSION>=86:record['preset_import']=dict(source_asset='assets/pvz2tool/saves/save_1/pp.dat',source_sha256='ee08d895f7fb56670f8cb834896e6c90d8f67ab37a28f7404dd35425ae73b0c6',plant_count=109,tier=1,independent_profile=True,source_sha256_java=hashlib.sha256((ROOT/'src/bootstrap-extra/com/popcap/pvz2cthd/PresetProfileImporter.java').read_bytes()).hexdigest())
 (OUT/'build.json').write_text(json.dumps(record,indent=2)+'\n',encoding='utf8');print(json.dumps(record))
 if VERSION==61:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_seagull.py'),str(OUT)],cwd=ROOT,check=True)
