@@ -6,6 +6,15 @@ static const BusinessPlot BUSINESSES[]={
  {0x71000002,3,3,{0x5546,0x5e97,0}}
 };
 extern "C" U offlineBusinessMapMode(){return 1;}
+#ifdef PVP_BUSINESS_OWNER
+// The original getter parses the server account id, which is zero offline.
+// Zero is also the unoccupied-owner sentinel. Use the selected local profile
+// for native ownership comparisons; keep wallet/save keys unchanged. A local
+// profile numbered zero receives a nonzero UI identity, never the sentinel.
+extern "C" U offlineBusinessIdentity(U b){
+ if(!regular(b))return 0;U user=owner(b);return user?user:0x7fffffff;
+}
+#endif
 static const BusinessPlot* businessPlot(U zone,U position){
  for(U i=0;i<sizeof(BUSINESSES)/sizeof(BUSINESSES[0]);++i)
   if(BUSINESSES[i].zone==zone&&BUSINESSES[i].position==position)return BUSINESSES+i;
