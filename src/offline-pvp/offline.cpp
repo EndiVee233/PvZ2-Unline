@@ -84,6 +84,9 @@ static void projectBusinessOwners(U b,P m){
 #ifdef PVP_BUSINESS_PRODUCTION
 #include "business_production.h"
 #endif
+#ifdef PVP_BUSINESS_COLLECTION
+#include "business_collection.h"
+#endif
 #ifdef PVP_EXCHANGE
 #include "exchange.h"
 #endif

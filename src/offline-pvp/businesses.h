@@ -38,6 +38,9 @@ static bool attackBusiness(U b,const BusinessPlot&s);
 extern "C" U offlineBusinessDefenseMode(){return 1;}
 static bool defendBusiness(U b,const BusinessPlot&s);
 #endif
+#ifdef PVP_BUSINESS_COLLECTION
+static bool collectBusiness(U b,const BusinessPlot&s);
+#endif
 static void projectBusinesses(U b,P m){
  if(!regular(b))return;
  for(U i=0;i<sizeof(BUSINESSES)/sizeof(BUSINESSES[0]);++i){
@@ -85,6 +88,13 @@ static bool localBusinessPanel(U b,P panel){
 // handler; residence and own-base events pass.
 extern "C" U offlineBusinessAction(U b,P panel,U button){
  if(button==203||!localBusinessPanel(b,panel))return 0;
+#ifdef PVP_BUSINESS_COLLECTION
+ if(button==200&&at<U>(panel,0xa4)==2){
+  const BusinessPlot*s=businessPlot(at<U>(panel,0xac),at<U>(panel,0xa8));
+  if(s&&collectBusiness(b,*s))if(P map=at<P>(panel,0xc0))call<void>(b,0x100a864,map);
+  return 1;
+ }
+#endif
 #ifdef PVP_BUSINESS_DEFENSE
  if(button==201&&at<U>(panel,0xa4)==2){
   const BusinessPlot*s=businessPlot(at<U>(panel,0xac),at<U>(panel,0xa8));
