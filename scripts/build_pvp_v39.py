@@ -8,7 +8,7 @@ from rebuild_bootstrap_dex import rebuild_bootstrap
 from elftools.elf.elffile import ELFFile
 from keystone import Ks,KS_ARCH_ARM,KS_MODE_ARM
 from prepare_offline_neighbors import generate
-ROOT=Path(__file__).resolve().parents[1];VERSION=74 if '--v74' in sys.argv else 73 if '--v73' in sys.argv else 72 if '--v72' in sys.argv else 71 if '--v71' in sys.argv else 70 if '--v70' in sys.argv else 69 if '--v69' in sys.argv else 68 if '--v68' in sys.argv else 67 if '--v67' in sys.argv else 66 if '--v66' in sys.argv else 65 if '--v65' in sys.argv else 64 if '--v64' in sys.argv else 63 if '--v63' in sys.argv else 62 if '--v62' in sys.argv else 61 if '--v61' in sys.argv else 60 if '--v60' in sys.argv else 59 if '--v59' in sys.argv else 58 if '--v58' in sys.argv else 57 if '--v57' in sys.argv else 56 if '--v56' in sys.argv else 55 if '--v55' in sys.argv else 54 if '--v54' in sys.argv else 53 if '--v53' in sys.argv else 52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
+ROOT=Path(__file__).resolve().parents[1];VERSION=75 if '--v75' in sys.argv else 74 if '--v74' in sys.argv else 73 if '--v73' in sys.argv else 72 if '--v72' in sys.argv else 71 if '--v71' in sys.argv else 70 if '--v70' in sys.argv else 69 if '--v69' in sys.argv else 68 if '--v68' in sys.argv else 67 if '--v67' in sys.argv else 66 if '--v66' in sys.argv else 65 if '--v65' in sys.argv else 64 if '--v64' in sys.argv else 63 if '--v63' in sys.argv else 62 if '--v62' in sys.argv else 61 if '--v61' in sys.argv else 60 if '--v60' in sys.argv else 59 if '--v59' in sys.argv else 58 if '--v58' in sys.argv else 57 if '--v57' in sys.argv else 56 if '--v56' in sys.argv else 55 if '--v55' in sys.argv else 54 if '--v54' in sys.argv else 53 if '--v53' in sys.argv else 52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
 OUT=ROOT/(f'work/pvp-v{VERSION}-test' if '--shop-clock-test' in sys.argv else f'work/pvp-v{VERSION}');OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -112,6 +112,7 @@ if VERSION>=71:flags.append('-DPVP_EXCHANGE')
 if VERSION>=72:flags.append('-DPVP_EXCHANGE_REFRESH')
 if VERSION>=73:flags.append('-DPVP_EXCHANGE_CLOCK')
 if VERSION>=74:flags.append('-DPVP_RESIDENT_NEIGHBORS')
+if VERSION>=75:flags.append('-DPVP_LOCAL_DEFENSE_SESSION')
 if '--shop-clock-test' in sys.argv:flags.append('-DPVP_EXCHANGE_CLOCK_TEST')
 subprocess.run([compiler,*flags,'-c',str(ROOT/'src/offline-pvp/offline.cpp'),'-o',str(OUT/'offline.o')],check=True)
 # A flat payload has no dynamic relocation table. Absolute pointer constants
@@ -407,7 +408,7 @@ if VERSION==69:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pv
 if VERSION==70:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v70_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION==71:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v71_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION==72:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v72_arm.py'),str(OUT)],cwd=ROOT,check=True)
-if VERSION>=73:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v74_arm.py' if VERSION>=74 else 'scripts/check_offline_pvp_v73_arm.py')),str(OUT)],cwd=ROOT,check=True)
+if VERSION>=73:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v75_arm.py' if VERSION>=75 else 'scripts/check_offline_pvp_v74_arm.py' if VERSION>=74 else 'scripts/check_offline_pvp_v73_arm.py')),str(OUT)],cwd=ROOT,check=True)
 if '--native-only' in sys.argv:raise SystemExit(0)
 scratch=Path(sys.argv[sys.argv.index('--intermediate-dir')+1]).resolve() if '--intermediate-dir' in sys.argv else OUT
 scratch.mkdir(parents=True,exist_ok=True)

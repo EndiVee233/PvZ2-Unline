@@ -302,7 +302,17 @@ static void loadArena(U b,P m,const char*level,U mode){
  log(b,"arena-load",mode,at<unsigned char>(m,0x17d));
 }
 extern "C" __attribute__((section(".text.entry"))) void offlineGarden(U b){neighbors(b,manager(b));scene(b,25);}
-extern "C" void offlineOwn(U b){P m=manager(b);Store s{};if(readStore(b,s)){apply(b,m+0x80,s);log(b,"defense-loaded",s.positions,s.infos);}else{clear(b,m+0x80);log(b,"defense-new");}call<void>(b,0x85e7d8);}
+#ifdef PVP_LOCAL_DEFENSE_SESSION
+static U defenseSessionUser;
+#endif
+extern "C" void offlineOwn(U b){P m=manager(b);Store s{};if(readStore(b,s)){apply(b,m+0x80,s);log(b,"defense-loaded",s.positions,s.infos);}else{clear(b,m+0x80);log(b,"defense-new");}
+#ifdef PVP_LOCAL_DEFENSE_SESSION
+ if(regular(b)){
+  defenseSessionUser=owner(b);at<U>(m,0xa8)=1;
+  at<unsigned char>(m,0x100)=at<unsigned char>(m,0x102)=at<unsigned char>(m,0x103)=0;
+ }
+#endif
+ call<void>(b,0x85e7d8);}
 extern "C" void offlineSave(U b,P network,P json,U zone,U type){
  if(!regular(b)){call<void>(b,0xf87cc4,network,json,zone,type);return;}
  Store s{};if(capture(b,manager(b)+0x80,s)&&writeStore(b,s)){log(b,"defense-saved",s.positions,s.infos);scene(b,25);}else log(b,"defense-save-failed");
@@ -381,6 +391,23 @@ extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
 // The offline session acknowledges the original three-second heartbeat using
 // the same monotonic clock as ArenaBattleModule's native timeout check.
 extern "C" void offlineBattleRequest(U b,P m,U action){
+#ifdef PVP_LOCAL_DEFENSE_SESSION
+ if(regular(b)&&defenseSessionUser==owner(b)){
+  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0),board=at<P>(app,0x6bc);
+  bool editor=board&&sameText(at<P>(board,0xc4),"arena_plant_test");
+  if(action==1&&editor){
+   // ArenaPlant's native update compares the clock's +18 time with the
+   // app's last server acknowledgement (+185c). A local edit needs no socket.
+   at<U>(app,0x185c)=at<U>(call<P>(b,0x1f7380),0x18);
+   return;
+  }
+  if(action==3){
+   // Only ArenaPlant's native destructor sends action 3. Keep this scoped
+   // token through scene teardown, when the app may already detach its board.
+   defenseSessionUser=0;log(b,"defense-session-closed");return;
+  }
+ }
+#endif
  P module=arenaModule(b);
  if(module){
   if(action==2){P clock=call<P>(b,0x1f7380);at<U>(module,0x40)=at<U>(clock,0x18);return;}
