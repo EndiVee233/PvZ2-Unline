@@ -1,13 +1,25 @@
 from pathlib import Path
 from io import BytesIO
-import struct,json
+import struct,json,sys
 from unicorn import *
 from unicorn.arm_const import *
 from elftools.elf.elffile import ELFFile
 r=Path(__file__).resolve().parents[1]
-code=(r/'work/input-v23/shortcuts.elf').read_bytes();e=ELFFile(BytesIO(code));payload=e.get_section_by_name('.payload')
+candidate=Path(sys.argv[1]) if len(sys.argv)>1 else None
+code=((candidate/'offline.elf') if candidate else r/'work/input-v23/shortcuts.elf').read_bytes();e=ELFFile(BytesIO(code));payload=e.get_section_by_name('.payload')
+entry=0x1a010a4 if candidate else e['e_entry']
 for base in [0,0x20000000]:
  u=Uc(UC_ARCH_ARM,UC_MODE_ARM);u.mem_map(base+0x1000,0x3000000);u.mem_write(base+payload['sh_addr'],payload.data());u.mem_map(0x6000000,0x200000)
+ if candidate:
+  with (candidate/'libSrc.so').open('rb') as lib:
+   for seg in ELFFile(lib).iter_segments():
+    if seg['p_type']=='PT_LOAD':
+     skip=max(0,4096-seg['p_vaddr']);u.mem_write(base+seg['p_vaddr']+skip,seg.data()[skip:])
+  exports={s.name:s['st_value'] for s in e.get_section_by_name('.symtab').iter_symbols()}
+  instruction=struct.unpack('<I',u.mem_read(base+entry,4))[0];assert instruction>>24==0xea
+  delta=instruction&0xffffff
+  if delta&0x800000:delta-=0x1000000
+  assert entry+8+delta*4==exports['desktopInput']
  app,board,driver,bank,packet,evt,table,children,stack=[0x6000000+i*0x2000 for i in range(9)]
  def put(p,v):u.mem_write(p,struct.pack('<I',v&0xffffffff))
  def get(p):return struct.unpack('<I',u.mem_read(p,4))[0]
@@ -22,6 +34,13 @@ for base in [0,0x20000000]:
  for k,v in funcs.items():put(table+k,v)
  put(bank+0x48,children);put(bank+0x4c,children+8);u.mem_write(bank+0x11d,b'\x01');put(children,packet);put(children+4,1)
  actions=[];blocked=False;disabled=False;overlay=False
+ pvp_manager,pvp_module,pvp_bank=0x6050000,0x6052000,0x6054000
+ pvp_packets=[0x6058000+i*0x200 for i in range(16)];pvp_bank_type=True;pvp_packet_type=True;pvp_occluded=False
+ pvp_slot_reads=[];preview_positions=[]
+ put(pvp_bank,table)
+ for p in pvp_packets:put(p,table)
+ put(pvp_manager+0xa8,1);put(board+0x938,pvp_module);put(pvp_module+0x48,pvp_bank);put(pvp_module+0x4c,1)
+ u.mem_write(pvp_bank+0x11d,b'\x06');put(pvp_bank+0x148,0);put(pvp_bank+0x14c,6)
  collectible,ctable,rect,dispatcher,listeners=0x6030000,0x6031000,0x6032000,0x6040000,0x6041000
  put(collectible,ctable);put(collectible+8,collectible);put(collectible+12,1)
  put(ctable+0x10,0x6100010);put(ctable+0x90,0x6100060);put(ctable+0xe4,0x6100050)
@@ -37,9 +56,21 @@ for base in [0,0x20000000]:
   elif off==0x14ebf58:pass
   elif off==0x97714c:result=bank if string(get(a0))=='UISeedBank' else packet
   elif off==0x976720:result=0 if disabled else 1
-  elif off==0x976478:put(a0,150);put(a0+4,250)
-  elif off==0x9775d4:result=packet
-  elif off in [0x11d74b4,0x8ac6f4,0x27c56c]:result=base+off
+  elif off==0x976478:
+   index=pvp_packets.index(a1) if a1 in pvp_packets else -1
+   put(a0,150+index*64 if index>=0 else 150);put(a0+4,550 if index>=0 else 250)
+  elif off==0x9775d4:
+   index=(a0-150)//64
+   result=(0 if pvp_occluded else pvp_packets[index]) if a1==550 and 0<=index<16 else packet
+  elif off in [0x11d74b4,0x8ac6f4,0x27c56c,0x10290ac,0x102dc20,0x1030720]:result=base+off
+  elif off==0x7fa754:result=pvp_manager
+  elif off==0x43af38:result=pvp_module if a0==pvp_module and a1==base+0x10290ac else 0
+  elif off==0x895f0c:
+   assert a1==pvp_bank and 0<=a2<u.mem_read(pvp_bank+0x11d,1)[0]
+   pvp_slot_reads.append(a2);put(a0,pvp_packets[a2]);put(a0+4,1)
+  elif off==0x147adc:pass
+  elif off==0x1327d0c:pass
+  elif off==0x1efccc:preview_positions.append((get(a1),get(a1+4)))
   elif off==0x1d9bb4:put(a0,a2);put(a0+4,a3)
   elif off==0x15dec20:result=struct.unpack('<I',struct.pack('<f',a0))[0]
   elif off==0x15deccc:result=struct.unpack('<I',struct.pack('<f',struct.unpack('<f',struct.pack('<I',a0))[0]*struct.unpack('<f',struct.pack('<I',a1))[0]))[0]
@@ -49,7 +80,11 @@ for base in [0,0x20000000]:
   elif off==0x20963c:actions.append('cancel')
   elif off==0x4021b0:actions.append('close');put(app+0x1378,0)
   elif a==0x6100000:result=int(overlay)
-  elif a==0x6100010:result=1 if (a0==collectible)==(a1==base+0x27c56c) else 0
+  elif a==0x6100010:
+   if a1==base+0x27c56c:result=int(a0==collectible)
+   elif a1==base+0x102dc20:result=int(a0==pvp_bank and pvp_bank_type)
+   elif a1==base+0x1030720:result=int(a0 in pvp_packets and pvp_packet_type)
+   elif a1==base+0x8ac6f4:result=int(a0==packet)
   elif a==0x6100020:actions.append(('down',get(a1+8),get(a1+12)))
   elif a==0x6100030:actions.append('blocked' if blocked else 'up')
   elif a==0x6100040:actions.append('resume');u.mem_write(board+0x8d5,bytes([a1]))
@@ -64,7 +99,7 @@ for base in [0,0x20000000]:
  def run(key,mode=6):
   actions.clear();put(evt+8,key);put(evt+16,-1);put(evt+20,-1)
   for rr,val in [(UC_ARM_REG_R0,base),(UC_ARM_REG_R1,driver),(UC_ARM_REG_R2,evt),(UC_ARM_REG_R3,mode),(UC_ARM_REG_LR,0x6101000),(UC_ARM_REG_SP,stack+0x1f00)]:u.reg_write(rr,val)
-  u.emu_start(base+e['e_entry'],0,count=20000)
+  u.emu_start(base+entry,0,count=20000)
   assert u.reg_read(UC_ARM_REG_PC)==0x6101000
   return list(actions)
  assert run(8)==[('down',150,250),'up']
@@ -82,3 +117,33 @@ for base in [0,0x20000000]:
  assert run(90,5)==[];assert run(120,5)==['collect'];assert run(120,5)==[]
  put(collectible+0x94,0);put(collectible+0x8c,0x80);assert run(29)==[];put(collectible+0x8c,0)
  print('Native shortcut checks passed at load base',hex(base))
+ if candidate:
+  # Bind the actual home-defense plant bank, not UISeedBank or its skills and
+  # zombies. Execute the installed entry branch at both relocation bases.
+  level=0x6060000;u.mem_write(level,b'arena_plant_test\0');put(board+0xc4,level);blocked=False
+  for key,index in [(8,0),(9,1),(10,2),(11,3),(45,4),(51,5)]:
+   assert run(key)==[('down',150+64*index,550),'up'];assert pvp_slot_reads[-1]==index
+  assert run(33)==run(46)==[] # visible slots seven/eight do not exist
+  put(pvp_bank+0x14c,8);u.mem_write(pvp_bank+0x11d,b'\x10')
+  assert run(33)==[('down',150+64*6,550),'up'];assert run(46)==[('down',150+64*7,550),'up']
+  put(pvp_bank+0x148,1);assert run(8)==[('down',150+64*8,550),'up']
+  u.mem_write(pvp_bank+0x11d,b'\x0a');assert run(10)==[] # incomplete last page
+  put(pvp_bank+0x148,0);put(pvp_bank+0x14c,6);u.mem_write(pvp_bank+0x11d,b'\x06')
+  put(pvp_manager+0xa8,2);assert run(8)==[];put(pvp_manager+0xa8,1) # merchant: fixed roster
+  put(pvp_module+0x48,0);put(pvp_module+0x4c,0);assert run(8)==[]
+  put(pvp_module+0x48,pvp_bank);put(pvp_module+0x4c,1)
+  pvp_bank_type=False;assert run(8)==[];pvp_bank_type=True
+  pvp_packet_type=False;assert run(8)==[];pvp_packet_type=True
+  pvp_occluded=True;assert run(8)==[];pvp_occluded=False
+  disabled=True;assert run(8)==[];disabled=False
+  overlay=True;assert run(8)==[];overlay=False
+  u.mem_write(board+0x8d5,b'\x01');assert run(8)==[];u.mem_write(board+0x8d5,b'\0')
+  blocked=True;assert run(8)==[('down',150,550),'blocked'];blocked=False
+  # The preview is restored using the original coordinate conversion rather
+  # than being left on the clicked card. Include a nonzero board origin.
+  put(board+0x94c,0x6062000);put(board+0x2c,25);put(board+0x30,15)
+  put(evt+8,8);put(evt+16,500);put(evt+20,300);actions.clear()
+  for rr,val in [(UC_ARM_REG_R0,base),(UC_ARM_REG_R1,driver),(UC_ARM_REG_R2,evt),(UC_ARM_REG_R3,6),(UC_ARM_REG_LR,0x6101000),(UC_ARM_REG_SP,stack+0x1f00)]:u.reg_write(rr,val)
+  u.emu_start(base+entry,0,count=20000);assert preview_positions[-1]==(475,285)
+  assert actions==[('down',150,550),'up']
+  print('PVP home bank: eight keys, visible pages, merchant exclusion, type/bounds/UI guards and hover restoration passed',hex(base))

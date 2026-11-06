@@ -8,7 +8,7 @@ from rebuild_bootstrap_dex import rebuild_bootstrap
 from elftools.elf.elffile import ELFFile
 from keystone import Ks,KS_ARCH_ARM,KS_MODE_ARM
 from prepare_offline_neighbors import generate
-ROOT=Path(__file__).resolve().parents[1];VERSION=84 if '--v84' in sys.argv else 83 if '--v83' in sys.argv else 82 if '--v82' in sys.argv else 81 if '--v81' in sys.argv else 80 if '--v80' in sys.argv else 79 if '--v79' in sys.argv else 78 if '--v78' in sys.argv else 77 if '--v77' in sys.argv else 76 if '--v76' in sys.argv else 75 if '--v75' in sys.argv else 74 if '--v74' in sys.argv else 73 if '--v73' in sys.argv else 72 if '--v72' in sys.argv else 71 if '--v71' in sys.argv else 70 if '--v70' in sys.argv else 69 if '--v69' in sys.argv else 68 if '--v68' in sys.argv else 67 if '--v67' in sys.argv else 66 if '--v66' in sys.argv else 65 if '--v65' in sys.argv else 64 if '--v64' in sys.argv else 63 if '--v63' in sys.argv else 62 if '--v62' in sys.argv else 61 if '--v61' in sys.argv else 60 if '--v60' in sys.argv else 59 if '--v59' in sys.argv else 58 if '--v58' in sys.argv else 57 if '--v57' in sys.argv else 56 if '--v56' in sys.argv else 55 if '--v55' in sys.argv else 54 if '--v54' in sys.argv else 53 if '--v53' in sys.argv else 52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
+ROOT=Path(__file__).resolve().parents[1];VERSION=85 if '--v85' in sys.argv else 84 if '--v84' in sys.argv else 83 if '--v83' in sys.argv else 82 if '--v82' in sys.argv else 81 if '--v81' in sys.argv else 80 if '--v80' in sys.argv else 79 if '--v79' in sys.argv else 78 if '--v78' in sys.argv else 77 if '--v77' in sys.argv else 76 if '--v76' in sys.argv else 75 if '--v75' in sys.argv else 74 if '--v74' in sys.argv else 73 if '--v73' in sys.argv else 72 if '--v72' in sys.argv else 71 if '--v71' in sys.argv else 70 if '--v70' in sys.argv else 69 if '--v69' in sys.argv else 68 if '--v68' in sys.argv else 67 if '--v67' in sys.argv else 66 if '--v66' in sys.argv else 65 if '--v65' in sys.argv else 64 if '--v64' in sys.argv else 63 if '--v63' in sys.argv else 62 if '--v62' in sys.argv else 61 if '--v61' in sys.argv else 60 if '--v60' in sys.argv else 59 if '--v59' in sys.argv else 58 if '--v58' in sys.argv else 57 if '--v57' in sys.argv else 56 if '--v56' in sys.argv else 55 if '--v55' in sys.argv else 54 if '--v54' in sys.argv else 53 if '--v53' in sys.argv else 52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
 OUT=ROOT/(f'work/pvp-v{VERSION}-test' if '--shop-clock-test' in sys.argv else f'work/pvp-v{VERSION}');OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -133,12 +133,18 @@ if '--shop-clock-test' in sys.argv:flags.append('-DPVP_EXCHANGE_CLOCK_TEST')
 subprocess.run([compiler,*flags,'-c',str(ROOT/'src/offline-pvp/offline.cpp'),'-o',str(OUT/'offline.o')],check=True)
 # A flat payload has no dynamic relocation table. Absolute pointer constants
 # would work at base zero in analysis and crash after Android relocates the SO.
-obj=ELFFile(BytesIO((OUT/'offline.o').read_bytes()))
-for sec in obj.iter_sections():
- if sec['sh_type']=='SHT_REL' and 'exidx' not in sec.name:
-  assert all(r['r_info_type']!=2 for r in sec.iter_relocations()),'payload contains R_ARM_ABS32'
+objects=[OUT/'offline.o']
+if VERSION>=85:
+ subprocess.run([compiler,*flags,'-DDESKTOP_PVP_SEEDS','-c',str(ROOT/'src/desktop-input/shortcuts.cpp'),'-o',str(OUT/'desktop-input.o')],check=True)
+ objects.append(OUT/'desktop-input.o')
+for object_path in objects:
+ obj=ELFFile(BytesIO(object_path.read_bytes()))
+ for sec in obj.iter_sections():
+  if sec['sh_type']=='SHT_REL' and 'exidx' not in sec.name:
+   assert all(r['r_info_type']!=2 for r in sec.iter_relocations()),'payload contains R_ARM_ABS32'
+
 (OUT/'flat.ld').write_text(f'ENTRY(offlineGarden)\nSECTIONS {{ . = {entry}; .payload : {{ *(.text.entry) *(.text*) *(.rodata*) }} . = 0x1b00000; .runtime : {{ *(.data*) *(.bss*) *(COMMON) *(.got*) }} /DISCARD/ : {{ *(.ARM.exidx*) *(.ARM.extab*) *(.comment*) *(.note*) }} }}')
-subprocess.run([compiler,*flags,'-nostdlib','-static','-no-pie','-Wl,--no-undefined','-Wl,-T,'+str(OUT/'flat.ld'),str(OUT/'offline.o'),'-o',str(OUT/'offline.elf')],check=True)
+subprocess.run([compiler,*flags,'-nostdlib','-static','-no-pie','-Wl,--no-undefined','-Wl,-T,'+str(OUT/'flat.ld'),*[str(p) for p in objects],'-o',str(OUT/'offline.elf')],check=True)
 payload=ELFFile(BytesIO((OUT/'offline.elf').read_bytes()))
 runtime=payload.get_section_by_name('.runtime');assert runtime['sh_addr']==0x1b00000 and 0<runtime['sh_size']<4096
 symbols={s.name:s['st_value'] for s in payload.get_section_by_name('.symtab').iter_symbols()}
@@ -360,6 +366,15 @@ if VERSION>=73:
  target=custom_stub('push {r4,lr}\nmov r4,r0\nbl exchange_clock_original\nmov r1,r4\n'+baseasm()+f'bl #{symbols["offlineExchangeClockDraw"]}\npop {{r4,pc}}\nexchange_clock_original: .word {first}\nb #{site+4}')
  redirect(site,target)
 
+if VERSION>=85:
+ # Existing Java key/hover/right-button queue is unchanged. Only replace the
+ # old native command entry with the rebuilt bridge; ordinary keys keep its
+ # established UI routing and hover path.
+ site=0x1a010a4;file_at=tail['p_offset']+site-tail['p_vaddr']
+ before=bytes(b[file_at:file_at+4]);assert struct.unpack('<I',before)[0]==0xe92d4ff0
+ b[file_at:file_at+4]=struct.pack('<I',0xea000000|(((symbols['desktopInput']-site-8)//4)&0xffffff))
+ patches.append(dict(site=hex(site),file_offset=hex(file_at),symbol='desktopInput',before=before.hex(),after=bytes(b[file_at:file_at+4]).hex()))
+
 if VERSION>=84:
  # After the native existing-plant cursor constructor, before AddCursor.
  # Keep the constructor's stack arguments and all original drag callbacks.
@@ -449,6 +464,7 @@ if VERSION==72:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pv
 if VERSION>=73:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v82_focused.py' if VERSION>=82 else 'scripts/check_offline_pvp_v81_focused.py' if VERSION>=81 else 'scripts/check_offline_pvp_v80_focused.py' if VERSION>=80 else 'scripts/check_offline_pvp_v79_focused.py' if VERSION>=79 else 'scripts/check_offline_pvp_v78_focused.py' if VERSION>=78 else 'scripts/check_offline_pvp_v77_focused.py' if VERSION>=77 else 'scripts/check_offline_pvp_v76_focused.py' if VERSION==76 else 'scripts/check_offline_pvp_v75_arm.py' if VERSION>=75 else 'scripts/check_offline_pvp_v74_arm.py' if VERSION>=74 else 'scripts/check_offline_pvp_v73_arm.py')),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=83:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v83_drag.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=84:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v84_cursor.py'),str(OUT)],cwd=ROOT,check=True)
+if VERSION>=85:subprocess.run([sys.executable,str(ROOT/'scripts/check_input_v23_native.py'),str(OUT)],cwd=ROOT,check=True)
 if '--native-only' in sys.argv:raise SystemExit(0)
 scratch=Path(sys.argv[sys.argv.index('--intermediate-dir')+1]).resolve() if '--intermediate-dir' in sys.argv else OUT
 scratch.mkdir(parents=True,exist_ok=True)
@@ -471,5 +487,6 @@ with zipfile.ZipFile(BASE) as src,zipfile.ZipFile(final) as dst:
   if item.filename.startswith('META-INF/') or item.filename in ('lib/armeabi/libSrc.so','classes8.dex','assets/reconstruction/dynamic-original-speed.rsb.smf') or (VERSION>=58 and item.filename=='assets/reconstruction/zombie2-pvp.rsb.smf'):continue
   assert dst.getinfo(item.filename).CRC==item.CRC and dst.getinfo(item.filename).file_size==item.file_size,item.filename
 record=dict(apk=str(final.relative_to(ROOT)),sha256=hashlib.file_digest(final.open('rb'),'sha256').hexdigest(),patches=patches,economy=economy_record,localization=localization,entry=hex(entry),symbols={k:hex(v) for k,v in symbols.items() if k.startswith('offline')},runtime_verified=False)
+if VERSION>=85:record['desktop_input']=dict(previous_entry='0x1a010a4',entry=hex(symbols['desktopInput']),source='src/desktop-input/shortcuts.cpp',source_sha256=hashlib.sha256((ROOT/'src/desktop-input/shortcuts.cpp').read_bytes()).hexdigest(),scope='home defense visible plant bank; original UI click routing')
 (OUT/'build.json').write_text(json.dumps(record,indent=2)+'\n',encoding='utf8');print(json.dumps(record))
 if VERSION==61:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_seagull.py'),str(OUT)],cwd=ROOT,check=True)

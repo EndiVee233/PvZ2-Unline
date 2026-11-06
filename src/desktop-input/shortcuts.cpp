@@ -20,6 +20,28 @@ static bool equal(const char *a,const char *z){if(!a)return false;while(*a&&*a==
 static int scaled(U b,int n,U scale){return call<int>(b,0x15df0f8,call<U>(b,0x15deccc,call<U>(b,0x15dec20,n),scale));}
 static bool playable(P board){U s=at<U>(board,0xc0);return (s==4||s==5)&&!at<unsigned char>(board,0x8d5);}
 static bool modal(P app){return virt<int>(app,0x12c,1)!=0;}
+#ifdef DESKTOP_PVP_SEEDS
+static P defensePacket(U b,P board,U slot){
+ // The home editor has three separate bank weak refs in PVPSeedBankModule.
+ // Never select the zombie/skill bank, a merchant's fixed roster, or a trial
+ // card through the ordinary SeedBank assumptions.
+ P m=call<P>(b,0x7fa754);
+ if(!m||at<U>(m,0xa8)!=1)return nullptr;
+ P modules=at<P>(board,0x938);if(!modules)return nullptr;
+ P module=call<P>(b,0x43af38,modules,call<P>(b,0x10290ac));if(!module)return nullptr;
+ P bank=cast(b,resolve(b,reinterpret_cast<Weak*>(module+0x48)),0x102dc20);
+ if(!enabled(b,bank))return nullptr;
+ U count=at<unsigned char>(bank,0x11d),page=at<U>(bank,0x148),perPage=at<U>(bank,0x14c);
+ call<int>(b,0x147adc,4,"DesktopInput","pvp-slot slot=%u count=%u page=%u size=%u",slot,count,page,perPage);
+ if(!count||!perPage||perPage>128||page>128||slot>=perPage)return nullptr;
+ U index=page*perPage+slot;if(index>=count)return nullptr;
+ Weak packet{0,0};call<void>(b,0x895f0c,&packet,bank,index);
+ P target=cast(b,resolve(b,&packet),0x1030720);weak(b,&packet);
+ // The normal click path, below, owns stock/sun/disable checks. PVP packets
+ // have different availability fields from ordinary SeedPacket packets.
+ return target;
+}
+#endif
 static bool click(U b,P app,P board,P p,Touch *source){
  if(!enabled(b,p))return false;
  int pos[2];call<void>(b,0x976478,pos,p);
@@ -84,6 +106,10 @@ extern "C" __attribute__((section(".text.entry"))) void desktopInput(U b,P drive
  if(key>=8&&key<=11)slot=key-8;
  if(key==45)slot=4;if(key==51)slot=5;if(key==33)slot=6;if(key==46)slot=7;
  if(slot>=0){
+#ifdef DESKTOP_PVP_SEEDS
+  if(equal(at<const char*>(board,0xc4),"arena_plant_test"))target=defensePacket(b,board,U(slot));
+  else {
+#endif
   P bank=widget(b,"UISeedBank");if(!enabled(b,bank))return;
   U n=(at<U>(bank,0x4c)-at<U>(bank,0x48))/8;
   if(n>32||U(slot)>=n||slot>=at<signed char>(bank,0x11d))return;
@@ -91,6 +117,9 @@ extern "C" __attribute__((section(".text.entry"))) void desktopInput(U b,P drive
   // Normal packets only: do not bind trial/free gift cards.
   target=cast(b,target,0x8ac6f4);if(!target)return;
   if(at<U>(target,0x10c)&(2|16|32))return;
+#ifdef DESKTOP_PVP_SEEDS
+  }
+#endif
  }else if(key==34)target=widget(b,"UIPlantfood");
  else if(key==32)target=widget(b,"UIShovel");
  else if(key==50)target=widget(b,"UIChangeSpeedButton");
