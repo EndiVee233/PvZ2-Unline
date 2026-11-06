@@ -20,6 +20,14 @@ static const BusinessPlot* businessPlot(U zone,U position){
   if(BUSINESSES[i].zone==zone&&BUSINESSES[i].position==position)return BUSINESSES+i;
  return nullptr;
 }
+#ifdef PVP_BUSINESS_SCOUT
+extern "C" U offlineBusinessScoutMode(){return 1;}
+static const BusinessPlot* businessId(U id){
+ for(U i=0;i<sizeof(BUSINESSES)/sizeof(BUSINESSES[0]);++i)if(BUSINESSES[i].id==id)return BUSINESSES+i;
+ return nullptr;
+}
+static bool scoutBusiness(U b,const BusinessPlot&s);
+#endif
 static void projectBusinesses(U b,P m){
  if(!regular(b))return;
  for(U i=0;i<sizeof(BUSINESSES)/sizeof(BUSINESSES[0]);++i){
@@ -50,11 +58,18 @@ static bool localBusinessPanel(U b,P panel){
   return at<U>(p,0)==s->id&&at<U64>(p,8)==0;
  return false;
 }
-// During the entrance-only milestone, never fall through into old server
-// requests if an unimplemented shop action is clicked accidentally. Closing
-// the panel remains the original handler; residence and own-base events pass.
+// Scouting is local when enabled; other unfinished shop actions must not fall
+// through into old server requests. Closing the panel remains the original
+// handler; residence and own-base events pass.
 extern "C" U offlineBusinessAction(U b,P panel,U button){
  if(button==203||!localBusinessPanel(b,panel))return 0;
+#ifdef PVP_BUSINESS_SCOUT
+ if(button==205){
+  const BusinessPlot*s=businessPlot(at<U>(panel,0xac),at<U>(panel,0xa8));
+  if(s&&scoutBusiness(b,*s))call<void>(b,0x100a864,at<P>(panel,0xc0));
+  return 1;
+ }
+#endif
  log(b,"business-action-pending",button);return 1;
 }
 extern "C" U offlineBusinessRaidInput(U b,P panel){

@@ -233,18 +233,26 @@ static U arenaNpc,arenaUser;
 static bool resultAck,exitAck;
 static bool resultSaved;
 static P armyBankModule,armyBankBoard;
+static bool localArenaIdentity(U b){
+ if(npc(arenaNpc))return true;
+#ifdef PVP_BUSINESS_SCOUT
+ return businessId(arenaNpc)&&at<unsigned char>(manager(b),0x100)==1;
+#else
+ return false;
+#endif
+}
 #ifdef PVP_BATTLE_ECONOMY
 #include "battle_economy.h"
 #endif
 static P arenaModule(U b){
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);P board=at<P>(app,0x6bc);
- if(!board||!regular(b)||!at<P>(board,0xc4)||!same(reinterpret_cast<const char*>(at<P>(board,0xc4)),"arena_battle_test")||arenaUser!=owner(b)||!npc(arenaNpc))return nullptr;
+ if(!board||!regular(b)||!at<P>(board,0xc4)||!same(reinterpret_cast<const char*>(at<P>(board,0xc4)),"arena_battle_test")||arenaUser!=owner(b)||!localArenaIdentity(b))return nullptr;
  P modules=at<P>(board,0x938);return modules?call<P>(b,0x43af38,modules,call<P>(b,0x108a164)):nullptr;
 }
 extern "C" void offlineBankReady(U b,P module){
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
  P board=at<P>(app,0x6bc);
- if(!regular(b)||arenaUser!=owner(b)||!npc(arenaNpc)||!board||!at<P>(board,0xc4)||!same(reinterpret_cast<const char*>(at<P>(board,0xc4)),"arena_battle_test"))return;
+ if(!regular(b)||arenaUser!=owner(b)||!localArenaIdentity(b)||!board||!at<P>(board,0xc4)||!same(reinterpret_cast<const char*>(at<P>(board,0xc4)),"arena_battle_test"))return;
  armyBankModule=module;armyBankBoard=at<P>(app,0x6bc);log(b,"battle-bank-ready");
 #ifdef PVP_BATTLE_ECONOMY
  if(!at<unsigned char>(manager(b),0x100))markPaidBattleStarted(b);
@@ -308,6 +316,33 @@ static void loadArena(U b,P m,const char*level,U mode){
  }
  log(b,"arena-load",mode,at<unsigned char>(m,0x17d));
 }
+#ifdef PVP_BUSINESS_SCOUT
+static bool scoutBusiness(U b,const BusinessPlot&s){
+ P m=manager(b);if(!regular(b))return false;
+ // Check the actual map record: do not route another owner's/server shop
+ // through a local fixture just because it happens to occupy the same plot.
+ P begin=at<P>(m,0x110),end=at<P>(m,0x114);bool found=false;
+ if(!begin||end<begin||U(end-begin)>64*256||U(end-begin)%64)return false;
+ for(P p=begin;p<end;p+=64)if(at<U>(p,0)==s.id&&at<U>(p,48)==s.zone&&at<U>(p,52)==s.position&&at<U64>(p,8)==0){found=true;break;}
+ if(!found)return false;
+ if(arenaNpc==s.id&&arenaUser==owner(b)&&arenaPending(b,"arena_battle_test",0)){
+  log(b,"business-scout-duplicate",s.id);return true;
+ }
+ // Dispose the previous board before replacing its formation vectors.
+ finishArenaBoard(b);
+ at<U>(m,0xa8)=2;at<U>(m,0xf4)=s.id;at<U>(m,0xf8)=s.position;at<U>(m,0xfc)=s.zone;at<U>(m,0x104)=s.id;
+ at<unsigned char>(m,0x100)=1;
+ at<unsigned char>(m,0x101)=at<unsigned char>(m,0x102)=at<unsigned char>(m,0x103)=0;
+ // Independent local neutral defenses, not recovered server formations.
+ // The two shops deliberately differ to expose stale-board/stacking bugs.
+ Store formation{};formation.user=owner(b);formation.positions=5;formation.infos=1;
+ U plant=s.id==BUSINESSES[0].id?2:6;
+ for(U row=0;row<5;++row)formation.pos[row]={plant,row,0};
+ formation.info[0].type=plant;formation.info[0].level=1;
+ apply(b,m+0x80,formation);arenaNpc=s.id;arenaUser=owner(b);
+ loadArena(b,m,"arena_battle_test",0);log(b,"business-scout",s.id,plant);return true;
+}
+#endif
 extern "C" __attribute__((section(".text.entry"))) void offlineGarden(U b){neighbors(b,manager(b));
 #ifdef PVP_BUSINESS_MAP
  projectBusinesses(b,manager(b));
@@ -340,6 +375,9 @@ extern "C" void offlineSave(U b,P network,P json,U zone,U type){
   scene(b,25);}else log(b,"defense-save-failed");
 }
 extern "C" void offlineInfo(U b,P m,U a,U id,U kind){
+#ifdef PVP_BUSINESS_SCOUT
+ if(regular(b)&&kind==2){const BusinessPlot*s=businessId(id);if(s){scoutBusiness(b,*s);return;}}
+#endif
  const NpcPreset*n=npc(id);if(n&&kind==2&&regular(b)){
   if(!localDaveAllowed(b,m,*n))return;
 #ifdef PVP_BATTLE_ECONOMY
@@ -350,6 +388,16 @@ extern "C" void offlineInfo(U b,P m,U a,U id,U kind){
  call<void>(b,0xf79d74);P net=call<P>(b,0xf7a070);call<void>(b,0xf87154,net,a,id,kind);
 }
 extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
+#ifdef PVP_BUSINESS_SCOUT
+ if(regular(b)){
+  const BusinessPlot*s=businessId(id);
+  if(!s&&id==0&&arenaUser==owner(b)){
+   const BusinessPlot*selected=businessId(at<U>(m,0x104));
+   if(selected&&selected->zone==at<U>(m,0xfc)&&selected->position==at<U>(m,0xf8))s=selected;
+  }
+  if(s){if(reason==3)scoutBusiness(b,*s);else log(b,"business-attack-pending",s->id,reason);return;}
+ }
+#endif
  const NpcPreset*n=npc(id);
  // Native special houses send a zero player id and put the house id in +104.
  if(!n&&id==0&&reason>=1&&reason<=4){const NpcPreset* selected=npc(at<U>(m,0x104));if(selected&&
@@ -435,7 +483,11 @@ extern "C" void offlineBattleRequest(U b,P m,U action){
   if(action==2){P clock=call<P>(b,0x1f7380);at<U>(module,0x40)=at<U>(clock,0x18);return;}
   if(action==4){
 #ifdef PVP_BATTLE_ECONOMY
-   if(!closeAbandonedBattle(b,m))return;
+   if(
+#ifdef PVP_BUSINESS_SCOUT
+      !businessId(arenaNpc)&&
+#endif
+      !closeAbandonedBattle(b,m))return;
 #endif
    exitAck=true;log(b,"battle-exit-requested");return;}
  }
@@ -487,6 +539,9 @@ static bool persistBattleArmy(U b,P m,bool daveVictory=false,U stars=0){
 }
 extern "C" U offlineBattleResult(U b,P m,U stars,U id,U kind){
  if(!arenaModule(b))return 0;
+#ifdef PVP_BUSINESS_SCOUT
+ if(businessId(arenaNpc)){log(b,"business-preview-result-ignored",stars);return 1;}
+#endif
  if(resultSaved)return 1;
  const NpcPreset*n=npc(arenaNpc);
 #ifdef PVP_DAVE_ROUNDS

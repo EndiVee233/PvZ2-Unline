@@ -26,7 +26,7 @@ def check_businesses():
   assert (e.get(p+48),e.get(p+52)) not in houseplots
   e.run(0x1060c1c,p);slots.append(e.u.reg_read(UC_ARM_REG_R0))
   ui,fields=e.shop_panel(p);assert fields==[0,2000,0,0,2000,0,1]
-  for button in (200,201,202,204,205):
+  for button in ((200,201,202,204) if 'offlineBusinessScoutMode' in e.exports else (200,201,202,204,205)):
    count=len(e.messages);e.stub(0x100b3d8,ui,button)
    assert e.messages[count:]==['business-action-pending']
    assert e.u.reg_read(UC_ARM_REG_R0)==ui,'void native callback arguments not preserved'
