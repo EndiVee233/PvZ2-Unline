@@ -14,10 +14,11 @@ if '--v89' in sys.argv:VERSION=89
 if '--v90' in sys.argv:VERSION=90
 if '--v91' in sys.argv:VERSION=91
 if '--v92' in sys.argv:VERSION=92
+if '--v93' in sys.argv:VERSION=93
 OUT=ROOT/(f'work/pvp-v{VERSION}-test' if '--shop-clock-test' in sys.argv else f'work/pvp-v{VERSION}');OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
-generate(OUT/'generated')
+generate(OUT/'generated',expansion=VERSION>=93)
 resource,strings,economy_record=prepare(BASE,OUT/'generated')
 if VERSION>=43:
  from prepare_offline_pvp_scenes import prepare as prepare_scenes
@@ -113,6 +114,10 @@ if VERSION>=71:strings.update(V71_EXCHANGE_REFRESH_PENDING='商品刷新将在�
 if VERSION>=82:strings['V82_REPOSITION_ONLY']='商铺只能调整现有植物的位置，不能增减或替换植物。'
 if VERSION>=80:strings.update(V80_ARMY_REQUIRED='没有可出战的僵尸，请先在训练场训练。',V80_BUSINESS_OWNED='这处商铺已属于您。')
 if VERSION>=66:strings['V66_DAVE_FINISHED']='已完成邪恶戴夫的六轮挑战。'
+if VERSION>=93:
+ strings.update(V93_PREVIOUS_REGION_REQUIRED='请先解锁前一个地区。',V93_REGION_COINS_REQUIRED='星币不足，暂时无法解锁此地区。',V93_REGION_CLOSED='请先解锁这个地区。')
+ for zone,level,capacity in [(2,6,12000),(3,7,18000),(4,8,27000),(5,9,39000),(6,9,39000)]:
+  strings[f'V93_REGION_{zone}_REQUIRED']=f'请先将基地升至{level}级，星币容量需达到{capacity}，才能解锁此地区。'
 b,localization=add_exchange_localization(b,strings)
 e=ELFFile(BytesIO(b));index,tail=[(i,s) for i,s in enumerate(e.iter_segments()) if s['p_type']=='PT_LOAD'][-1]
 old=len(b);assert tail['p_offset']+tail['p_filesz']==old
@@ -146,6 +151,7 @@ if VERSION>=84:flags.append('-DPVP_DEFENSE_DESKTOP_CURSOR')
 if VERSION>=90:flags.append('-DPVP_BUSINESS_PRODUCTION')
 if VERSION>=91:flags.append('-DPVP_BUSINESS_COLLECTION')
 if VERSION>=92:flags.append('-DPVP_UPGRADE_VISUAL_FIX')
+if VERSION>=93:flags.append('-DPVP_REGIONS')
 if '--shop-clock-test' in sys.argv:flags.append('-DPVP_EXCHANGE_CLOCK_TEST')
 subprocess.run([compiler,*flags,'-c',str(ROOT/'src/offline-pvp/offline.cpp'),'-o',str(OUT/'offline.o')],check=True)
 # A flat payload has no dynamic relocation table. Absolute pointer constants
@@ -382,6 +388,10 @@ if VERSION>=68:
   redirect(site,target)
 
 if VERSION>=71:
+ if VERSION>=93:
+  site=0x10196d0;assert bytes(b[site:site+4])==bl(site,0x1013a3c)
+  target=custom_stub('push {r4-r6,lr}\nmov r4,r0\nldr r6,[sp,#16]\nsub sp,sp,#8\nstr r6,[sp]\nbl #0x1013a3c\nadd sp,sp,#8\nmov r1,r4\n'+baseasm()+f'bl #{symbols["offlineRegionPanelReady"]}\nmov r0,r4\npop {{r4-r6,pc}}')
+  b[site:site+4]=bl(site,target);patches.append(dict(site=hex(site),symbol='offlineRegionPanelReady',scope='bind native region confirmation to its local player'))
  for site,name in ((0x106d23c,'offlineExchangePrepare'),(0x106c098,'offlineExchangeBuy')):
   first=struct.unpack_from('<I',b,site)[0];assert first&0xffff0000==0xe92d0000 and bytes(b[site:site+4])==original[site:site+4]
   target=custom_stub('push {r0-r4,lr}\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl #{symbols[name]}\ncmp r0,#0\npop {{r0-r4,lr}}\nbne exchange_handled\n.word {first}\nb #{site+4}\nexchange_handled: bx lr')
@@ -492,9 +502,9 @@ if VERSION==69:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pv
 if VERSION==70:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v70_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION==71:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v71_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION==72:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v72_arm.py'),str(OUT)],cwd=ROOT,check=True)
-if VERSION>=73:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v91_focused.py' if VERSION>=91 else 'scripts/check_offline_pvp_v90_focused.py' if VERSION>=90 else 'scripts/check_offline_pvp_v82_focused.py' if VERSION>=82 else 'scripts/check_offline_pvp_v81_focused.py' if VERSION>=81 else 'scripts/check_offline_pvp_v80_focused.py' if VERSION>=80 else 'scripts/check_offline_pvp_v79_focused.py' if VERSION>=79 else 'scripts/check_offline_pvp_v78_focused.py' if VERSION>=78 else 'scripts/check_offline_pvp_v77_focused.py' if VERSION>=77 else 'scripts/check_offline_pvp_v76_focused.py' if VERSION==76 else 'scripts/check_offline_pvp_v75_arm.py' if VERSION>=75 else 'scripts/check_offline_pvp_v74_arm.py' if VERSION>=74 else 'scripts/check_offline_pvp_v73_arm.py')),str(OUT)],cwd=ROOT,check=True)
+if VERSION>=73:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v93_focused.py' if VERSION>=93 else 'scripts/check_offline_pvp_v91_focused.py' if VERSION>=91 else 'scripts/check_offline_pvp_v90_focused.py' if VERSION>=90 else 'scripts/check_offline_pvp_v82_focused.py' if VERSION>=82 else 'scripts/check_offline_pvp_v81_focused.py' if VERSION>=81 else 'scripts/check_offline_pvp_v80_focused.py' if VERSION>=80 else 'scripts/check_offline_pvp_v79_focused.py' if VERSION>=79 else 'scripts/check_offline_pvp_v78_focused.py' if VERSION>=78 else 'scripts/check_offline_pvp_v77_focused.py' if VERSION>=77 else 'scripts/check_offline_pvp_v76_focused.py' if VERSION==76 else 'scripts/check_offline_pvp_v75_arm.py' if VERSION>=75 else 'scripts/check_offline_pvp_v74_arm.py' if VERSION>=74 else 'scripts/check_offline_pvp_v73_arm.py')),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=83:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v83_drag.py'),str(OUT)],cwd=ROOT,check=True)
-if VERSION>=84:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v84_cursor.py'),str(OUT)],cwd=ROOT,check=True)
+if VERSION>=84:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v84_cursor.py'),str(OUT),*(['--legacy-regions-fixture'] if VERSION>=93 else [])],cwd=ROOT,check=True)
 if VERSION>=85:subprocess.run([sys.executable,str(ROOT/'scripts/check_input_v23_native.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=88:subprocess.run([sys.executable,str(ROOT/'scripts/check_resource_index_v88.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=89:subprocess.run([sys.executable,str(ROOT/'scripts/check_map_buffer_v89.py'),str(OUT)],cwd=ROOT,check=True)

@@ -73,6 +73,14 @@ class Engine:
    assert x==M;self.records.append(bytes(em.mem_read(y,64)))
    p=self.alloc(len(self.records)*64)
    em.mem_write(p,b''.join(self.records));self.put(M+0x110,p);self.put(M+0x114,p+len(self.records)*64);self.put(M+0x118,p+len(self.records)*64)
+  elif off==0x1046d44:
+   # Native region-vector boundary; the map rendering itself is user-tested.
+   assert x==M;first,last=self.get(M+0x11c),self.get(M+0x120)
+   records=[bytes(em.mem_read(p,12)) for p in range(first,last,12)]
+   record=bytes(em.mem_read(y,12));zone=struct.unpack_from('<I',record)[0]
+   records=[r for r in records if struct.unpack_from('<I',r)[0]!=zone]+[record]
+   p=self.alloc(12*len(records));em.mem_write(p,b''.join(records))
+   for o,v in ((0x11c,p),(0x120,p+len(records)*12),(0x124,p+len(records)*12)):self.put(M+o,v)
   elif off in (0x104673c,0x1046764):result=0
   elif off in (0x1048f44,0x1048dcc):assert x==M
   elif off==0x104b5d8:

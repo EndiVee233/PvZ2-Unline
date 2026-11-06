@@ -45,6 +45,9 @@ static void projectBusinesses(U b,P m){
  if(!regular(b))return;
  for(U i=0;i<sizeof(BUSINESSES)/sizeof(BUSINESSES[0]);++i){
   const BusinessPlot&s=BUSINESSES[i];bool occupied=false;
+#ifdef PVP_REGIONS
+  if(!regionOpen(s.zone))continue;
+#endif
   P begin=at<P>(m,0x110),end=at<P>(m,0x114);
   if((begin&&end<begin)||U(end-begin)>64*256||U(end-begin)%64)return;
   for(P p=begin;p<end;p+=64)if(at<U>(p,48)==s.zone&&at<U>(p,52)==s.position){occupied=true;break;}
@@ -87,6 +90,9 @@ static bool localBusinessPanel(U b,P panel){
 // through into old server requests. Closing the panel remains the original
 // handler; residence and own-base events pass.
 extern "C" U offlineBusinessAction(U b,P panel,U button){
+#ifdef PVP_REGIONS
+ if(regionAction(b,panel,button))return 1;
+#endif
  if(button==203||!localBusinessPanel(b,panel))return 0;
 #ifdef PVP_BUSINESS_COLLECTION
  if(button==200&&at<U>(panel,0xa4)==2){

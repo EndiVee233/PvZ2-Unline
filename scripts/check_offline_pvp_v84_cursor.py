@@ -82,5 +82,8 @@ def check():
  (OUT/'desktop-cursor-check.json').write_text(json.dumps(report,indent=2)+'\n',encoding='utf8')
  print('v84 desktop formation cursor checks passed')
 
-if __name__=='__main__':check()
+if __name__=='__main__':
+ if '--legacy-regions-fixture' in sys.argv:
+  importlib.import_module('check_offline_pvp_v93_focused').accepted_legacy_fixtures()
+ check()
 

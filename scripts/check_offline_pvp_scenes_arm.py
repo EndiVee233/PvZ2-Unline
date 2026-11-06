@@ -33,7 +33,9 @@ class SceneEngine(wallet.EconomyEngine):
   elif off==0x104678c:
    assert x==M
    record=bytes(em.mem_read(y,64));zone,pos=struct.unpack_from('<II',record,28)
-   self.special=[r for r in self.special if struct.unpack_from('<II',r,28)!=(zone,pos)]+[record]
+   first,last=self.get(M+0x128),self.get(M+0x12c)
+   rows=[bytes(em.mem_read(p,64)) for p in range(first,last,64)]
+   self.special=[r for r in rows if struct.unpack_from('<II',r,28)!=(zone,pos)]+[record]
    p=self.alloc(64*len(self.special));em.mem_write(p,b''.join(self.special));self.put(M+0x128,p);self.put(M+0x12c,p+64*len(self.special))
   elif off==0x354360:
    assert x==GM and self.txt(self.get(y))=='activity'

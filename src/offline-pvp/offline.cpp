@@ -26,6 +26,10 @@ static void log(U b,const char*what,U a=0,U c=0){call<I>(b,0x147adc,4,"OfflinePv
 #include "residences.h"
 #endif
 #ifdef PVP_BUSINESS_MAP
+#ifdef PVP_REGIONS
+static U regionAction(U b,P panel,U button);
+static bool regionOpen(U zone);
+#endif
 #include "businesses.h"
 #endif
 static void starter(U b,P m,const char*name,U count,bool skill){
@@ -42,6 +46,11 @@ static void completeLocalBattle(U b);
 static U campCapacity(U level){return CAMP_SPECS[level>=1&&level<=20?level-1:0].capacity;}
 static void applyProgression(U b,P m);
 static void tickProgression(U b);
+#ifdef PVP_REGIONS
+static void projectRegions(U b,P m);
+static bool regionOpen(U zone);
+static void neighbors(U b,P m);
+#endif
 static U finishProgressionWithGems(U b,P timer);
 #ifdef PVP_EVOLUTION
 static void applyEvolution(U b,P m);
@@ -81,6 +90,9 @@ static void projectBusinessOwners(U b,P m){
 }
 #endif
 #include "progression.h"
+#ifdef PVP_REGIONS
+#include "regions.h"
+#endif
 #ifdef PVP_BUSINESS_PRODUCTION
 #include "business_production.h"
 #endif
@@ -121,10 +133,16 @@ static void bindBattleArmy(U b,P m){
 }
 static void neighbors(U b,P m){
  if(!regular(b))return;
+#ifdef PVP_REGIONS
+ removeLockedNeighbors(b,m);
+#endif
 #ifdef PVP_RESIDENT_NEIGHBORS
  removeLocalBusinessRecords(b,m);
 #endif
  for(U i=0;i<NPC_COUNT;++i){const NpcPreset& n=NPCS[i];
+#ifdef PVP_REGIONS
+  if(!regionOpen(n.zone))continue;
+#endif
   bool occupied=false;P begin=at<P>(m,0x110),end=at<P>(m,0x114);
   if(begin&&end>=begin&&U(end-begin)<=64*256){
    for(P p=begin;p<end;p+=64)if(at<U>(p,48)==n.zone&&at<U>(p,52)==n.position){occupied=true;break;}
@@ -234,6 +252,10 @@ static void initialBusinessFormation(U b,const BusinessPlot&s,Store&formation){
 #endif
 static U arenaDaveRound;
 static bool localDaveAllowed(U b,P m,const NpcPreset&n){
+#ifdef PVP_REGIONS
+ if(!ensureEconomy(b,m))return false;
+ if(!regionOpen(n.zone)){economyNotice(b,"[V93_REGION_CLOSED]");return false;}
+#endif
 #ifdef PVP_DAVE_ROUNDS
  if(n.evil){
   if(!ensureEconomy(b,m))return false;
@@ -362,6 +384,10 @@ static void loadArena(U b,P m,const char*level,U mode){
 #ifdef PVP_BUSINESS_SCOUT
 static bool scoutBusiness(U b,const BusinessPlot&s,bool attack){
  P m=manager(b);if(!regular(b))return false;
+#ifdef PVP_REGIONS
+ if(!ensureEconomy(b,m))return false;
+ if(!regionOpen(s.zone)){economyNotice(b,"[V93_REGION_CLOSED]");return false;}
+#endif
  // Check the actual map record: do not route another owner's/server shop
  // through a local fixture just because it happens to occupy the same plot.
  P begin=at<P>(m,0x110),end=at<P>(m,0x114);bool found=false;
@@ -386,6 +412,9 @@ static bool scoutBusiness(U b,const BusinessPlot&s,bool attack){
 #ifdef PVP_BUSINESS_BATTLE
 static bool attackBusiness(U b,const BusinessPlot&s){
  P m=manager(b);if(!regular(b)||!ensureEconomy(b,m))return false;
+#ifdef PVP_REGIONS
+ if(!regionOpen(s.zone)){economyNotice(b,"[V93_REGION_CLOSED]");return false;}
+#endif
  if(economyRuntime.state.businessOwnedMask&businessBit(s.id)){economyNotice(b,"[V80_BUSINESS_OWNED]");return false;}
  P first=at<P>(m,0x110),last=at<P>(m,0x114);bool available=false;
  if(!first||last<first||U(last-first)>64*256||U(last-first)%64)return false;
@@ -410,6 +439,9 @@ static bool attackBusiness(U b,const BusinessPlot&s){
 extern "C" __attribute__((section(".text.entry"))) void offlineGarden(U b){neighbors(b,manager(b));
 #ifdef PVP_BUSINESS_MAP
  projectBusinesses(b,manager(b));
+#endif
+#ifdef PVP_REGIONS
+ projectRegions(b,manager(b));
 #endif
  scene(b,25);}
 #ifdef PVP_LOCAL_DEFENSE_SESSION

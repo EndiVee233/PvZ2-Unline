@@ -30,6 +30,9 @@ static void applyProgression(U b,P m){
  U now=realNow(b);at<U>(m,0x6c)=s.upgradeKind;at<U>(m,0x70)=0;
  at<float>(m,0x74)=s.upgradeKind?at<float>(call<P>(b,0x1f7380),0x24)+float(s.upgradeDue>now?s.upgradeDue-now:0):0x1.fffffep127f;
  at<U>(m,0x15c)=s.daveWins;ownBaseRecord(b,m);
+#ifdef PVP_REGIONS
+ projectRegions(b,m);
+#endif
 #ifdef PVP_BUSINESS_PRODUCTION
  projectBusinessStocks(b,m);
 #endif

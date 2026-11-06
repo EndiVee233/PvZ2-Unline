@@ -5,7 +5,7 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'scripts'))
 from merge_legacy_pvp_resources import Bundle,u32
 
-def generate(out):
+def generate(out,expansion=False):
  with zipfile.ZipFile(ROOT/'pvz2data.zip') as z:
   bundle=Bundle(z.read('com.popcap.pvz2cthd/files/dynamic.rsb.smf'))
  i,name,info=next((i,n,k) for i in range(len(bundle.groups)) for n,k in bundle.files(i) if n.endswith('PROPERTIES\\RANDOMSTRINGS.TXT'))
@@ -16,6 +16,9 @@ def generate(out):
  assert len(lines)==2
  prefixes,suffixes=[s.split(',') for s in lines]
  config=json.loads((ROOT/'src/offline-pvp/neighbors.json').read_text(encoding='utf8'))
+ if expansion:
+  extra=json.loads((ROOT/'src/offline-pvp/expansion-neighbors.json').read_text(encoding='utf8'))
+  config['neighbors']+=extra['neighbors']
  text=['struct NpcPreset { unsigned id,zone,position,level,count,evil; unsigned name[40]; unsigned plants[16][3]; };','static const NpcPreset NPCS[] = {']
  names=set();slots=set()
  for index,npc in enumerate(config['neighbors']):
