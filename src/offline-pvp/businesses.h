@@ -26,7 +26,13 @@ static const BusinessPlot* businessId(U id){
  for(U i=0;i<sizeof(BUSINESSES)/sizeof(BUSINESSES[0]);++i)if(BUSINESSES[i].id==id)return BUSINESSES+i;
  return nullptr;
 }
-static bool scoutBusiness(U b,const BusinessPlot&s);
+static bool scoutBusiness(U b,const BusinessPlot&s,bool attack=false);
+#endif
+#ifdef PVP_BUSINESS_BATTLE
+extern "C" U offlineBusinessBattleMode(){return 1;}
+static U businessBit(U id){for(U i=0;i<2;++i)if(BUSINESSES[i].id==id)return 1u<<i;return 0;}
+static void projectBusinessOwners(U b,P m);
+static bool attackBusiness(U b,const BusinessPlot&s);
 #endif
 static void projectBusinesses(U b,P m){
  if(!regular(b))return;
@@ -48,14 +54,26 @@ static void projectBusinesses(U b,P m){
   call<void>(b,0x1046a04,m,record);release(b,reinterpret_cast<P>(record[4]),true);
   log(b,"business-map-added",s.zone,s.position);
  }
+#ifdef PVP_BUSINESS_BATTLE
+ projectBusinessOwners(b,m);
+#endif
 }
 static bool localBusinessPanel(U b,P panel){
- if(!panel||!regular(b)||at<U>(panel,0xa4)!=3)return false;
+ if(!panel||!regular(b))return false;
+ U kind=at<U>(panel,0xa4);if(kind!=3
+#ifdef PVP_BUSINESS_BATTLE
+ &&kind!=2
+#endif
+ )return false;
  const BusinessPlot*s=businessPlot(at<U>(panel,0xac),at<U>(panel,0xa8));if(!s)return false;
  P m=manager(b),begin=at<P>(m,0x110),end=at<P>(m,0x114);
  if(!begin||end<begin||U(end-begin)>64*256||U(end-begin)%64)return false;
  for(P p=begin;p<end;p+=64)if(at<U>(p,48)==s->zone&&at<U>(p,52)==s->position)
-  return at<U>(p,0)==s->id&&at<U64>(p,8)==0;
+  return at<U>(p,0)==s->id&&(at<U64>(p,8)==0
+#ifdef PVP_BUSINESS_BATTLE
+  ||at<U64>(p,8)==offlineBusinessIdentity(b)
+#endif
+  );
  return false;
 }
 // Scouting is local when enabled; other unfinished shop actions must not fall
@@ -74,5 +92,10 @@ extern "C" U offlineBusinessAction(U b,P panel,U button){
 }
 extern "C" U offlineBusinessRaidInput(U b,P panel){
  if(!localBusinessPanel(b,panel))return 0;
+#ifdef PVP_BUSINESS_BATTLE
+ // Keep the original big-button hit test and army validation. The request
+ // reaches offlineAttack only when the user actually clicks its rectangle.
+ if(at<U>(panel,0xa4)==3)return 0;
+#endif
  log(b,"business-raid-pending");return 1;
 }

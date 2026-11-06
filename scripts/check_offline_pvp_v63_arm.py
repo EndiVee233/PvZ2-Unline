@@ -41,7 +41,7 @@ class EvolutionEngine(DaveEngine):
  def state(self):
   suffix=f'offline-pvp-{self.get(PM+0x74):08x}.eco'
   raw=next(v for k,v in self.files.items() if k.endswith(suffix))
-  assert (len(raw),struct.unpack_from('<I',raw,4)[0]) in ((304,4),(332,5),(344,6),(364,7),(400,8),(412,9))
+  assert (len(raw),struct.unpack_from('<I',raw,4)[0]) in ((304,4),(332,5),(344,6),(364,7),(400,8),(412,9),(416,10))
   return struct.unpack('<76I',raw[:304])
  def queue(self):return self.state()[74:76]
 

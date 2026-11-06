@@ -26,7 +26,7 @@ class ClockEngine(RefreshEngine):
   ui=self.alloc(0xec);label=self.alloc(0x80);self.put(ui+0xe8,label);self.clock_labels[label]='';return ui
  def draw(self,ui):self.run(0x106e5d4,ui);return self.clock_labels[self.get(ui+0xe8)]
  def clock_state(self):
-  raw=next(v for k,v in self.files.items() if k.endswith('.eco'));assert len(raw)==412;return struct.unpack('<IIi',raw[400:])
+  raw=next(v for k,v in self.files.items() if k.endswith('.eco'));assert len(raw) in (412,416);return struct.unpack('<IIi',raw[400:412])
  def mode(self):self.run('offlineExchangeClockMode');return self.u.reg_read(UC_ARM_REG_R0)
  def restart(self):
   r=ClockEngine();r.now=self.now;r.timezone_offset=self.timezone_offset;r.copy_state(self);r.enter();r.open();return r

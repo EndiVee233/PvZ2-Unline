@@ -18,7 +18,14 @@ class Engine:
   self.exports={s.name:s['st_value'] for s in e.get_section_by_name('.symtab').iter_symbols()};self.heap=M+0x10000
   self.records=[];self.loaded=[];self.scenes=[];self.files={};self.fds={};self.counter=3;self.failwrite=False
   self.put(BASE+0x1835eec,GM);self.put(PM+0x74,42);self.put(PROFILE+0x75c,9);self.put(M+0x15c,0xffffffff)
-  self.u.mem_write(END,b'\x1e\xff\x2f\xe1');self.u.hook_add(UC_HOOK_CODE,self.hook)
+  self.payload_range=(BASE+s['sh_addr'],BASE+s['sh_addr']+s['sh_size'])
+  self.u.mem_write(END,b'\x1e\xff\x2f\xe1');self.u.hook_add(UC_HOOK_CODE,self.dispatch)
+ def dispatch(self,em,a,size,data):
+  # All current native-boundary fixtures leave the compiled payload itself
+  # executable. Avoid twenty historical UI hooks/register reads per payload
+  # instruction. Older base shims (including 1a0204c) remain outside this range.
+  if self.payload_range[0]<=a<self.payload_range[1]:return
+  self.hook(em,a,size,data)
  def put(self,p,v):self.u.mem_write(p,struct.pack('<I',v&0xffffffff))
  def get(self,p):return struct.unpack('<I',self.u.mem_read(p,4))[0]
  def alloc(self,n):p=self.heap;self.heap=(p+n+7)&~7;return p

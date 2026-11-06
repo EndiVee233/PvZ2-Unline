@@ -31,8 +31,11 @@ def check_businesses():
    assert e.messages[count:]==['business-action-pending']
    assert e.u.reg_read(UC_ARM_REG_R0)==ui,'void native callback arguments not preserved'
   e.run('offlineBusinessAction',ui,203);assert e.u.reg_read(UC_ARM_REG_R0)==0
-  count=len(e.messages);e.stub(0x101a564,ui,0)
-  assert e.messages[count:]==['business-raid-pending']
+  if 'offlineBusinessBattleMode' in e.exports:
+   e.run('offlineBusinessRaidInput',ui);assert e.u.reg_read(UC_ARM_REG_R0)==0
+  else:
+   count=len(e.messages);e.stub(0x101a564,ui,0)
+   assert e.messages[count:]==['business-raid-pending']
  assert slots==[9,10] and len(set(slots))==2
  e.run('offlineGarden');assert len(e.shops())==2 and len(e.residents())==7
  assert (e.get(M+4),e.get(M+8),e.gems,e.files)==funds

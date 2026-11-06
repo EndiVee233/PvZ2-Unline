@@ -66,7 +66,7 @@ def check_scout():
  else:raise AssertionError('foreign profile accepted a stale preview')
  report=dict(installed_business_scout_button_executed=True,no_army_required_for_readonly_scout=True,
  independent_local_formations_no_repeated_scene_or_stacking=True,preview_heartbeat_45_seconds=True,
- no_fee_reward_or_ownership_save=True,attack_paths_blocked_during_preview=True,
+ no_fee_reward_or_ownership_save=True,attack_paths_rejected_without_army=True,
  cancel_finishes_board_and_returns_map=True,shop_to_residence_routing_preserved=True,
  restart_and_player_scope=True,native_render_and_actual_dialog_close_are_runtime_boundaries=True,
  runtime_game_verified=False)

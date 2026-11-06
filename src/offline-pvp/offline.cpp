@@ -58,6 +58,21 @@ static U finishResearchWithGems(U b,P timer);
 static bool researchFinishPrompt;
 #endif
 #include "economy.h"
+#ifdef PVP_BUSINESS_BATTLE
+static U businessProjectionIdentity;
+static void projectBusinessOwners(U b,P m){
+ if(!regular(b)||!ensureEconomy(b,m))return;
+ P begin=at<P>(m,0x110),end=at<P>(m,0x114);U identity=offlineBusinessIdentity(b);
+ if(!begin||end<begin||U(end-begin)>64*256||U(end-begin)%64)return;
+ for(P p=begin;p<end;p+=64){const BusinessPlot*s=businessId(at<U>(p,0));
+  if(!s||at<U>(p,48)!=s->zone||at<U>(p,52)!=s->position)continue;
+  U64 previous=at<U64>(p,8);
+  if(previous&&previous!=identity&&previous!=businessProjectionIdentity)continue;
+  at<U64>(p,8)=economyRuntime.state.businessOwnedMask&businessBit(s->id)?identity:0;
+ }
+ businessProjectionIdentity=identity;
+}
+#endif
 #include "progression.h"
 #ifdef PVP_EXCHANGE
 #include "exchange.h"
@@ -236,7 +251,11 @@ static P armyBankModule,armyBankBoard;
 static bool localArenaIdentity(U b){
  if(npc(arenaNpc))return true;
 #ifdef PVP_BUSINESS_SCOUT
- return businessId(arenaNpc)&&at<unsigned char>(manager(b),0x100)==1;
+ return businessId(arenaNpc)
+#ifndef PVP_BUSINESS_BATTLE
+ &&at<unsigned char>(manager(b),0x100)==1
+#endif
+ ;
 #else
  return false;
 #endif
@@ -317,7 +336,7 @@ static void loadArena(U b,P m,const char*level,U mode){
  log(b,"arena-load",mode,at<unsigned char>(m,0x17d));
 }
 #ifdef PVP_BUSINESS_SCOUT
-static bool scoutBusiness(U b,const BusinessPlot&s){
+static bool scoutBusiness(U b,const BusinessPlot&s,bool attack){
  P m=manager(b);if(!regular(b))return false;
  // Check the actual map record: do not route another owner's/server shop
  // through a local fixture just because it happens to occupy the same plot.
@@ -325,13 +344,13 @@ static bool scoutBusiness(U b,const BusinessPlot&s){
  if(!begin||end<begin||U(end-begin)>64*256||U(end-begin)%64)return false;
  for(P p=begin;p<end;p+=64)if(at<U>(p,0)==s.id&&at<U>(p,48)==s.zone&&at<U>(p,52)==s.position&&at<U64>(p,8)==0){found=true;break;}
  if(!found)return false;
- if(arenaNpc==s.id&&arenaUser==owner(b)&&arenaPending(b,"arena_battle_test",0)){
+ if(arenaNpc==s.id&&arenaUser==owner(b)&&arenaPending(b,"arena_battle_test",0)&&requestedArenaView==U(!attack)){
   log(b,"business-scout-duplicate",s.id);return true;
  }
  // Dispose the previous board before replacing its formation vectors.
  finishArenaBoard(b);
  at<U>(m,0xa8)=2;at<U>(m,0xf4)=s.id;at<U>(m,0xf8)=s.position;at<U>(m,0xfc)=s.zone;at<U>(m,0x104)=s.id;
- at<unsigned char>(m,0x100)=1;
+ at<unsigned char>(m,0x100)=attack?0:1;
  at<unsigned char>(m,0x101)=at<unsigned char>(m,0x102)=at<unsigned char>(m,0x103)=0;
  // Independent local neutral defenses, not recovered server formations.
  // The two shops deliberately differ to expose stale-board/stacking bugs.
@@ -341,6 +360,30 @@ static bool scoutBusiness(U b,const BusinessPlot&s){
  formation.info[0].type=plant;formation.info[0].level=1;
  apply(b,m+0x80,formation);arenaNpc=s.id;arenaUser=owner(b);
  loadArena(b,m,"arena_battle_test",0);log(b,"business-scout",s.id,plant);return true;
+}
+#endif
+#ifdef PVP_BUSINESS_BATTLE
+static bool attackBusiness(U b,const BusinessPlot&s){
+ P m=manager(b);if(!regular(b)||!ensureEconomy(b,m))return false;
+ if(economyRuntime.state.businessOwnedMask&businessBit(s.id)){economyNotice(b,"[V80_BUSINESS_OWNED]");return false;}
+ P first=at<P>(m,0x110),last=at<P>(m,0x114);bool available=false;
+ if(!first||last<first||U(last-first)>64*256||U(last-first)%64)return false;
+ for(P p=first;p<last;p+=64)if(at<U>(p,0)==s.id&&at<U>(p,48)==s.zone&&at<U>(p,52)==s.position&&at<U64>(p,8)==0){available=true;break;}
+ if(!available)return false;
+ U army=0;for(U i=0;i<TRAIN_COUNT;++i)army+=economyRuntime.state.trains[i].held;
+ if(!army){at<unsigned char>(m,0x100)=1;economyNotice(b,"[V80_ARMY_REQUIRED]");return false;}
+ P live=arenaModule(b);
+ if(arenaNpc==s.id&&live&&at<U>(live,0xb0)==3){log(b,"business-battle-duplicate",s.id);return true;}
+ if(arenaNpc==s.id&&arenaUser==owner(b)&&requestedArenaView==0&&arenaPending(b,"arena_battle_test",0))return true;
+ NpcPreset fee{};fee.id=s.id;
+ if(arenaNpc==s.id&&live&&at<U>(live,0xb0)==2){
+  if(!beginBattleFee(b,m,fee,true)){at<unsigned char>(m,0x100)=1;return false;}
+  at<unsigned char>(m,0x100)=0;at<unsigned char>(m,0x102)=at<unsigned char>(m,0x103)=0;
+  requestedArenaView=0;call<void>(b,0x1090990,live);log(b,"business-preview-started",s.id);return true;
+ }
+ if(!beginBattleFee(b,m,fee,false))return false;
+ if(!scoutBusiness(b,s,true)){closeAbandonedBattle(b,m);return false;}
+ log(b,"business-battle-loaded",s.id);return true;
 }
 #endif
 extern "C" __attribute__((section(".text.entry"))) void offlineGarden(U b){neighbors(b,manager(b));
@@ -395,7 +438,11 @@ extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
    const BusinessPlot*selected=businessId(at<U>(m,0x104));
    if(selected&&selected->zone==at<U>(m,0xfc)&&selected->position==at<U>(m,0xf8))s=selected;
   }
-  if(s){if(reason==3)scoutBusiness(b,*s);else log(b,"business-attack-pending",s->id,reason);return;}
+  if(s){if(reason==3)scoutBusiness(b,*s);
+#ifdef PVP_BUSINESS_BATTLE
+   else if(reason==1||reason==2)attackBusiness(b,*s);
+#endif
+   else log(b,"business-attack-pending",s->id,reason);return;}
  }
 #endif
  const NpcPreset*n=npc(id);
@@ -485,7 +532,11 @@ extern "C" void offlineBattleRequest(U b,P m,U action){
 #ifdef PVP_BATTLE_ECONOMY
    if(
 #ifdef PVP_BUSINESS_SCOUT
-      !businessId(arenaNpc)&&
+      (!businessId(arenaNpc)
+#ifdef PVP_BUSINESS_BATTLE
+       ||!at<unsigned char>(m,0x100)
+#endif
+      )&&
 #endif
       !closeAbandonedBattle(b,m))return;
 #endif
@@ -525,7 +576,14 @@ static bool persistBattleArmy(U b,P m,bool daveVictory=false,U stars=0){
  }
 #ifdef PVP_BATTLE_ECONOMY
  const NpcPreset*n=npc(arenaNpc);
- if(n&&!n->evil&&!settleBattleReward(b,next,stars))return false;
+ bool rewarded=n&&!n->evil;
+#ifdef PVP_BUSINESS_BATTLE
+ if(businessId(arenaNpc)){
+  if(stars==3)next.businessOwnedMask|=businessBit(arenaNpc);
+  rewarded=true;
+ }
+#endif
+ if(rewarded&&!settleBattleReward(b,next,stars))return false;
 #endif
 #ifdef PVP_DAVE_NARRATIVE
  if(n&&n->evil){
@@ -540,7 +598,11 @@ static bool persistBattleArmy(U b,P m,bool daveVictory=false,U stars=0){
 extern "C" U offlineBattleResult(U b,P m,U stars,U id,U kind){
  if(!arenaModule(b))return 0;
 #ifdef PVP_BUSINESS_SCOUT
- if(businessId(arenaNpc)){log(b,"business-preview-result-ignored",stars);return 1;}
+ if(businessId(arenaNpc)
+#ifdef PVP_BUSINESS_BATTLE
+ &&at<unsigned char>(m,0x100)
+#endif
+ ){log(b,"business-preview-result-ignored",stars);return 1;}
 #endif
  if(resultSaved)return 1;
  const NpcPreset*n=npc(arenaNpc);
@@ -548,12 +610,16 @@ extern "C" U offlineBattleResult(U b,P m,U stars,U id,U kind){
  if(n&&n->evil&&(kind!=1||(id&&id!=n->id))){log(b,"dave-result-foreign",id,kind);return 1;}
 #endif
 #ifdef PVP_BATTLE_ECONOMY
- if(!n||stars>3||(!n->evil&&(id!=n->id||kind!=2||!ensureEconomy(b,m)||!paidBattleMatches(b,economyRuntime.state)))){log(b,"battle-result-unpaid-or-stale",stars,id);return 1;}
+ bool shop=false;
+#ifdef PVP_BUSINESS_BATTLE
+ shop=businessId(arenaNpc)!=nullptr;
+#endif
+ if((!n&&!shop)||stars>3||((shop||n&&!n->evil)&&(id!=arenaNpc||kind!=2||!ensureEconomy(b,m)||!paidBattleMatches(b,economyRuntime.state)))){log(b,"battle-result-unpaid-or-stale",stars,id);return 1;}
  U previousCoins=economyRuntime.state.coins;
 #endif
  if(!persistBattleArmy(b,m,n&&n->evil&&stars>0,stars)){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return 1;}
 #ifdef PVP_BATTLE_ECONOMY
- if(n&&(!n->evil
+ if(shop||n&&(!n->evil
 #ifdef PVP_DAVE_ROUNDS
  ||n->evil
 #endif
@@ -566,6 +632,9 @@ extern "C" U offlineBattleResult(U b,P m,U stars,U id,U kind){
   at<U>(m,0xc4)=economyRuntime.state.coins-previousCoins;at<U>(m,0xc8)=at<U>(m,0xcc)=0;
   log(b,"battle-reward-saved",stars,at<U>(m,0xc4));
  }
+#ifdef PVP_BUSINESS_BATTLE
+ if(shop){projectBusinessOwners(b,m);log(b,"business-result",stars,economyRuntime.state.businessOwnedMask);}
+#endif
 #endif
  // The response callback opens the original result window. The unrelated
  // 10485f0 notification tears down the battle and skips that window.
