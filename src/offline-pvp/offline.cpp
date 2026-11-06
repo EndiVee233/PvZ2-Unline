@@ -257,7 +257,11 @@ extern "C" void offlineMapArmyReady(U b,P map){
 }
 static void finishArenaBoard(U b){
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0),board=at<P>(app,0x6bc);
- if(board&&at<P>(board,0xc4)&&same(reinterpret_cast<const char*>(at<P>(board,0xc4)),"arena_battle_test")&&at<U>(board,0xc0)!=9){
+ bool local=board&&at<P>(board,0xc4)&&same(reinterpret_cast<const char*>(at<P>(board,0xc4)),"arena_battle_test");
+#ifdef PVP_DEFENSE_FINISH
+ if(board&&regular(b)&&at<P>(board,0xc4)&&same(reinterpret_cast<const char*>(at<P>(board,0xc4)),"arena_plant_test"))local=true;
+#endif
+ if(local&&at<U>(board,0xc0)!=9){
   // The original PvP return handlers finish the board before changing scenes.
   // Removing only its widget leaves plant objects and module listeners alive.
   call<void>(b,0x226770,board);log(b,"battle-board-finished");
@@ -305,7 +309,11 @@ extern "C" __attribute__((section(".text.entry"))) void offlineGarden(U b){neigh
 #ifdef PVP_LOCAL_DEFENSE_SESSION
 static U defenseSessionUser;
 #endif
-extern "C" void offlineOwn(U b){P m=manager(b);Store s{};if(readStore(b,s)){apply(b,m+0x80,s);log(b,"defense-loaded",s.positions,s.infos);}else{clear(b,m+0x80);log(b,"defense-new");}
+extern "C" void offlineOwn(U b){
+#ifdef PVP_DEFENSE_FINISH
+ if(regular(b))finishArenaBoard(b);
+#endif
+ P m=manager(b);Store s{};if(readStore(b,s)){apply(b,m+0x80,s);log(b,"defense-loaded",s.positions,s.infos);}else{clear(b,m+0x80);log(b,"defense-new");}
 #ifdef PVP_LOCAL_DEFENSE_SESSION
  if(regular(b)){
   defenseSessionUser=owner(b);at<U>(m,0xa8)=1;
@@ -315,7 +323,14 @@ extern "C" void offlineOwn(U b){P m=manager(b);Store s{};if(readStore(b,s)){appl
  call<void>(b,0x85e7d8);}
 extern "C" void offlineSave(U b,P network,P json,U zone,U type){
  if(!regular(b)){call<void>(b,0xf87cc4,network,json,zone,type);return;}
- Store s{};if(capture(b,manager(b)+0x80,s)&&writeStore(b,s)){log(b,"defense-saved",s.positions,s.infos);scene(b,25);}else log(b,"defense-save-failed");
+ Store s{};if(capture(b,manager(b)+0x80,s)&&writeStore(b,s)){log(b,"defense-saved",s.positions,s.infos);
+#ifdef PVP_DEFENSE_FINISH
+  // Removing only the editor widget keeps the live board/module listeners
+  // and music active. Serialize first, then use native Board::Finish before
+  // the map transition, just as the original editor exit path does.
+  finishArenaBoard(b);
+#endif
+  scene(b,25);}else log(b,"defense-save-failed");
 }
 extern "C" void offlineInfo(U b,P m,U a,U id,U kind){
  const NpcPreset*n=npc(id);if(n&&kind==2&&regular(b)){
