@@ -25,6 +25,9 @@ static void log(U b,const char*what,U a=0,U c=0){call<I>(b,0x147adc,4,"OfflinePv
 #ifdef PVP_RESIDENT_NEIGHBORS
 #include "residences.h"
 #endif
+#ifdef PVP_BUSINESS_MAP
+#include "businesses.h"
+#endif
 static void starter(U b,P m,const char*name,U count,bool skill){
  P key=nullptr;narrow(b,reinterpret_cast<P>(&key),name);
  if(!call<P>(b,skill?0x1046764:0x104673c,m,&key)){
@@ -305,7 +308,11 @@ static void loadArena(U b,P m,const char*level,U mode){
  }
  log(b,"arena-load",mode,at<unsigned char>(m,0x17d));
 }
-extern "C" __attribute__((section(".text.entry"))) void offlineGarden(U b){neighbors(b,manager(b));scene(b,25);}
+extern "C" __attribute__((section(".text.entry"))) void offlineGarden(U b){neighbors(b,manager(b));
+#ifdef PVP_BUSINESS_MAP
+ projectBusinesses(b,manager(b));
+#endif
+ scene(b,25);}
 #ifdef PVP_LOCAL_DEFENSE_SESSION
 static U defenseSessionUser;
 #endif

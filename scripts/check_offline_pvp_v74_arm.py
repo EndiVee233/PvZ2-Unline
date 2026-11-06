@@ -9,6 +9,17 @@ class ResidenceEngine(ClockEngine):
  def __init__(self):super().__init__();self.opened=[];self.messages=[]
  def hook(self,em,a,size,d):
   off=a-BASE
+  # Payload instructions need no engine boundary emulation. Avoid walking
+  # every historical UI fixture (and its register reads) for each instruction.
+  if off>=0x1a00000 or a==END:return
+  if off==0x1046a04:
+   source=em.reg_read(UC_ARM_REG_R1);item=bytes(em.mem_read(source,64))
+   begin,end=self.get(M+0x110),self.get(M+0x114)
+   rows=[bytes(em.mem_read(p,64)) for p in range(begin,end,64)]
+   rows=[r for r in rows if r[48:56]!=item[48:56]]+[item]
+   self.records=rows;p=self.alloc(len(rows)*64);em.mem_write(p,b''.join(rows))
+   self.put(M+0x110,p);self.put(M+0x114,p+len(rows)*64);self.put(M+0x118,p+len(rows)*64)
+   em.reg_write(UC_ARM_REG_PC,em.reg_read(UC_ARM_REG_LR)&~1);return
   if off==0x147adc:
    self.messages.append(self.txt(em.reg_read(UC_ARM_REG_R3)))
    return super().hook(em,a,size,d)
@@ -27,7 +38,11 @@ class ResidenceEngine(ClockEngine):
 
 def check_residences():
  e=ResidenceEngine();e.enter();assert not e.records and e.panel()==[1000,2000,40,200,2000,20]
- e.run('offlineGarden');assert e.get(M+0x110)==e.get(M+0x114),'residences leaked into businesses'
+ e.run('offlineGarden')
+ def only_businesses():
+  rows=range(e.get(M+0x110),e.get(M+0x114),64)
+  assert all(e.get(p) in (0x71000001,0x71000002) for p in rows),'residences leaked into businesses'
+ only_businesses()
  rows=e.residents();assert len(rows)==7
  for i,p in enumerate(rows):
   id=e.get(p);kind=e.get(p+36)
@@ -40,15 +55,17 @@ def check_residences():
   # Execute the real map-click branch into the native kind-5 panel opener.
   e.u.reg_write(UC_ARM_REG_R8,M);e.u.reg_write(UC_ARM_REG_R5,i*64);e.u.reg_write(UC_ARM_REG_R6,e.alloc(0x300))
   e.run(0x101a20c);assert e.opened[-1]==(5,e.get(p+28),e.get(p+32))
- e.run('offlineGarden');assert len(e.residents())==7 and e.get(M+0x110)==e.get(M+0x114)
+ e.run('offlineGarden');assert len(e.residents())==7;only_businesses()
  # Migration removes only our former fake businesses, retaining foreign shops.
  first=rows[0];old=e.alloc(64*3);e.u.mem_write(old,bytes(64*3))
  e.put(old,e.get(first));e.put(old+48,e.get(first+28));e.put(old+52,e.get(first+32));e.string(old+16,'old fake',True)
  e.put(old+64,777);e.put(old+64+48,3);e.put(old+64+52,2);e.string(old+64+16,'real shop',True)
  e.put(old+128,42);e.put(old+128+48,1);e.put(old+128+52,2);e.string(old+128+16,'duplicate own',True)
  e.put(M+0x110,old);e.put(M+0x114,old+192);e.put(M+0x118,old+192);e.run('offlineGarden')
- assert e.get(M+0x114)==old+64 and e.get(old)==777 and e.get(old+48)==3
- assert e.get(e.get(old+16)-12)>0
+ remaining=list(range(e.get(M+0x110),e.get(M+0x114),64))
+ foreign=next(p for p in remaining if e.get(p)==777)
+ assert e.get(foreign+48)==3 and e.get(e.get(foreign+16)-12)>0
+ assert all(e.get(p) in (777,0x71000001,0x71000002) for p in remaining)
  # Real residential requests use selected-id, zero player-id, reasons 4/1.
  f=ResidenceEngine();f.enter();f.run('offlineGarden')
  for _ in range(3):f.train()
