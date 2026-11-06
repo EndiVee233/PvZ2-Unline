@@ -10,6 +10,7 @@ from keystone import Ks,KS_ARCH_ARM,KS_MODE_ARM
 from prepare_offline_neighbors import generate
 ROOT=Path(__file__).resolve().parents[1];VERSION=86 if '--v86' in sys.argv else 85 if '--v85' in sys.argv else 84 if '--v84' in sys.argv else 83 if '--v83' in sys.argv else 82 if '--v82' in sys.argv else 81 if '--v81' in sys.argv else 80 if '--v80' in sys.argv else 79 if '--v79' in sys.argv else 78 if '--v78' in sys.argv else 77 if '--v77' in sys.argv else 76 if '--v76' in sys.argv else 75 if '--v75' in sys.argv else 74 if '--v74' in sys.argv else 73 if '--v73' in sys.argv else 72 if '--v72' in sys.argv else 71 if '--v71' in sys.argv else 70 if '--v70' in sys.argv else 69 if '--v69' in sys.argv else 68 if '--v68' in sys.argv else 67 if '--v67' in sys.argv else 66 if '--v66' in sys.argv else 65 if '--v65' in sys.argv else 64 if '--v64' in sys.argv else 63 if '--v63' in sys.argv else 62 if '--v62' in sys.argv else 61 if '--v61' in sys.argv else 60 if '--v60' in sys.argv else 59 if '--v59' in sys.argv else 58 if '--v58' in sys.argv else 57 if '--v57' in sys.argv else 56 if '--v56' in sys.argv else 55 if '--v55' in sys.argv else 54 if '--v54' in sys.argv else 53 if '--v53' in sys.argv else 52 if '--v52' in sys.argv else 51 if '--v51' in sys.argv else 50 if '--v50' in sys.argv else 49 if '--v49' in sys.argv else 48 if '--v48' in sys.argv else 47 if '--v47' in sys.argv else 46 if '--v46' in sys.argv else 45 if '--v45' in sys.argv else 44 if '--v44' in sys.argv else 43 if '--v43' in sys.argv else 42 if '--v42' in sys.argv else 41 if '--v41' in sys.argv else 40 if '--v40' in sys.argv else 39
 if '--v88' in sys.argv:VERSION=88
+if '--v89' in sys.argv:VERSION=89
 OUT=ROOT/(f'work/pvp-v{VERSION}-test' if '--shop-clock-test' in sys.argv else f'work/pvp-v{VERSION}');OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -206,6 +207,10 @@ if VERSION>=88:
  site=0x11c7740;assert bytes(b[site:site+4])==bl(site,0x1405fd0)
  target=custom_stub('push {r4,lr}\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl #{symbols["retainedResourceLookup"]}\npop {{r4,pc}}')
  b[site:site+4]=bl(site,target);patches.append(dict(site=hex(site),symbol='retainedResourceLookup',scope='immutable RSG dictionaries retained independently of unloadable resource pools'))
+if VERSION>=89:
+ site=0x11fc144;assert bytes(b[site:site+4])==bl(site,0x112d864)
+ target=custom_stub('push {r4,lr}\nsub sp,sp,#8\nstr r2,[sp]\nmov r3,r1\nmov r1,r0\nldr r2,[sb]\n'+baseasm()+f'bl #{symbols["retainedMapBuffer"]}\nadd sp,sp,#8\npop {{r4,pc}}')
+ b[site:site+4]=bl(site,target);patches.append(dict(site=hex(site),symbol='retainedMapBuffer',scope='independent immutable worldmap animation bytes'))
 site=0x9344a4;first=struct.unpack_from('<I',b,site)[0];assert first==0xe92d4bf0
 coin_stub=custom_stub('push {r0-r4,lr}\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlineCoinComplete"]}\ncmp r0,#0\npop {{r0-r4,lr}}\nbne handled\n.word {first}\nb #{site+4}\nhandled: bx lr')
 redirect(site,coin_stub)
@@ -483,6 +488,7 @@ if VERSION>=83:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pv
 if VERSION>=84:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v84_cursor.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=85:subprocess.run([sys.executable,str(ROOT/'scripts/check_input_v23_native.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=88:subprocess.run([sys.executable,str(ROOT/'scripts/check_resource_index_v88.py'),str(OUT)],cwd=ROOT,check=True)
+if VERSION>=89:subprocess.run([sys.executable,str(ROOT/'scripts/check_map_buffer_v89.py'),str(OUT)],cwd=ROOT,check=True)
 if '--native-only' in sys.argv:raise SystemExit(0)
 scratch=Path(sys.argv[sys.argv.index('--intermediate-dir')+1]).resolve() if '--intermediate-dir' in sys.argv else OUT
 scratch.mkdir(parents=True,exist_ok=True)

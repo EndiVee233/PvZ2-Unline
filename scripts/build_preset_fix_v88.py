@@ -4,7 +4,7 @@ from io import BytesIO
 import hashlib,json,struct,subprocess,zipfile,shutil,sys
 from elftools.elf.elffile import ELFFile
 from keystone import Ks,KS_ARCH_ARM,KS_MODE_ARM
-ROOT=Path(__file__).resolve().parents[1];OUT=ROOT/'work/pvp-v88';OUT.mkdir(exist_ok=True)
+ROOT=Path(__file__).resolve().parents[1];VERSION=89 if '--v89' in sys.argv else 88;OUT=ROOT/f'work/pvp-v{VERSION}';OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v86/PvZ2-v86-pvp-scene-candidate.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a4dde5aa68813de5523e07f823082b8f1f8d2eb8ce9f06b2101c8c304de87801'
 with zipfile.ZipFile(BASE) as z:b=bytearray(z.read('lib/armeabi/libSrc.so'))
@@ -26,15 +26,26 @@ symbols={s.name:s['st_value'] for s in payload.get_section_by_name('.symtab').it
 code=bytearray(section.data());stub=va+len(code);stub+=(4-stub%4)%4;code.extend(bytes(stub-va-len(code)))
 asm='push {r4,lr}\nmov r2,r1\nmov r1,r0\nadr r0,basepoint\nldr r12,[r0]\nsub r0,r0,r12\n'+f'bl #{symbols["retainedResourceLookup"]}\npop {{r4,pc}}\nbasepoint: .word 0x11223344'
 shim=bytearray(Ks(KS_ARCH_ARM,KS_MODE_ARM).asm(asm,addr=stub)[0]);at=shim.index(struct.pack('<I',0x11223344));struct.pack_into('<I',shim,at,stub+at);code.extend(shim)
-assert off+len(code)<rw['p_offset'] and not any(b[off:off+len(code)])
+if VERSION>=89:
+ map_stub=va+len(code);map_stub+=(4-map_stub%4)%4;code.extend(bytes(map_stub-va-len(code)))
+ asm='push {r4,lr}\nsub sp,sp,#8\nstr r2,[sp]\nmov r3,r1\nmov r1,r0\nldr r2,[sb]\nadr r0,basepoint\nldr r12,[r0]\nsub r0,r0,r12\n'+f'bl #{symbols["retainedMapBuffer"]}\nadd sp,sp,#8\npop {{r4,pc}}\nbasepoint: .word 0x11223344'
+ shim=bytearray(Ks(KS_ARCH_ARM,KS_MODE_ARM).asm(asm,addr=map_stub)[0]);at=shim.index(struct.pack('<I',0x11223344));struct.pack_into('<I',shim,at,map_stub+at);code.extend(shim)
+if off+len(code)>=rw['p_offset']:
+ padding=((off+len(code)-rw['p_offset'])//4096+1)*4096
+ b[rw['p_offset']:rw['p_offset']]=bytes(padding)
+ rw_index=loads[-1][0];struct.pack_into('<I',b,elf['e_phoff']+32*rw_index+4,rw['p_offset']+padding)
+assert not any(b[off:off+len(code)])
 b[off:off+len(code)]=code
 site=0x11c7740
 def bl(a,t):return struct.pack('<I',0xeb000000|(((t-a-8)//4)&0xffffff))
 assert b[site:site+4]==bl(site,0x1405fd0);b[site:site+4]=bl(site,stub)
+if VERSION>=89:
+ assert b[0x11fc144:0x11fc148]==bl(0x11fc144,0x112d864);b[0x11fc144:0x11fc148]=bl(0x11fc144,map_stub)
 ph=elf['e_phoff']+index*32;struct.pack_into('<II',b,ph+16,text['p_filesz']+len(code),text['p_filesz']+len(code))
 (OUT/'libSrc.so').write_bytes(b)
-subprocess.run([sys.executable,str(ROOT/'scripts/check_resource_index_v88.py')],check=True)
-unsigned=OUT/'unsigned.apk';aligned=OUT/'aligned.apk';final=OUT/'PvZ2-v88-retained-resource-index.apk'
+subprocess.run([sys.executable,str(ROOT/'scripts/check_resource_index_v88.py'),str(OUT)],check=True)
+if VERSION>=89:subprocess.run([sys.executable,str(ROOT/'scripts/check_map_buffer_v89.py'),str(OUT)],check=True)
+unsigned=OUT/'unsigned.apk';aligned=OUT/'aligned.apk';final=OUT/(f'PvZ2-v{VERSION}-retained-map-resources.apk' if VERSION>=89 else 'PvZ2-v88-retained-resource-index.apk')
 with zipfile.ZipFile(BASE) as src,zipfile.ZipFile(unsigned,'w',allowZip64=True) as dst:
  for item in src.infolist():
   if item.filename.startswith('META-INF/'):continue
