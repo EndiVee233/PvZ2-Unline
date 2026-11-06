@@ -15,6 +15,7 @@ if '--v90' in sys.argv:VERSION=90
 if '--v91' in sys.argv:VERSION=91
 if '--v92' in sys.argv:VERSION=92
 if '--v93' in sys.argv:VERSION=93
+if '--v94' in sys.argv:VERSION=94
 OUT=ROOT/(f'work/pvp-v{VERSION}-test' if '--shop-clock-test' in sys.argv else f'work/pvp-v{VERSION}');OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -152,6 +153,7 @@ if VERSION>=90:flags.append('-DPVP_BUSINESS_PRODUCTION')
 if VERSION>=91:flags.append('-DPVP_BUSINESS_COLLECTION')
 if VERSION>=92:flags.append('-DPVP_UPGRADE_VISUAL_FIX')
 if VERSION>=93:flags.append('-DPVP_REGIONS')
+if VERSION>=94:flags+=['-DPVP_REGION_BALANCE_ONLY','-DPVP_HISTORY']
 if '--shop-clock-test' in sys.argv:flags.append('-DPVP_EXCHANGE_CLOCK_TEST')
 subprocess.run([compiler,*flags,'-c',str(ROOT/'src/offline-pvp/offline.cpp'),'-o',str(OUT/'offline.o')],check=True)
 # A flat payload has no dynamic relocation table. Absolute pointer constants
@@ -388,6 +390,19 @@ if VERSION>=68:
   redirect(site,target)
 
 if VERSION>=71:
+ if VERSION>=94:
+  site=0x105a954;assert bytes(b[site:site+12])==bl(site,0xf79d74)+bl(site+4,0xf7a070)+bl(site+8,0xf88b30)
+  target=custom_stub('push {r0-r4,lr}\nmov r1,r4\n'+baseasm()+f'bl #{symbols["offlineHistoryLoad"]}\ncmp r0,#0\nbne history_loaded\nbl #0xf79d74\nbl #0xf7a070\nbl #0xf88b30\nhistory_loaded: pop {{r0-r4,pc}}')
+  b[site:site+12]=bl(site,target)+struct.pack('<II',0xe1a00000,0xe1a00000);patches.append(dict(site=hex(site),symbol='offlineHistoryLoad',scope='original playback list, local completed battle summaries'))
+  site=0x103bdb0;first=struct.unpack_from('<I',b,site)[0];assert first&0xffff0000==0xe92d0000
+  target=custom_stub('ldr ip,history_namespace\ncmp r3,ip\nbne history_lookup_original\npush {r4,lr}\nmov r1,r2\nmov r2,r3\n'+baseasm()+f'bl #{symbols["offlineHistoryLookup"]}\npop {{r4,pc}}\nhistory_lookup_original: .word {first}\nb #{site+4}\nhistory_namespace: .word 0x4c4f434c')
+  redirect(site,target)
+  site=0x105acbc;first=struct.unpack_from('<I',b,site)[0];assert first==0xe92d4ff0
+  target=custom_stub('push {r4,lr}\nmov r4,r0\nbl history_row_original\nmov r1,r4\n'+baseasm()+f'bl #{symbols["offlineHistoryRowReady"]}\nmov r0,r4\npop {{r4,pc}}\nhistory_row_original: .word {first}\nb #{site+4}')
+  redirect(site,target)
+  site=0x105c06c;first=struct.unpack_from('<I',b,site)[0];assert first&0xffff0000==0xe92d0000
+  target=custom_stub('push {r0-r4,lr}\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlineHistoryAction"]}\ncmp r0,#0\npop {{r0-r4,lr}}\nbne history_action_consumed\n.word {first}\nb #{site+4}\nhistory_action_consumed: bx lr')
+  redirect(site,target)
  if VERSION>=93:
   site=0x10196d0;assert bytes(b[site:site+4])==bl(site,0x1013a3c)
   target=custom_stub('push {r4-r6,lr}\nmov r4,r0\nldr r6,[sp,#16]\nsub sp,sp,#8\nstr r6,[sp]\nbl #0x1013a3c\nadd sp,sp,#8\nmov r1,r4\n'+baseasm()+f'bl #{symbols["offlineRegionPanelReady"]}\nmov r0,r4\npop {{r4-r6,pc}}')
@@ -502,7 +517,7 @@ if VERSION==69:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pv
 if VERSION==70:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v70_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION==71:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v71_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION==72:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v72_arm.py'),str(OUT)],cwd=ROOT,check=True)
-if VERSION>=73:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v93_focused.py' if VERSION>=93 else 'scripts/check_offline_pvp_v91_focused.py' if VERSION>=91 else 'scripts/check_offline_pvp_v90_focused.py' if VERSION>=90 else 'scripts/check_offline_pvp_v82_focused.py' if VERSION>=82 else 'scripts/check_offline_pvp_v81_focused.py' if VERSION>=81 else 'scripts/check_offline_pvp_v80_focused.py' if VERSION>=80 else 'scripts/check_offline_pvp_v79_focused.py' if VERSION>=79 else 'scripts/check_offline_pvp_v78_focused.py' if VERSION>=78 else 'scripts/check_offline_pvp_v77_focused.py' if VERSION>=77 else 'scripts/check_offline_pvp_v76_focused.py' if VERSION==76 else 'scripts/check_offline_pvp_v75_arm.py' if VERSION>=75 else 'scripts/check_offline_pvp_v74_arm.py' if VERSION>=74 else 'scripts/check_offline_pvp_v73_arm.py')),str(OUT)],cwd=ROOT,check=True)
+if VERSION>=73:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v94_focused.py' if VERSION>=94 else 'scripts/check_offline_pvp_v93_focused.py' if VERSION>=93 else 'scripts/check_offline_pvp_v91_focused.py' if VERSION>=91 else 'scripts/check_offline_pvp_v90_focused.py' if VERSION>=90 else 'scripts/check_offline_pvp_v82_focused.py' if VERSION>=82 else 'scripts/check_offline_pvp_v81_focused.py' if VERSION>=81 else 'scripts/check_offline_pvp_v80_focused.py' if VERSION>=80 else 'scripts/check_offline_pvp_v79_focused.py' if VERSION>=79 else 'scripts/check_offline_pvp_v78_focused.py' if VERSION>=78 else 'scripts/check_offline_pvp_v77_focused.py' if VERSION>=77 else 'scripts/check_offline_pvp_v76_focused.py' if VERSION==76 else 'scripts/check_offline_pvp_v75_arm.py' if VERSION>=75 else 'scripts/check_offline_pvp_v74_arm.py' if VERSION>=74 else 'scripts/check_offline_pvp_v73_arm.py')),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=83:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v83_drag.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=84:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v84_cursor.py'),str(OUT),*(['--legacy-regions-fixture'] if VERSION>=93 else [])],cwd=ROOT,check=True)
 if VERSION>=85:subprocess.run([sys.executable,str(ROOT/'scripts/check_input_v23_native.py'),str(OUT)],cwd=ROOT,check=True)

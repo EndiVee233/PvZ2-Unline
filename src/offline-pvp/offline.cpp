@@ -93,6 +93,9 @@ static void projectBusinessOwners(U b,P m){
 #ifdef PVP_REGIONS
 #include "regions.h"
 #endif
+#ifdef PVP_HISTORY
+#include "history.h"
+#endif
 #ifdef PVP_BUSINESS_PRODUCTION
 #include "business_production.h"
 #endif
@@ -666,7 +669,13 @@ static bool persistBattleArmy(U b,P m,bool daveVictory=false,U stars=0){
   rewarded=true;
  }
 #endif
+#ifdef PVP_HISTORY
+ U beforeReward=next.coins;
+#endif
  if(rewarded&&!settleBattleReward(b,next,stars))return false;
+#ifdef PVP_HISTORY
+ appendHistory(b,next,arenaNpc,stars,next.coins-beforeReward);
+#endif
 #endif
 #ifdef PVP_DAVE_NARRATIVE
  if(n&&n->evil){

@@ -40,15 +40,18 @@ def check_regions(c):
  def legacy(level=7,coins=50000):
   e=Regions();e.enter();r=Regions();r.files={key(e):old_record(e,level,coins)};r.enter();r.run('offlineGarden');return r
  e=Regions();e.enter();e.run('offlineGarden')
+ balance_only='offlineRegionBalanceOnlyMode' in e.exports
  assert e.mask()==1 and e.get(M+4)==1000 and len(e.residents())==4 and not e.shops()
  assert e.regions()=={2:(10000,1),3:(16500,1),4:(23500,1),5:(31000,1),6:(39000,1)}
  saved=bytes(e.files[key(e)]);p=e.panel_region(2)
  e.run('offlineBusinessAction',p,203);assert e.u.reg_read(UC_ARM_REG_R0)==0 and bytes(e.files[key(e)])==saved
- e.unlock(2);assert e.mask()==1 and '[V93_REGION_2_REQUIRED]' in e.notices[-1]
+ e.unlock(2);assert e.mask()==1 and ('[V93_REGION_COINS_REQUIRED]' if balance_only else '[V93_REGION_2_REQUIRED]') in e.notices[-1]
  # Legacy v11 is read at its historical length/checksum and keeps areas 1-3.
  old=legacy();assert old.mask()==7 and old.get(M+4)==50000 and len(old.residents())==7 and len(old.shops())==2
  assert old.regions()[2]==(10000,0) and old.regions()[3]==(16500,0)
- old.unlock(4);assert old.mask()==7 and old.get(M+4)==50000 and '[V93_REGION_4_REQUIRED]' in old.notices[-1]
+ old.unlock(4)
+ if balance_only:assert old.mask()==15 and old.get(M+4)==26500
+ else:assert old.mask()==7 and old.get(M+4)==50000 and '[V93_REGION_4_REQUIRED]' in old.notices[-1]
  # New-player paid area 2, sufficient capacity but insufficient actual funds.
  def fresh_at(level,coins):
   f=Regions();f.enter();raw=bytearray(f.files[key(f)])
@@ -56,6 +59,8 @@ def check_regions(c):
   r=Regions();r.files={key(f):crc(raw)};r.enter();r.run('offlineGarden');return r
  f=fresh_at(6,9999);f.unlock(2);assert f.mask()==1 and f.get(M+4)==9999 and '[V93_REGION_COINS_REQUIRED]' in f.notices[-1]
  f=fresh_at(6,10000);p=f.unlock(2);assert f.mask()==3 and f.get(M+4)==0 and len(f.residents())==7
+ if balance_only:
+  low=fresh_at(1,10000);low.unlock(2);assert low.mask()==3 and low.get(M+4)==0,'gem-funded low-level player incorrectly blocked'
  first=bytes(f.files[key(f)]);f.stub(0x100b3d8,p,202)
  assert bytes(f.files[key(f)])==first and f.get(M+4)==0,'repeated callback charged again'
  order=fresh_at(9,100000);order.unlock(4);assert order.mask()==1 and order.get(M+4)==100000
@@ -67,7 +72,7 @@ def check_regions(c):
  assert f.mask()==15 and f.get(M+4)==0 and f.regions()[4]==(23500,0) and len(f.residents())==10
  r=Regions();r.copy_state(f);r.enter();r.run('offlineGarden')
  assert r.mask()==15 and r.get(M+4)==0 and len(r.residents())==10
- r.unlock(5);assert r.mask()==15 and '[V93_REGION_5_REQUIRED]' in r.notices[-1]
+ r.unlock(5);assert r.mask()==15 and ('[V93_REGION_COINS_REQUIRED]' if balance_only else '[V93_REGION_5_REQUIRED]') in r.notices[-1]
  # Finish remaining areas with a capacity-appropriate synthetic wallet.
  raw=bytearray(r.files[key(r)])
  for o,v in [(12,70000),(16,9),(184,9)]:struct.pack_into('<I',raw,o,v)
@@ -87,7 +92,7 @@ def check_regions(c):
  bad=Regions();bad.files={key(f):corrupt};bad.enter();assert bytes(bad.files[key(f)])==bytes(corrupt)
  runtime=next(v for k,v in bad.exports.items() if k.endswith('economyRuntime'))
  assert bytes(bad.u.mem_read(BASE+runtime+9,1))==b'\1'
- report=dict(new_free_first_area=True,legacy_v11_first_three_free=True,prices=[10000,16500,23500,31000,39000],base_levels=[6,7,8,9,9],capacity_and_balance_and_order_enforced=True,cancel_and_duplicate_safe=True,atomic_failure_retry=True,restart_and_profile_isolation=True,local_neighbors_per_new_area=3,corrupt_state_rejected=True,runtime_game_verified=False)
+ report=dict(new_free_first_area=True,legacy_v11_first_three_free=True,prices=[10000,16500,23500,31000,39000],base_level_gate=not balance_only,balance_and_order_enforced=True,gem_funded_low_level_unlock=balance_only,cancel_and_duplicate_safe=True,atomic_failure_retry=True,restart_and_profile_isolation=True,local_neighbors_per_new_area=3,corrupt_state_rejected=True,runtime_game_verified=False)
  (c.OUT/'v93-region-checks.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report))
 
 def accepted_legacy_fixtures():
@@ -103,7 +108,7 @@ def accepted_legacy_fixtures():
   if user in marker:return
   marker.add(user);e.legacy_region_users=marker
   raw=e.files.get(key(e))
-  if not raw or len(raw)!=464 or struct.unpack_from('<I',raw,460)[0]!=1:return
+  if not raw or len(raw) not in (464,708) or struct.unpack_from('<I',raw,460)[0]!=1:return
   e.files[key(e)]=old_record(e,struct.unpack_from('<I',raw,184)[0],struct.unpack_from('<I',raw,12)[0])
   symbol=next(v for k,v in e.exports.items() if k.endswith('economyRuntime'))
   e.u.mem_write(BASE+symbol+8,b'\0');original(e)

@@ -1,6 +1,9 @@
 // Native map regions are {zone, starcoin price, closed byte + padding} at
 // manager+11c. Cloud rendering and the existing kind-0 confirmation use them.
 extern "C" U offlineRegionMode(){return 1;}
+#ifdef PVP_REGION_BALANCE_ONLY
+extern "C" U offlineRegionBalanceOnlyMode(){return 1;}
+#endif
 static P regionPanel;
 static U regionPanelUser;
 extern "C" void offlineRegionPanelReady(U b,P panel){
@@ -16,10 +19,12 @@ static bool regionOpen(U zone){
  return zone>=1&&zone<=6&&economyRuntime.loaded&&!economyRuntime.blocked&&
   economyRuntime.state.regionsInitialized&&(economyRuntime.state.regionsOpen&(1u<<(zone-1)));
 }
+#ifndef PVP_REGION_BALANCE_ONLY
 static U regionBaseLevel(U zone){
  U price=regionCost(zone);for(U i=0;i<20;++i)if(BASE_SPECS[i].coinLimit>=price)return i+1;
  return 21;
 }
+#endif
 static void projectRegions(U b,P m){
  auto&r=economyRuntime;
  if(!regular(b)||!r.loaded||r.blocked||r.user!=owner(b)||!r.state.regionsInitialized)return;
@@ -62,10 +67,12 @@ static U regionAction(U b,P panel,U button){
  P map=at<P>(panel,0xc0);if(!map)return 1;
  if(regionOpen(zone)){call<void>(b,0x100a864,map);return 1;}
  if(!regionOpen(zone-1)){economyNotice(b,"[V93_PREVIOUS_REGION_REQUIRED]");return 1;}
+#ifndef PVP_REGION_BALANCE_ONLY
  if(r.state.baseLevel<regionBaseLevel(zone)){
   char requirement[]="[V93_REGION_0_REQUIRED]";requirement[12]=char('0'+zone);
   economyNotice(b,requirement);return 1;
  }
+#endif
  U price=regionCost(zone);
  if(at<U>(panel,0x144)!=price){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return 1;}
  if(r.state.coins<price){economyNotice(b,"[V93_REGION_COINS_REQUIRED]");return 1;}

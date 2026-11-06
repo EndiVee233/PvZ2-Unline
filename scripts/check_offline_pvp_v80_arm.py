@@ -92,7 +92,8 @@ def check_capture():
  r.attack_shop(0);board(r);r.run(0x1030a50,M+0x14300,3);r.deaths(0);result(r,0,0x71000001)
  production='offlineBusinessProductionMode' in r.exports
  regions='offlineRegionMode' in r.exports
- assert len(r.files[key])==(464 if regions else 456 if production else 416) and struct.unpack_from('<I',r.files[key],4)[0]==(12 if regions else 11 if production else 10)
+ history='offlineHistoryMode' in r.exports
+ assert len(r.files[key])==(708 if history else 464 if regions else 456 if production else 416) and struct.unpack_from('<I',r.files[key],4)[0]==(13 if history else 12 if regions else 11 if production else 10)
  report=dict(native_direct_request_tail_and_preview_start=True,
  fee_once_and_free_scout=True,zero_through_three_star_rewards=[0,33,66,100],only_three_stars_occupies=True,
  ownership_reward_army_atomic_and_duplicate_safe=True,live_recall_dead_only_consumption=True,
