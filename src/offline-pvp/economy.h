@@ -140,11 +140,19 @@ static bool validEconomy(const Economy&s,U user){
   if(s.historySeeds[i]){const NpcPreset*n=npc(s.history[i].target);if(!n||n->evil)return false;}
  }
 #endif
+#ifdef PVP_NPC_RAIDS
+ version=version||s.version==15;
+ if(s.version==15&&s.reserved>s.sequence)return false;
+#endif
  if(s.version>=13){
   if(s.historyCount>10)return false;
   for(U i=0;i<s.historyCount;++i){const auto& h=s.history[i];
    const NpcPreset*n=npc(h.target);const BusinessPlot*shop=businessId(h.target);
-   if(!h.serial||h.serial>s.sequence||i&&h.serial>=s.history[i-1].serial||!h.time||(!n&&!shop)||h.stars>3||h.coins>100||h.kind!=(shop?2u:1u)||n&&n->evil&&h.coins)return false;
+   bool defense=false;
+#ifdef PVP_NPC_RAIDS
+   defense=h.kind==3&&n&&!n->evil&&!h.coins;
+#endif
+   if(!h.serial||h.serial>s.sequence||i&&h.serial>=s.history[i-1].serial||!h.time||(!n&&!shop)||h.stars>3||h.coins>100||(!defense&&h.kind!=(shop?2u:1u))||n&&n->evil&&h.coins)return false;
   }
  }
 #endif
@@ -197,6 +205,9 @@ static bool saveEconomy(U b,Economy&s){
 #ifdef PVP_RANDOM_NEIGHBORS
  s.version=14;
 #endif
+#ifdef PVP_NPC_RAIDS
+ s.version=15;
+#endif
  s.checksum=checkEconomy(s);if(!validEconomy(s,s.user))return false;
  char dst[160],tmp[160];economyPath(s.user,dst,false);economyPath(s.user,tmp,true);
  I fd=call<I>(b,0x148448,tmp,0x241,0600);if(fd<0)return false;U done=0;
@@ -244,6 +255,9 @@ static I loadEconomy(U b,Economy&s){
 #endif
 #ifdef PVP_RANDOM_NEIGHBORS
  length=length||(s.version==14&&done==sizeof(s));
+#endif
+#ifdef PVP_NPC_RAIDS
+ length=length||(s.version==15&&done==sizeof(s));
 #endif
  return length&&extra==0&&validEconomy(s,owner(b))?1:-1;
 }
@@ -389,7 +403,11 @@ extern "C" void offlineTrainingTick(U b,P camp){P m=manager(b);if(ensureEconomy(
 #ifdef PVP_SKILL_RESEARCH
  settleResearch(b,m);
 #endif
- call<void>(b,0x104c894,camp);completeLocalBattle(b);inspectArena(b);}
+ call<void>(b,0x104c894,camp);completeLocalBattle(b);inspectArena(b);
+#ifdef PVP_NPC_RAIDS
+ raidTick(b);
+#endif
+}
 static bool trainingFinishPrompt;
 // Read the local queues, rather than the obsolete cash-product availability.
 // Different types train in parallel; each type's queue is sequential.

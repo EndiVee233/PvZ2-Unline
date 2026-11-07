@@ -47,6 +47,14 @@ static void starter(U b,P m,const char*name,U count,bool skill){
 }
 static void inspectArena(U b);
 static void completeLocalBattle(U b);
+#ifdef PVP_NPC_RAIDS
+static bool raidActive(U b);
+static void raidBindArmy(U b,P m);
+static void raidQueue(U b,U target);
+static void raidTick(U b);
+static U raidResult(U b,U stars);
+static void raidEnded(U b);
+#endif
 #include "progression_presets.h"
 static U campCapacity(U level){return CAMP_SPECS[level>=1&&level<=20?level-1:0].capacity;}
 static void applyProgression(U b,P m);
@@ -128,6 +136,9 @@ static void projectBusinessOwners(U b,P m){
 // not TrainingData. Use the native alias converter and vector assignment.
 static U deployedArmy[TRAIN_COUNT],deployedSlot[TRAIN_COUNT],deployedType[TRAIN_COUNT],deployedUser;
 static void bindBattleArmy(U b,P m){
+#ifdef PVP_NPC_RAIDS
+ if(raidActive(b)){raidBindArmy(b,m);return;}
+#endif
  alignas(8) U entries[TRAIN_COUNT][2]{};U count=0,total=0;
  deployedUser=owner(b);for(U i=0;i<TRAIN_COUNT;++i)deployedArmy[i]=0;
  for(U i=0;i<TRAIN_COUNT;++i){U held=economyRuntime.state.trains[i].held;if(!held)continue;
@@ -640,6 +651,9 @@ extern "C" void offlineBattleRequest(U b,P m,U action){
  if(module){
   if(action==2){P clock=call<P>(b,0x1f7380);at<U>(module,0x40)=at<U>(clock,0x18);return;}
   if(action==4){
+#ifdef PVP_NPC_RAIDS
+   if(raidActive(b)){raidResult(b,at<U>(module,0x78));return;}
+#endif
 #ifdef PVP_BATTLE_ECONOMY
    if(
 #ifdef PVP_BUSINESS_SCOUT
@@ -719,6 +733,9 @@ static bool persistBattleArmy(U b,P m,bool daveVictory=false,U stars=0){
  log(b,"battle-army-saved");return true;
 }
 extern "C" U offlineBattleResult(U b,P m,U stars,U id,U kind){
+#ifdef PVP_NPC_RAIDS
+ if(raidActive(b))return raidResult(b,stars);
+#endif
  if(!arenaModule(b))return 0;
 #ifdef PVP_BUSINESS_SCOUT
  if(businessId(arenaNpc)
@@ -761,7 +778,11 @@ extern "C" U offlineBattleResult(U b,P m,U stars,U id,U kind){
 #endif
  // The response callback opens the original result window. The unrelated
  // 10485f0 notification tears down the battle and skips that window.
- resultSaved=true;resultAck=true;log(b,"battle-result-local",stars,kind);return 1;
+ resultSaved=true;resultAck=true;log(b,"battle-result-local",stars,kind);
+#ifdef PVP_NPC_RAIDS
+ if(n&&!n->evil)raidQueue(b,n->id);
+#endif
+ return 1;
 }
 static void completeLocalBattle(U b){
  if(resultAck){resultAck=false;P module=arenaModule(b);if(module){P m=manager(b);applyEconomy(b,m);
@@ -880,3 +901,6 @@ static void inspectArena(U b){
  P m=manager(b);call<I>(b,0x147adc,4,"OfflinePvP","board-active level=%s mode=%u state=%u plant_module=%u view=%u",at<P>(board,0xc4),at<U>(app,0x1218),at<U>(board,0xc0),U(plant!=nullptr),U(at<unsigned char>(m,0x100)));
  loggedArenaBoard=board;
 }
+#ifdef PVP_NPC_RAIDS
+#include "raids.h"
+#endif

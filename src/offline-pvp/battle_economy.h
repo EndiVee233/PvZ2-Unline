@@ -20,6 +20,9 @@ static bool beginBattleFee(U b,P m,const NpcPreset&n,bool live){
  call<void>(b,0x1042a5c,m,next.coins);log(b,"battle-fee-paid",next.battleOpen,next.coins);return true;
 }
 static void markPaidBattleStarted(U b){
+#ifdef PVP_NPC_RAIDS
+ if(raidActive(b))return;
+#endif
  if(!paidBattleMatches(b,economyRuntime.state)||economyRuntime.state.battleStage!=1)return;
  Economy next=economyRuntime.state;next.battleStage=2;++next.sequence;
  if(saveEconomy(b,next)){economyRuntime.state=next;log(b,"paid-battle-started",next.battleOpen);}

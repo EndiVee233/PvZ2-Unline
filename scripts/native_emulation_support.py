@@ -1,12 +1,12 @@
 """Map the original ARM ELF with relocations for small bounded recovery checks."""
 from pathlib import Path
-import sys,struct
+import os,sys,struct
 base=Path(__file__).resolve().parents[1];sys.path.insert(0,str(base/'tools/python_libs'))
 from unicorn import Uc,UC_ARCH_ARM,UC_MODE_ARM
 from elftools.elf.elffile import ELFFile
 
 def machine():
-    path=base/'raw/lib/armeabi/libSrc.so';blob=path.read_bytes()
+    path=Path(os.environ.get('PVZ2_NATIVE_ORIGINAL',base/'raw/lib/armeabi/libSrc.so'));blob=path.read_bytes()
     with path.open('rb') as fp:
         elf=ELFFile(fp);segments=[dict(s.header) for s in elf.iter_segments() if s['p_type']=='PT_LOAD']
         symbols=[dict(s.entry,name=s.name) for s in elf.get_section_by_name('.dynsym').iter_symbols()]

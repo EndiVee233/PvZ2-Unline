@@ -32,7 +32,7 @@ extern "C" P offlineHistoryLookup(U b,U serial,U high){
  // ia/+90, t/+94, v/+98, on/+9c, opi/+a0, r/+a8,
  // cc/+ac, mc/+b0, agc/+b4, rs/+b8, ft/+c8.
  at<U>(historyBrief,0x88)=serial;at<U>(historyBrief,0x8c)=high;
- at<U>(historyBrief,0x90)=1;at<U>(historyBrief,0x94)=h->kind;
+ at<U>(historyBrief,0x90)=h->kind==3?0:1;at<U>(historyBrief,0x94)=h->kind==3?1:h->kind;
  at<U>(historyBrief,0x98)=serial;at<U>(historyBrief,0xa0)=h->target;
  at<U>(historyBrief,0xa8)=h->stars;at<U>(historyBrief,0xb4)=h->coins;
  at<U>(historyBrief,0xc8)=h->time;
