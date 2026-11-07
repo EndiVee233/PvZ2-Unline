@@ -13,6 +13,9 @@ static bool beginBattleFee(U b,P m,const NpcPreset&n,bool live){
  if(next.battleOpen){log(b,"battle-payment-already-open",next.battleOpen,next.battleNpc);return false;}
  if(!next.coins){economyNotice(b,"[PVP_ERROR_PVPCOIN_NOT_ENOUCH]");return false;}
  if(next.battleSerial==0xffffffffu){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return false;}
+#ifdef PVP_SILENT_RAIDS
+ if(!markRevengeStarted(b,next,n.id))return false;
+#endif
  --next.coins;++next.battleSerial;next.battleOpen=next.battleSerial;
  next.battleNpc=n.id;next.battleStage=live?2:1;next.battleFee=1;++next.sequence;
  if(!saveEconomy(b,next)){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return false;}

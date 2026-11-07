@@ -41,6 +41,14 @@ struct Economy {U magic,version,user,coins,home,sequence,checksum,reserved;Local
  U historySeeds[10],historyKinds[10];
 #endif
 #endif
+#ifdef PVP_SILENT_RAIDS
+ U raidInitialized,raidRng,raidCheckedAt;
+ U shopRaidAt[2],shopEnemy[2],shopEnemySeed[2],shopEnemyKind[2];
+ U historyMedals[10],historyDefended[10],historyFlags[10];
+ U historyFrozen[10][2];
+ struct Retaliation {U target,seed,kind,due,stars,frozenLo,frozenHi;};
+ U retaliationCount;Retaliation retaliations[64];
+#endif
 };
 static constexpr U LEGACY_ECONOMY_SIZE=32+12*TRAIN_COUNT;
 static constexpr U V2_ECONOMY_SIZE=LEGACY_ECONOMY_SIZE+44;
@@ -55,6 +63,7 @@ static constexpr U V10_ECONOMY_SIZE=V9_ECONOMY_SIZE+4;
 static constexpr U V11_ECONOMY_SIZE=V10_ECONOMY_SIZE+40;
 static constexpr U V12_ECONOMY_SIZE=V11_ECONOMY_SIZE+8;
 static constexpr U V13_ECONOMY_SIZE=V12_ECONOMY_SIZE+244;
+static constexpr U V14_ECONOMY_SIZE=V13_ECONOMY_SIZE+80;
 #ifdef PVP_DAVE_ROUNDS
 static constexpr U DAVE_WINS_LIMIT=6;
 #else
@@ -63,7 +72,7 @@ static constexpr U DAVE_WINS_LIMIT=1;
 struct EconomyRuntime {U user,lastTick;bool loaded,blocked,busy,loadedFromDisk;P camp;Economy state;};
 static EconomyRuntime economyRuntime;
 static bool same(const char*a,const char*b){while(*a&&*a==*b){++a;++b;}return *a==*b;}
-static U checkEconomy(const Economy&s){const unsigned char*p=reinterpret_cast<const unsigned char*>(&s);U h=2166136261u;for(U i=0;i<(s.version==1?LEGACY_ECONOMY_SIZE:s.version==2?V2_ECONOMY_SIZE:s.version==3?V3_ECONOMY_SIZE:s.version==4?V4_ECONOMY_SIZE:s.version==5?V5_ECONOMY_SIZE:s.version==6?V6_ECONOMY_SIZE:s.version==7?V7_ECONOMY_SIZE:s.version==8?V8_ECONOMY_SIZE:s.version==9?V9_ECONOMY_SIZE:s.version==10?V10_ECONOMY_SIZE:s.version==11?V11_ECONOMY_SIZE:s.version==12?V12_ECONOMY_SIZE:s.version==13?V13_ECONOMY_SIZE:sizeof(s));++i)if(i<24||i>=28)h=(h^p[i])*16777619u;return h;}
+static U checkEconomy(const Economy&s){const unsigned char*p=reinterpret_cast<const unsigned char*>(&s);U h=2166136261u;for(U i=0;i<(s.version==1?LEGACY_ECONOMY_SIZE:s.version==2?V2_ECONOMY_SIZE:s.version==3?V3_ECONOMY_SIZE:s.version==4?V4_ECONOMY_SIZE:s.version==5?V5_ECONOMY_SIZE:s.version==6?V6_ECONOMY_SIZE:s.version==7?V7_ECONOMY_SIZE:s.version==8?V8_ECONOMY_SIZE:s.version==9?V9_ECONOMY_SIZE:s.version==10?V10_ECONOMY_SIZE:s.version==11?V11_ECONOMY_SIZE:s.version==12?V12_ECONOMY_SIZE:s.version==13?V13_ECONOMY_SIZE:s.version==14||s.version==15?V14_ECONOMY_SIZE:sizeof(s));++i)if(i<24||i>=28)h=(h^p[i])*16777619u;return h;}
 static bool validEconomy(const Economy&s,U user){
  bool version=s.version==1||s.version==2;
 #ifdef PVP_BATTLE_ECONOMY
@@ -144,6 +153,10 @@ static bool validEconomy(const Economy&s,U user){
  version=version||s.version==15;
  if(s.version==15&&s.reserved>s.sequence)return false;
 #endif
+#ifdef PVP_SILENT_RAIDS
+ version=version||s.version==16;
+ if(s.version>=16&&!validSilentRaids(s))return false;
+#endif
  if(s.version>=13){
   if(s.historyCount>10)return false;
   for(U i=0;i<s.historyCount;++i){const auto& h=s.history[i];
@@ -152,7 +165,10 @@ static bool validEconomy(const Economy&s,U user){
 #ifdef PVP_NPC_RAIDS
    defense=h.kind==3&&n&&!n->evil&&!h.coins;
 #endif
-   if(!h.serial||h.serial>s.sequence||i&&h.serial>=s.history[i-1].serial||!h.time||(!n&&!shop)||h.stars>3||h.coins>100||(!defense&&h.kind!=(shop?2u:1u))||n&&n->evil&&h.coins)return false;
+#ifdef PVP_SILENT_RAIDS
+   defense=(h.kind==3||h.kind==4)&&n&&!n->evil;
+#endif
+   if(!h.serial||h.serial>s.sequence||i&&h.serial>=s.history[i-1].serial||!h.time||(!n&&!shop)||h.stars>3||h.coins>(defense?100000000u:100u)||(!defense&&h.kind!=(shop?2u:1u))||n&&n->evil&&h.coins)return false;
   }
  }
 #endif
@@ -208,6 +224,9 @@ static bool saveEconomy(U b,Economy&s){
 #ifdef PVP_NPC_RAIDS
  s.version=15;
 #endif
+#ifdef PVP_SILENT_RAIDS
+ s.version=16;
+#endif
  s.checksum=checkEconomy(s);if(!validEconomy(s,s.user))return false;
  char dst[160],tmp[160];economyPath(s.user,dst,false);economyPath(s.user,tmp,true);
  I fd=call<I>(b,0x148448,tmp,0x241,0600);if(fd<0)return false;U done=0;
@@ -254,10 +273,13 @@ static I loadEconomy(U b,Economy&s){
  length=length||(s.version==13&&done==V13_ECONOMY_SIZE);
 #endif
 #ifdef PVP_RANDOM_NEIGHBORS
- length=length||(s.version==14&&done==sizeof(s));
+ length=length||(s.version==14&&done==V14_ECONOMY_SIZE);
 #endif
 #ifdef PVP_NPC_RAIDS
- length=length||(s.version==15&&done==sizeof(s));
+ length=length||(s.version==15&&done==V14_ECONOMY_SIZE);
+#endif
+#ifdef PVP_SILENT_RAIDS
+ length=length||(s.version==16&&done==sizeof(s));
 #endif
  return length&&extra==0&&validEconomy(s,owner(b))?1:-1;
 }

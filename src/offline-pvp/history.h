@@ -10,9 +10,17 @@ static void appendHistory(U b,Economy&next,U target,U stars,U coins){
 #ifdef PVP_RANDOM_NEIGHBORS
   next.historySeeds[i]=next.historySeeds[i-1];next.historyKinds[i]=next.historyKinds[i-1];
 #endif
+#ifdef PVP_SILENT_RAIDS
+  next.historyMedals[i]=next.historyMedals[i-1];next.historyDefended[i]=next.historyDefended[i-1];next.historyFlags[i]=next.historyFlags[i-1];
+  next.historyFrozen[i][0]=next.historyFrozen[i-1][0];next.historyFrozen[i][1]=next.historyFrozen[i-1][1];
+#endif
  }
 #ifdef PVP_RANDOM_NEIGHBORS
  bool rich=target==activeEncounterId;next.historySeeds[0]=rich?activeEncounterSeed:0;next.historyKinds[0]=rich?activeEncounterKind:0;
+#endif
+#ifdef PVP_SILENT_RAIDS
+ next.historyMedals[0]=next.historyDefended[0]=next.historyFlags[0]=0;
+ next.historyFrozen[0][0]=next.historyFrozen[0][1]=0;
 #endif
  next.history[0]={next.sequence+1,realNow(b),target,stars,coins,businessId(target)?2u:1u};
  if(next.historyCount<10)++next.historyCount;
@@ -32,15 +40,20 @@ extern "C" P offlineHistoryLookup(U b,U serial,U high){
  // ia/+90, t/+94, v/+98, on/+9c, opi/+a0, r/+a8,
  // cc/+ac, mc/+b0, agc/+b4, rs/+b8, ft/+c8.
  at<U>(historyBrief,0x88)=serial;at<U>(historyBrief,0x8c)=high;
- at<U>(historyBrief,0x90)=h->kind==3?0:1;at<U>(historyBrief,0x94)=h->kind==3?1:h->kind;
+ at<U>(historyBrief,0x90)=h->kind>=3?0:1;at<U>(historyBrief,0x94)=h->kind>=3?(h->kind==4?2:1):h->kind;
  at<U>(historyBrief,0x98)=serial;at<U>(historyBrief,0xa0)=h->target;
  at<U>(historyBrief,0xa8)=h->stars;at<U>(historyBrief,0xb4)=h->coins;
  at<U>(historyBrief,0xc8)=h->time;
+#ifdef PVP_SILENT_RAIDS
+ U index=U(h-economyRuntime.state.history);
+ at<U>(historyBrief,0xb0)=economyRuntime.state.historyMedals[index];
+ at<U>(historyBrief,0xb8)=economyRuntime.state.historyFlags[index]&1;
+#endif
  const NpcPreset*n=npc(h->target);const BusinessPlot*s=businessId(h->target);
  const U*name=n?n->name:s?s->name:nullptr;
 #ifdef PVP_RANDOM_NEIGHBORS
- U title[40]{};U index=U(h-economyRuntime.state.history);
- if(economyRuntime.state.historySeeds[index]){neighborName(economyRuntime.state.historySeeds[index],economyRuntime.state.historyKinds[index],title);name=title;}
+ U title[40]{};U nameIndex=U(h-economyRuntime.state.history);
+ if(economyRuntime.state.historySeeds[nameIndex]){neighborName(economyRuntime.state.historySeeds[nameIndex],economyRuntime.state.historyKinds[nameIndex],title);name=title;}
 #endif
  if(name){char alloc=0;call<void>(b,0x14eb451,historyBrief+0x9c,name,&alloc);}
  return historyBrief;
@@ -62,12 +75,19 @@ extern "C" void offlineHistoryRowReady(U b,P row){
  // Local residential rewards are starcoins, so keep the original third icon.
  at<U>(row,0xd0)=h->coins;
  for(U o=0xb0;o<=0xb4;o+=4)if(P button=at<P>(row,o)){
-  call<void>(b,at<U>(at<P>(button,0),0x8c)-b,button,0);
-  call<void>(b,at<U>(at<P>(button,0),0xa4)-b,button,1);
+  bool allow=false;
+#ifdef PVP_SILENT_RAIDS
+  allow=o==0xb4&&revengeAllowed(b,h->serial);
+#endif
+  call<void>(b,at<U>(at<P>(button,0),0x8c)-b,button,U(allow));
+  call<void>(b,at<U>(at<P>(button,0),0xa4)-b,button,U(!allow));
  }
 }
-extern "C" U offlineHistoryAction(U b,P row){
+extern "C" U offlineHistoryAction(U b,P row,U button){
  if(!row||at<U>(row,0xac)!=HISTORY_NAMESPACE)return 0;
+#ifdef PVP_SILENT_RAIDS
+ startHistoryRevenge(b,row,button);
+#endif
  // Replay input streams and revenge are separate recovery steps. A local
  // summary must never fall through to the obsolete download/attack requests.
  return 1;

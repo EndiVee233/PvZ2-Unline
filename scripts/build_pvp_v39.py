@@ -20,6 +20,7 @@ if '--v95' in sys.argv:VERSION=95
 if '--v96' in sys.argv:VERSION=96
 if '--v97' in sys.argv:VERSION=97
 if '--v98' in sys.argv:VERSION=98
+if '--v99' in sys.argv:VERSION=99
 OUT=ROOT/(f'work/pvp-v{VERSION}-test' if '--shop-clock-test' in sys.argv else f'work/pvp-v{VERSION}');OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -166,6 +167,7 @@ if VERSION>=95:flags.append('-DPVP_RANDOM_NEIGHBORS')
 if VERSION>=96:flags.append('-DPVP_UNIQUE_NEIGHBORS')
 if VERSION>=97:flags.append('-DPVP_TUTORIAL_DEFENSE')
 if VERSION>=98:flags.append('-DPVP_NPC_RAIDS')
+if VERSION>=99:flags.append('-DPVP_SILENT_RAIDS')
 if '--shop-clock-test' in sys.argv:flags.append('-DPVP_EXCHANGE_CLOCK_TEST')
 subprocess.run([compiler,*flags,'-c',str(ROOT/'src/offline-pvp/offline.cpp'),'-o',str(OUT/'offline.o')],check=True)
 # A flat payload has no dynamic relocation table. Absolute pointer constants
@@ -186,7 +188,8 @@ for object_path in objects:
 (OUT/'flat.ld').write_text(f'ENTRY(offlineGarden)\nSECTIONS {{ . = {entry}; .payload : {{ *(.text.entry) *(.text*) *(.rodata*) }} . = 0x1b00000; .runtime : {{ *(.data*) *(.bss*) *(COMMON) *(.got*) }} /DISCARD/ : {{ *(.ARM.exidx*) *(.ARM.extab*) *(.comment*) *(.note*) }} }}')
 subprocess.run([compiler,*flags,'-nostdlib','-static','-no-pie','-Wl,--no-undefined','-Wl,-T,'+str(OUT/'flat.ld'),*[str(p) for p in objects],'-o',str(OUT/'offline.elf')],check=True)
 payload=ELFFile(BytesIO((OUT/'offline.elf').read_bytes()))
-runtime=payload.get_section_by_name('.runtime');assert runtime['sh_addr']==0x1b00000 and 0<runtime['sh_size']<4096
+runtime=payload.get_section_by_name('.runtime');runtime_bytes=8192 if VERSION>=99 else 4096
+assert runtime['sh_addr']==0x1b00000 and 0<runtime['sh_size']<runtime_bytes
 symbols={s.name:s['st_value'] for s in payload.get_section_by_name('.symtab').iter_symbols()}
 section=payload.get_section_by_name('.payload')
 # Clang may require 8-byte alignment for native double-word constants.
@@ -300,7 +303,7 @@ if VERSION>=50:
  target=custom_stub('push {r4,lr}\nmov r4,r0\nbl bank_original\nmov r1,r4\n'+baseasm()+f'bl #{symbols["offlineBankReady"]}\npop {{r4,pc}}\nbank_original: .word {first}\nb #{site+4}')
  redirect(site,target)
 
-if VERSION>=98:
+if VERSION==98:
  # Advance the separate NPC input stream after the real recorder's frame.
  # The helper guards its own stream to avoid recursive replay dispatch.
  site=0x10347f8;first=struct.unpack_from('<I',b,site)[0];assert first==0xe92d48f0
@@ -420,7 +423,8 @@ if VERSION>=71:
   target=custom_stub('push {r4,lr}\nmov r4,r0\nbl history_row_original\nmov r1,r4\n'+baseasm()+f'bl #{symbols["offlineHistoryRowReady"]}\nmov r0,r4\npop {{r4,pc}}\nhistory_row_original: .word {first}\nb #{site+4}')
   redirect(site,target)
   site=0x105c06c;first=struct.unpack_from('<I',b,site)[0];assert first&0xffff0000==0xe92d0000
-  target=custom_stub('push {r0-r4,lr}\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlineHistoryAction"]}\ncmp r0,#0\npop {{r0-r4,lr}}\nbne history_action_consumed\n.word {first}\nb #{site+4}\nhistory_action_consumed: bx lr')
+  history_button='mov r2,r1\n' if VERSION>=99 else ''
+  target=custom_stub('push {r0-r4,lr}\n'+history_button+'mov r1,r0\n'+baseasm()+f'bl #{symbols["offlineHistoryAction"]}\ncmp r0,#0\npop {{r0-r4,lr}}\nbne history_action_consumed\n.word {first}\nb #{site+4}\nhistory_action_consumed: bx lr')
   redirect(site,target)
  if VERSION>=93:
   site=0x10196d0;assert bytes(b[site:site+4])==bl(site,0x1013a3c)
@@ -513,9 +517,9 @@ assert e['e_phoff']==52 and len(headers)==8 and headers[1][0]==3
 headers[index][4]=headers[index][5]=len(b)-tail['p_offset']
 rw_offset=(len(b)+4095)&~4095
 headers.pop(1)
-headers.append([1,rw_offset,0x1b00000,0x1b00000,4096,4096,6,4096])
+headers.append([1,rw_offset,0x1b00000,0x1b00000,runtime_bytes,runtime_bytes,6,4096])
 for i,h in enumerate(headers):struct.pack_into('<8I',b,e['e_phoff']+i*32,*h)
-b.extend(bytes(rw_offset-len(b)));b.extend(bytes(4096))
+b.extend(bytes(rw_offset-len(b)));b.extend(bytes(runtime_bytes))
 assert struct.unpack_from('<I',b,28)[0]==52 and struct.unpack_from('<H',b,44)[0]==8
 (OUT/'libSrc.so').write_bytes(b)
 if '--compile-only' in sys.argv:raise SystemExit(0)

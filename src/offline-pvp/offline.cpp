@@ -55,6 +55,18 @@ static void raidTick(U b);
 static U raidResult(U b,U stars);
 static void raidEnded(U b);
 #endif
+#ifdef PVP_SILENT_RAIDS
+struct Economy;
+static bool validSilentRaids(const Economy& s);
+static void planSilentRevenge(U b,Economy& next,U target);
+static bool startHistoryRevenge(U b,P row,U button);
+static bool revengeAllowed(U b,U serial);
+static const NeighborEncounter* revengeEncounter(U b,U id);
+static void rememberBattleEncounter(U b,const NeighborEncounter& opponent);
+static bool markRevengeStarted(U b,Economy& next,U target);
+static void clearRevenge();
+static bool localRaidOccupier(U b,U64 identity);
+#endif
 #include "progression_presets.h"
 static U campCapacity(U level){return CAMP_SPECS[level>=1&&level<=20?level-1:0].capacity;}
 static void applyProgression(U b,P m);
@@ -312,7 +324,14 @@ static bool preset(U b,P m,const NpcPreset&n){
  Store s{};s.user=owner(b);s.positions=count;
 #ifdef PVP_RANDOM_NEIGHBORS
  const NeighborEncounter* rich=nullptr;activeEncounterId=activeEncounterSeed=activeEncounterKind=0;
- if(!n.evil){rich=encounter(b,n.id);if(!rich||!rich->seed)return false;count=s.positions=rich->count;
+ if(!n.evil){
+#ifdef PVP_SILENT_RAIDS
+  rich=revengeEncounter(b,n.id);
+#endif
+  if(!rich)rich=encounter(b,n.id);if(!rich||!rich->seed)return false;count=s.positions=rich->count;
+#ifdef PVP_SILENT_RAIDS
+  rememberBattleEncounter(b,*rich);
+#endif
   activeEncounterId=n.id;activeEncounterSeed=rich->seed;activeEncounterKind=rich->kind;}
 #endif
  for(U k=0;k<count;++k){
@@ -476,6 +495,9 @@ static bool attackBusiness(U b,const BusinessPlot&s){
 }
 #endif
 extern "C" __attribute__((section(".text.entry"))) void offlineGarden(U b){neighbors(b,manager(b));
+#ifdef PVP_SILENT_RAIDS
+ clearRevenge();
+#endif
 #ifdef PVP_BUSINESS_MAP
  projectBusinesses(b,manager(b));
 #endif
@@ -493,6 +515,9 @@ static U defenseSessionUser;
 #include "tutorial_defense.h"
 #endif
 extern "C" void offlineOwn(U b){
+#ifdef PVP_SILENT_RAIDS
+ clearRevenge();
+#endif
 #ifdef PVP_BUSINESS_DEFENSE
  if(regular(b)){openLocalDefense(b,0);return;}
 #endif
@@ -522,6 +547,9 @@ extern "C" void offlineSave(U b,P network,P json,U zone,U type){
   scene(b,25);}else log(b,"defense-save-failed");
 }
 extern "C" void offlineInfo(U b,P m,U a,U id,U kind){
+#ifdef PVP_SILENT_RAIDS
+ clearRevenge();
+#endif
 #ifdef PVP_BUSINESS_DEFENSE
  if(regular(b)&&kind==2){const BusinessPlot*s=businessId(id);if(s&&ownedGarrison(b,id)){defendBusiness(b,*s);return;}}
 #endif
@@ -560,6 +588,10 @@ extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
 #endif
  selected->zone==at<U>(m,0xfc)&&selected->position==at<U>(m,0xf8))n=selected;}
  if(n&&regular(b)){
+#ifdef PVP_SILENT_RAIDS
+  P revengeLive=arenaModule(b);
+  if(n->id!=arenaNpc||!revengeLive||at<U>(revengeLive,0xb0)!=2||reason==3||reason==4)clearRevenge();
+#endif
 #ifdef PVP_RESIDENT_NEIGHBORS
   // Residential buttons use zero-id reasons 4 (scout) and 1 (raid).
   // Route ordinary opponents through the already accepted local battle kind,
@@ -651,6 +683,9 @@ extern "C" void offlineBattleRequest(U b,P m,U action){
  if(module){
   if(action==2){P clock=call<P>(b,0x1f7380);at<U>(module,0x40)=at<U>(clock,0x18);return;}
   if(action==4){
+#ifdef PVP_SILENT_RAIDS
+   clearRevenge();
+#endif
 #ifdef PVP_NPC_RAIDS
    if(raidActive(b)){raidResult(b,at<U>(module,0x78));return;}
 #endif
@@ -720,6 +755,9 @@ static bool persistBattleArmy(U b,P m,bool daveVictory=false,U stars=0){
  if(rewarded&&!settleBattleReward(b,next,stars))return false;
 #ifdef PVP_HISTORY
  appendHistory(b,next,arenaNpc,stars,next.coins-beforeReward);
+#endif
+#ifdef PVP_SILENT_RAIDS
+ if(n&&!n->evil)planSilentRevenge(b,next,n->id);
 #endif
 #endif
 #ifdef PVP_DAVE_NARRATIVE
@@ -795,6 +833,9 @@ extern "C" U offlineResultContinue(U b,P window,U button){
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
  if(!resultSaved||arenaUser!=owner(b)||!arenaModule(b)||at<P>(app,0x139c)!=window)return 0;
  if(button!=0)return 1;
+#ifdef PVP_SILENT_RAIDS
+ clearRevenge();
+#endif
  // Native continuation assigns server response balances (+ac/+b0) to the
  // wallet. Those fields are not offline rewards; retain the local economy.
  resultSaved=false;call<void>(b,0x3ffc08,app);call<void>(b,0x3fa970,app);
@@ -902,5 +943,9 @@ static void inspectArena(U b){
  loggedArenaBoard=board;
 }
 #ifdef PVP_NPC_RAIDS
+#ifdef PVP_SILENT_RAIDS
+#include "silent_raids.h"
+#else
 #include "raids.h"
+#endif
 #endif
