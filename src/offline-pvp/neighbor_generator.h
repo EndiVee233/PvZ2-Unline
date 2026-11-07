@@ -49,11 +49,12 @@ static const NeighborPlantSpec* neighborChoose(const NeighborEncounter&e,U& rng,
  return nullptr;
 }
 static U neighborSpent(const NeighborEncounter&e){U total=0;for(U i=0;i<e.count;++i){const auto*p=neighborPlant(e.plants[i].type);if(p)total+=p->cost;}return total;}
-static void generateNeighbor(NeighborEncounter&e,U id,U seed,U forcedKind=0){
+static void generateNeighbor(NeighborEncounter&e,U id,U seed,U forcedKind=0,U ordinaryCups=0xffffffffu){
  e=NeighborEncounter{};e.id=id;e.seed=seed?seed:1;U rng=neighborMix(e.seed);
  e.kind=forcedKind==8?0:forcedKind?forcedKind:specialNeighborRoll(neighborRandom(rng)%100);
  const NpcPreset*n=npc(id);U zone=n?n->zone:1;
  e.cups=e.kind==1?999:e.kind==2?60+neighborRandom(rng)%121:e.kind==3?40+neighborRandom(rng)%111:e.kind==4?30+neighborRandom(rng)%121:e.kind==5?45+neighborRandom(rng)%106:e.kind==6?35+neighborRandom(rng)%116:e.kind==7?30+neighborRandom(rng)%121:neighborRandom(rng)%121+(zone-1)*10;
+ if(!e.kind&&ordinaryCups!=0xffffffffu)e.cups=ordinaryCups;
  if(e.kind==1){
   const U strong[]={34,314,316,313,7,63};U type=strong[neighborRandom(rng)%6];
   const auto*p=neighborPlant(type);

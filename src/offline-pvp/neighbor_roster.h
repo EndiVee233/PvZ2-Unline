@@ -96,10 +96,24 @@ static void migrateNeighborRoster(NeighborRoster&r){
  r.version=2;
 }
 #endif
+#ifdef PVP_CUP_MATCHING
+static U matchedNeighborCups(U playerCups,U seed){
+ const U center=playerCups<100?playerCups:100;
+ U rng=neighborMix(seed^0xb27159afu);
+ const U roll=neighborRandom(rng)%100;
+ const U radius=roll<75?10:roll<95?25:50;
+ const U low=center>radius?center-radius:0;
+ return low+neighborRemainder(neighborRandom(rng),center+radius-low+1);
+}
+#endif
 static void generateRosterNeighbor(NeighborRoster&r,NeighborEncounter&e,U id,U seed,U kind=0){
- generateNeighbor(e,id,seed,kind);
+ U cups=0xffffffffu;
+#ifdef PVP_CUP_MATCHING
+ cups=matchedNeighborCups(economyRuntime.state.cups,seed);
+#endif
+ generateNeighbor(e,id,seed,kind,cups);
 #ifdef PVP_UNIQUE_NEIGHBORS
- if(e.kind>=2&&e.kind<=7&&(presentSpecials(r,id)&(1u<<e.kind)))generateNeighbor(e,id,seed,8);
+ if(e.kind>=2&&e.kind<=7&&(presentSpecials(r,id)&(1u<<e.kind)))generateNeighbor(e,id,seed,8,cups);
 #endif
 }
 static bool ensureNeighborRoster(U b,P m){
@@ -189,7 +203,7 @@ static U neighborAction(U b,P panel,U button){
  for(U attempt=0;attempt<16;++attempt){
   bool sameName=false;if(kind==old->kind&&(kind==0||kind==4)){U a[40]{},c[40]{};neighborName(entry->seed,kind,a);neighborName(old->seed,kind,c);sameName=true;for(U i=0;i<40;++i)if(a[i]!=c[i])sameName=false;}
   if(!sameName&&(kind==1||entry->cups!=old->cups))break;
-  generateNeighbor(*entry,n->id,neighborRandom(next->rng),kind?kind:8);
+  generateRosterNeighbor(*next,*entry,n->id,neighborRandom(next->rng),kind?kind:8);
  }
  if(entry->kind==1&&old->kind==1&&entry->plants[0].type==old->plants[0].type){
   U type=old->plants[0].type==34?314:34;

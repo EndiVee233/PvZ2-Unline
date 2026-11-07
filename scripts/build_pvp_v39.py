@@ -25,6 +25,7 @@ if '--v101' in sys.argv:VERSION=101
 if '--v104' in sys.argv:VERSION=104
 if '--v105' in sys.argv:VERSION=105
 if '--v106' in sys.argv:VERSION=106
+if '--v107' in sys.argv:VERSION=107
 OUT=ROOT/(f'work/pvp-v{VERSION}-test' if '--shop-clock-test' in sys.argv or '--silent-raid-test' in sys.argv else f'work/pvp-v{VERSION}')
 if '--output-dir' in sys.argv:OUT=Path(sys.argv[sys.argv.index('--output-dir')+1]).resolve()
 OUT.mkdir(parents=True,exist_ok=True)
@@ -194,6 +195,7 @@ if VERSION>=101:flags.append('-DPVP_SELL_TROOPS')
 if VERSION>=104:flags.append('-DPVP_DAVE_REFERENCE')
 if VERSION>=105:flags.append('-DPVP_BUSINESS_REPLACE')
 if VERSION>=106:flags.append('-DPVP_NEIGHBOR_PROTECTION')
+if VERSION>=107:flags.append('-DPVP_CUP_MATCHING')
 if '--silent-raid-test' in sys.argv:flags.append('-DPVP_SILENT_RAID_TEST')
 if '--shop-clock-test' in sys.argv:flags.append('-DPVP_EXCHANGE_CLOCK_TEST')
 subprocess.run([compiler,*flags,'-c',str(ROOT/'src/offline-pvp/offline.cpp'),'-o',str(OUT/'offline.o')],check=True)
