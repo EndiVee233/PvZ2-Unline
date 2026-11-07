@@ -48,6 +48,7 @@ struct Economy {U magic,version,user,coins,home,sequence,checksum,reserved;Local
  U historyFrozen[10][2];
  struct Retaliation {U target,seed,kind,due,stars,frozenLo,frozenHi;};
  U retaliationCount;Retaliation retaliations[64];
+ U raidTestMask,raidTestDue,raidTestDone;
 #endif
 };
 static constexpr U LEGACY_ECONOMY_SIZE=32+12*TRAIN_COUNT;
@@ -130,7 +131,11 @@ static bool validEconomy(const Economy&s,U user){
  version=version||s.version==11;
  if(s.version>=11)for(U i=0;i<2;++i){const auto& stock=s.businessStocks[i];
   if(stock.coins>2000||stock.medals>2000||stock.coinFraction>=3600||stock.medalFraction>=3600)return false;
-  if(!(s.businessOwnedMask&(1u<<i))&&(stock.producedAt||stock.coins||stock.medals||stock.coinFraction||stock.medalFraction))return false;
+  bool retained=false;
+#ifdef PVP_SILENT_RAIDS
+  retained=s.version>=16&&s.shopEnemy[i];
+#endif
+  if(!(s.businessOwnedMask&(1u<<i))&&!retained&&(stock.producedAt||stock.coins||stock.medals||stock.coinFraction||stock.medalFraction))return false;
   if(!stock.producedAt&&(stock.coins||stock.medals||stock.coinFraction||stock.medalFraction))return false;
  }
 #endif

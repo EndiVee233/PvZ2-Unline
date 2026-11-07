@@ -48,7 +48,7 @@ def check_revenge(c):
    for offset in (0xb0,0xb4):button=self.alloc(0x180);self.put(button,table);self.put(row+offset,button)
    self.run('offlineHistoryRowReady',row);return row
  seed=Revenge();seed.enter();seed.run('offlineGarden');target=seed.get(seed.residents()[0]);raw=bytearray(seed.files[key(seed)])
- assert len(raw)==2828
+ assert len(raw)==2840
  npc=seed.alloc(740);frozen=seed.alloc(8);seed.run('offlineNeighborGenerate',npc,target,123456,1);seed.run('offlineFreezeEncounter',npc,frozen)
  assert seed.u.reg_read(UC_ARM_REG_R0)==1;lo,hi=struct.unpack('<II',seed.u.mem_read(frozen,8))
  # Public synthetic past defense: no real user progress is read or edited.
@@ -86,3 +86,10 @@ def check_revenge(c):
 
 if __name__=='__main__':
  sys.meta_path.insert(0,Definitions());c=importlib.import_module('check_offline_pvp_v82_arm');check_policy(c);check_revenge(c)
+ importlib.import_module('check_offline_pvp_v99_events').check_events(c)
+ importlib.import_module('check_offline_pvp_v97_focused').check_tutorial(c)
+ importlib.import_module('check_offline_pvp_v93_focused').accepted_legacy_fixtures()
+ importlib.import_module('check_offline_pvp_v91_focused').check_collection(c)
+ importlib.import_module('check_offline_pvp_v94_focused').check_history(c)
+ old=importlib.import_module('check_offline_pvp_v76_arm');old.check_lifecycle();old.check_defense();old.check_residences()
+ c.check_reposition();c.check_scout()

@@ -31,6 +31,9 @@ static void log(U b,const char*what,U a=0,U c=0){call<I>(b,0x147adc,4,"OfflinePv
 #include "residences.h"
 #endif
 #ifdef PVP_BUSINESS_MAP
+#ifdef PVP_SILENT_RAIDS
+static bool localRaidOccupier(U b,U64 identity);
+#endif
 #ifdef PVP_REGIONS
 static U regionAction(U b,P panel,U button);
 static bool regionOpen(U zone);
@@ -58,7 +61,9 @@ static void raidEnded(U b);
 #ifdef PVP_SILENT_RAIDS
 struct Economy;
 static bool validSilentRaids(const Economy& s);
-static void planSilentRevenge(U b,Economy& next,U target);
+static bool planSilentRevenge(U b,Economy& next,U target,U stars);
+static void silentTestArm(U b);
+static bool silentBacklog(U b);
 static bool startHistoryRevenge(U b,P row,U button);
 static bool revengeAllowed(U b,U serial);
 static const NeighborEncounter* revengeEncounter(U b,U id);
@@ -105,8 +110,23 @@ static void projectBusinessOwners(U b,P m){
  for(P p=begin;p<end;p+=64){const BusinessPlot*s=businessId(at<U>(p,0));
   if(!s||at<U>(p,48)!=s->zone||at<U>(p,52)!=s->position)continue;
   U64 previous=at<U64>(p,8);
-  if(previous&&previous!=identity&&previous!=businessProjectionIdentity)continue;
-  at<U64>(p,8)=economyRuntime.state.businessOwnedMask&businessBit(s->id)?identity:0;
+  if(previous&&previous!=identity&&previous!=businessProjectionIdentity
+#ifdef PVP_SILENT_RAIDS
+   &&!(previous<=0xffffffffu&&npc(U(previous)))
+#endif
+  )continue;
+  U64 target=economyRuntime.state.businessOwnedMask&businessBit(s->id)?identity:0;
+#ifdef PVP_SILENT_RAIDS
+  U index=businessBit(s->id)==1?0:1;
+  if(!target)target=economyRuntime.state.shopEnemy[index];
+  U title[40]{};
+  if(economyRuntime.state.shopEnemy[index])neighborName(economyRuntime.state.shopEnemySeed[index],economyRuntime.state.shopEnemyKind[index],title);
+  else for(U i=0;i<8;++i)title[i]=s->name[i];
+  P old=at<P>(p,16);bool equal=old!=nullptr;
+  for(U i=0;i<40&&equal;++i){if(at<U>(old,i*4)!=title[i])equal=false;if(!title[i])break;}
+  if(!equal){P text=nullptr;char a=0;call<void>(b,0x14eb451,reinterpret_cast<P>(&text),title,&a);at<P>(p,16)=text;release(b,old,true);}
+#endif
+  at<U64>(p,8)=target;
  }
  businessProjectionIdentity=identity;
 #ifdef PVP_BUSINESS_PRODUCTION
@@ -450,7 +470,11 @@ static bool scoutBusiness(U b,const BusinessPlot&s,bool attack){
  // through a local fixture just because it happens to occupy the same plot.
  P begin=at<P>(m,0x110),end=at<P>(m,0x114);bool found=false;
  if(!begin||end<begin||U(end-begin)>64*256||U(end-begin)%64)return false;
- for(P p=begin;p<end;p+=64)if(at<U>(p,0)==s.id&&at<U>(p,48)==s.zone&&at<U>(p,52)==s.position&&at<U64>(p,8)==0){found=true;break;}
+ for(P p=begin;p<end;p+=64)if(at<U>(p,0)==s.id&&at<U>(p,48)==s.zone&&at<U>(p,52)==s.position&&(at<U64>(p,8)==0
+#ifdef PVP_SILENT_RAIDS
+  ||localRaidOccupier(b,at<U64>(p,8))
+#endif
+ )){found=true;break;}
  if(!found)return false;
  if(arenaNpc==s.id&&arenaUser==owner(b)&&arenaPending(b,"arena_battle_test",0)&&requestedArenaView==U(!attack)){
   log(b,"business-scout-duplicate",s.id);return true;
@@ -463,6 +487,9 @@ static bool scoutBusiness(U b,const BusinessPlot&s,bool attack){
  // Independent local neutral defenses, not recovered server formations.
  // The two shops deliberately differ to expose stale-board/stacking bugs.
  Store formation{};initialBusinessFormation(b,s,formation);U plant=formation.info[0].type;
+#ifdef PVP_SILENT_RAIDS
+ I saved=readGarrison(b,s.id,formation);if(saved<0)return false;
+#endif
  apply(b,m+0x80,formation);arenaNpc=s.id;arenaUser=owner(b);
  loadArena(b,m,"arena_battle_test",0);log(b,"business-scout",s.id,plant);return true;
 }
@@ -476,7 +503,11 @@ static bool attackBusiness(U b,const BusinessPlot&s){
  if(economyRuntime.state.businessOwnedMask&businessBit(s.id)){economyNotice(b,"[V80_BUSINESS_OWNED]");return false;}
  P first=at<P>(m,0x110),last=at<P>(m,0x114);bool available=false;
  if(!first||last<first||U(last-first)>64*256||U(last-first)%64)return false;
- for(P p=first;p<last;p+=64)if(at<U>(p,0)==s.id&&at<U>(p,48)==s.zone&&at<U>(p,52)==s.position&&at<U64>(p,8)==0){available=true;break;}
+ for(P p=first;p<last;p+=64)if(at<U>(p,0)==s.id&&at<U>(p,48)==s.zone&&at<U>(p,52)==s.position&&(at<U64>(p,8)==0
+#ifdef PVP_SILENT_RAIDS
+  ||localRaidOccupier(b,at<U64>(p,8))
+#endif
+ )){available=true;break;}
  if(!available)return false;
  U army=0;for(U i=0;i<TRAIN_COUNT;++i)army+=economyRuntime.state.trains[i].held;
  if(!army){at<unsigned char>(m,0x100)=1;economyNotice(b,"[V80_ARMY_REQUIRED]");return false;}
@@ -744,6 +775,10 @@ static bool persistBattleArmy(U b,P m,bool daveVictory=false,U stars=0){
    U bit=businessBit(arenaNpc);
    if(!(next.businessOwnedMask&bit))next.businessStocks[bit==1?0:1].producedAt=realNow(b);
 #endif
+#ifdef PVP_SILENT_RAIDS
+   U i=businessBit(arenaNpc)==1?0:1;next.shopRaidAt[i]=realNow(b);
+   next.shopEnemy[i]=next.shopEnemySeed[i]=next.shopEnemyKind[i]=0;
+#endif
    next.businessOwnedMask|=businessBit(arenaNpc);
   }
   rewarded=true;
@@ -757,7 +792,7 @@ static bool persistBattleArmy(U b,P m,bool daveVictory=false,U stars=0){
  appendHistory(b,next,arenaNpc,stars,next.coins-beforeReward);
 #endif
 #ifdef PVP_SILENT_RAIDS
- if(n&&!n->evil)planSilentRevenge(b,next,n->id);
+ if(n&&!n->evil&&!planSilentRevenge(b,next,n->id,stars))return false;
 #endif
 #endif
 #ifdef PVP_DAVE_NARRATIVE

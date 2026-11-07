@@ -83,6 +83,9 @@ static bool localBusinessPanel(U b,P panel){
 #ifdef PVP_BUSINESS_BATTLE
   ||at<U64>(p,8)==offlineBusinessIdentity(b)
 #endif
+#ifdef PVP_SILENT_RAIDS
+  ||localRaidOccupier(b,at<U64>(p,8))
+#endif
   );
  return false;
 }

@@ -46,7 +46,7 @@ class EconomyEngine(Engine):
 
 def main():
  zero=EconomyEngine();zero.put(M+4,0);zero.run('offlineEconomyInit')
- if int(core.OUT.name.split('-v')[-1])<54:zero.stub(0x1021f4c);assert zero.get(M+4)==0,'legacy lobby clamp restored a spent coin'
+ if int(core.OUT.name.split('-v')[-1].split('-')[0])<54:zero.stub(0x1021f4c);assert zero.get(M+4)==0,'legacy lobby clamp restored a spent coin'
  e=EconomyEngine()
  out=e.alloc(4);key=e.alloc(4);e.string(key,'V38_PVP_5000',True);e.run(0xd07ae8,out,key)
  raw=bytes(e.u.mem_read(e.get(out),64)).decode('utf-32-le').split('\0')[0];assert raw=='获得5000星币'

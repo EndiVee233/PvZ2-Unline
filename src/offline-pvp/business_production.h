@@ -25,10 +25,14 @@ static void projectBusinessStocks(U b,P m){
  for(P p=begin;p<end;p+=64){const BusinessPlot* plot=businessId(at<U>(p,0));
   if(!plot||at<U>(p,48)!=plot->zone||at<U>(p,52)!=plot->position)continue;
   U index=businessBit(plot->id)==1?0:1;bool owned=r.state.businessOwnedMask&(1u<<index);
-  if(at<U64>(p,8)!=(owned?U64(identity):0))continue;
+  U64 expected=owned?U64(identity):0;
+#ifdef PVP_SILENT_RAIDS
+  if(!owned)expected=r.state.shopEnemy[index];
+#endif
+  if(at<U64>(p,8)!=expected)continue;
   const auto& stock=r.state.businessStocks[index];
   at<U>(p,24)=owned?stock.medals:0;at<U>(p,28)=2000;
   at<U>(p,32)=owned?stock.coins:0;at<U>(p,36)=2000;
-  at<U>(p,40)=owned?20:0;at<U>(p,44)=owned?40:0;
+  at<U>(p,40)=expected?20:0;at<U>(p,44)=expected?40:0;
  }
 }

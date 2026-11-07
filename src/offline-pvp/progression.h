@@ -55,15 +55,14 @@ static void produce(U&balance,U&fraction,U rate,U cap,U elapsed){
  U earned=(elapsed/3600)*rate+partial/3600;fraction=partial%3600;
  if(earned>=cap-balance){balance=cap;fraction=0;}else balance+=earned;
 }
-static void tickProgression(U b){
- EconomyRuntime&r=economyRuntime;if(!r.loaded||r.blocked||!r.state.initialized||r.user!=owner(b))return;
- U now=realNow(b);Economy next=r.state;if(now<next.producedAt)return;
+static bool accrueProduction(Economy&next,U now){
+ if(now<next.producedAt)return false;
 #ifdef PVP_BUSINESS_PRODUCTION
  bool businessChanged=produceBusinesses(next,now);
 #else
  bool businessChanged=false;
 #endif
- U elapsed=now-next.producedAt;if(!elapsed&&(!next.upgradeKind||now<next.upgradeDue)&&!businessChanged)return;
+ U elapsed=now-next.producedAt;
  bool completed=next.upgradeKind&&now>=next.upgradeDue;
  U before=completed&&next.upgradeDue>next.producedAt?next.upgradeDue-next.producedAt:completed?0:elapsed;
  const BaseSpec&base=BASE_SPECS[next.baseLevel-1];
@@ -74,8 +73,20 @@ static void tickProgression(U b){
   produce(next.medals,next.medalFraction,after.medals,after.medalLimit,elapsed-before);
  }
  next.producedAt=now;
+ return businessChanged||completed;
+}
+static void tickProgression(U b){
+ EconomyRuntime&r=economyRuntime;if(!r.loaded||r.blocked||!r.state.initialized||r.user!=owner(b))return;
+#ifdef PVP_SILENT_RAIDS
+ if(r.busy)return;
+ raidTick(b);
+ if(silentBacklog(b))return;
+#endif
+ U now=realNow(b);Economy next=r.state;if(now<next.producedAt)return;
+ U elapsed=now-next.producedAt;bool completed=next.upgradeKind&&now>=next.upgradeDue;
+ bool significant=accrueProduction(next,now);
  // Persist at most once per minute unless a whole currency unit or an upgrade changes.
- if(next.coins==r.state.coins&&next.medals==r.state.medals&&!completed&&!businessChanged&&elapsed<60)return;
+ if(next.coins==r.state.coins&&next.medals==r.state.medals&&!significant&&elapsed<60)return;
  if(commitProgression(b,manager(b),next)&&completed)log(b,"building-upgrade-completed",next.baseLevel,next.campLevel);
 }
 extern "C" void offlineProgressionInit(U b){

@@ -24,6 +24,11 @@ class ScoutEngine(OwnershipEngine):
 
 def check_scout():
  e=ScoutEngine();e.enter();e.run('offlineGarden');assert e.held()==0
+ # v99 initializes its per-player daily clock on the first idle heartbeat.
+ # Establish that baseline before checking that a free preview changes none
+ # of the wallet/ownership files; initialization is not a scouting charge.
+ if 'offlineSilentRaidsMode' in e.exports:
+  e.advance(1);e.run('offlineTrainingTick',e.get(M+0x20))
  funds=(e.get(M+4),e.get(M+8),e.gems);saved={k:bytes(v) for k,v in e.files.items()}
  e.scout_shop(0);assert e.dismissed==[M+0x18000] and len(e.loads)==1
  assert bytes(e.u.mem_read(M+0x100,4))==b'\1\0\0\0'

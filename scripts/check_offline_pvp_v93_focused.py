@@ -109,7 +109,7 @@ def accepted_legacy_fixtures():
   if user in marker:return
   marker.add(user);e.legacy_region_users=marker
   raw=e.files.get(key(e))
-  if not raw or len(raw) not in (464,708,788) or struct.unpack_from('<I',raw,460)[0]!=1:return
+  if not raw or len(raw) not in (464,708,788,2840) or struct.unpack_from('<I',raw,460)[0]!=1:return
   e.files[key(e)]=old_record(e,struct.unpack_from('<I',raw,184)[0],struct.unpack_from('<I',raw,12)[0])
   symbol=next(v for k,v in e.exports.items() if k.endswith('economyRuntime'))
   e.u.mem_write(BASE+symbol+8,b'\0');original(e)

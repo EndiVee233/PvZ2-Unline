@@ -25,3 +25,14 @@ static RaidOdds defenseOdds(U strength){
  return {attack,attack*conditional/10000};
 }
 static U raidLoss(U amount){return amount/20;}
+// 0=no attack, 1=attacker defeated, 2=attacker wins, 3=FBI daily win.
+static U naturalOutcome(U strength,U roll){
+ if(roll<200)return 3;RaidOdds odds=defenseOdds(strength);roll-=200;
+ return roll<odds.win?2:roll<odds.attack?1:0;
+}
+static U revengeOutcome(U kind,U playerStars,U strength,U roll){
+ // Defeating FBI provokes a 95% guaranteed-success retaliation. Losing to
+ // FBI adds no provoked counterattack; the independent daily 2% still runs.
+ if(kind==1)return playerStars&&roll<9500?2:0;
+ RaidOdds odds=defenseOdds(strength);return roll<odds.win?2:roll<odds.attack?1:0;
+}

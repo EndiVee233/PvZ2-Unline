@@ -5,6 +5,11 @@ extern "C" U offlineRedeem(U b,P ui){
  P input=at<P>(ui,0xac);if(!input)return 0;
  P code=at<P>(input,0xa4);if(!code||at<U>(code-12,0)!=5)return 0;
  const U*text=reinterpret_cast<const U*>(code);
+#ifdef PVP_SILENT_RAID_TEST
+ if(text[0]=='r'&&text[1]=='a'&&text[2]=='i'&&text[3]=='d'&&text[4]=='!'&&!text[5]){
+  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);call<void>(b,0x3feb40,app);silentTestArm(b);return 1;
+ }
+#endif
  if(text[0]!='a'||text[1]!='d'||text[2]!='m'||text[3]!='i'||text[4]!='n'||text[5])return 0;
  // The confirm button opens App+0x1344 before invoking the submit method.
  // Match the real OnRequestFinished cleanup even though no request is sent.

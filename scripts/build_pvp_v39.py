@@ -21,7 +21,7 @@ if '--v96' in sys.argv:VERSION=96
 if '--v97' in sys.argv:VERSION=97
 if '--v98' in sys.argv:VERSION=98
 if '--v99' in sys.argv:VERSION=99
-OUT=ROOT/(f'work/pvp-v{VERSION}-test' if '--shop-clock-test' in sys.argv else f'work/pvp-v{VERSION}');OUT.mkdir(exist_ok=True)
+OUT=ROOT/(f'work/pvp-v{VERSION}-test' if '--shop-clock-test' in sys.argv or '--silent-raid-test' in sys.argv else f'work/pvp-v{VERSION}');OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
 generate(OUT/'generated',expansion=VERSION>=93,rich=VERSION>=95)
@@ -128,6 +128,7 @@ if VERSION>=93:
  strings.update(V93_PREVIOUS_REGION_REQUIRED='请先解锁前一个地区。',V93_REGION_COINS_REQUIRED='星币不足，暂时无法解锁此地区。',V93_REGION_CLOSED='请先解锁这个地区。')
  for zone,level,capacity in [(2,6,12000),(3,7,18000),(4,8,27000),(5,9,39000),(6,9,39000)]:
   strings[f'V93_REGION_{zone}_REQUIRED']=f'请先将基地升至{level}级，星币容量需达到{capacity}，才能解锁此地区。'
+if VERSION>=99:strings.update(V99_REVENGE_USED='这条战报已经发起过复仇。',V99_REVENGE_EXPIRED='这条战报已过期，请返回地图。',V99_TEST_ARMED='袭击验收已安排：30秒后出现一次FBI袭击，以及已占领商铺的失守。不会自动进入草坪。',V99_TEST_ALREADY='本轮袭击验收已经安排，不会重复触发。')
 b,localization=add_exchange_localization(b,strings)
 e=ELFFile(BytesIO(b));index,tail=[(i,s) for i,s in enumerate(e.iter_segments()) if s['p_type']=='PT_LOAD'][-1]
 old=len(b);assert tail['p_offset']+tail['p_filesz']==old
@@ -168,6 +169,7 @@ if VERSION>=96:flags.append('-DPVP_UNIQUE_NEIGHBORS')
 if VERSION>=97:flags.append('-DPVP_TUTORIAL_DEFENSE')
 if VERSION>=98:flags.append('-DPVP_NPC_RAIDS')
 if VERSION>=99:flags.append('-DPVP_SILENT_RAIDS')
+if '--silent-raid-test' in sys.argv:flags.append('-DPVP_SILENT_RAID_TEST')
 if '--shop-clock-test' in sys.argv:flags.append('-DPVP_EXCHANGE_CLOCK_TEST')
 subprocess.run([compiler,*flags,'-c',str(ROOT/'src/offline-pvp/offline.cpp'),'-o',str(OUT/'offline.o')],check=True)
 # A flat payload has no dynamic relocation table. Absolute pointer constants
@@ -541,7 +543,7 @@ if VERSION==69:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pv
 if VERSION==70:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v70_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION==71:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v71_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION==72:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v72_arm.py'),str(OUT)],cwd=ROOT,check=True)
-if VERSION>=73:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v98_focused.py' if VERSION>=98 else 'scripts/check_offline_pvp_v97_focused.py' if VERSION>=97 else 'scripts/check_offline_pvp_v96_focused.py' if VERSION>=96 else 'scripts/check_offline_pvp_v95_focused.py' if VERSION>=95 else 'scripts/check_offline_pvp_v94_focused.py' if VERSION>=94 else 'scripts/check_offline_pvp_v93_focused.py' if VERSION>=93 else 'scripts/check_offline_pvp_v91_focused.py' if VERSION>=91 else 'scripts/check_offline_pvp_v90_focused.py' if VERSION>=90 else 'scripts/check_offline_pvp_v82_focused.py' if VERSION>=82 else 'scripts/check_offline_pvp_v81_focused.py' if VERSION>=81 else 'scripts/check_offline_pvp_v80_focused.py' if VERSION>=80 else 'scripts/check_offline_pvp_v79_focused.py' if VERSION>=79 else 'scripts/check_offline_pvp_v78_focused.py' if VERSION>=78 else 'scripts/check_offline_pvp_v77_focused.py' if VERSION>=77 else 'scripts/check_offline_pvp_v76_focused.py' if VERSION==76 else 'scripts/check_offline_pvp_v75_arm.py' if VERSION>=75 else 'scripts/check_offline_pvp_v74_arm.py' if VERSION>=74 else 'scripts/check_offline_pvp_v73_arm.py')),str(OUT)],cwd=ROOT,check=True)
+if VERSION>=73:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v99_focused.py' if VERSION>=99 else 'scripts/check_offline_pvp_v98_focused.py' if VERSION>=98 else 'scripts/check_offline_pvp_v97_focused.py' if VERSION>=97 else 'scripts/check_offline_pvp_v96_focused.py' if VERSION>=96 else 'scripts/check_offline_pvp_v95_focused.py' if VERSION>=95 else 'scripts/check_offline_pvp_v94_focused.py' if VERSION>=94 else 'scripts/check_offline_pvp_v93_focused.py' if VERSION>=93 else 'scripts/check_offline_pvp_v91_focused.py' if VERSION>=91 else 'scripts/check_offline_pvp_v90_focused.py' if VERSION>=90 else 'scripts/check_offline_pvp_v82_focused.py' if VERSION>=82 else 'scripts/check_offline_pvp_v81_focused.py' if VERSION>=81 else 'scripts/check_offline_pvp_v80_focused.py' if VERSION>=80 else 'scripts/check_offline_pvp_v79_focused.py' if VERSION>=79 else 'scripts/check_offline_pvp_v78_focused.py' if VERSION>=78 else 'scripts/check_offline_pvp_v77_focused.py' if VERSION>=77 else 'scripts/check_offline_pvp_v76_focused.py' if VERSION==76 else 'scripts/check_offline_pvp_v75_arm.py' if VERSION>=75 else 'scripts/check_offline_pvp_v74_arm.py' if VERSION>=74 else 'scripts/check_offline_pvp_v73_arm.py')),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=83:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v83_drag.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=84:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v84_cursor.py'),str(OUT),*(['--legacy-regions-fixture'] if VERSION>=93 else [])],cwd=ROOT,check=True)
 if VERSION>=85:subprocess.run([sys.executable,str(ROOT/'scripts/check_input_v23_native.py'),str(OUT)],cwd=ROOT,check=True)
@@ -551,7 +553,7 @@ if VERSION>=92:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pv
 if '--native-only' in sys.argv:raise SystemExit(0)
 scratch=Path(sys.argv[sys.argv.index('--intermediate-dir')+1]).resolve() if '--intermediate-dir' in sys.argv else OUT
 scratch.mkdir(parents=True,exist_ok=True)
-unsigned=scratch/'unsigned.apk';aligned=scratch/'aligned.apk';final=OUT/(f'PvZ2-v{VERSION}-shop-clock-test.apk' if '--shop-clock-test' in sys.argv else f'PvZ2-v{VERSION}-pvp-scene-candidate.apk' if VERSION>=43 else f'PvZ2-v{VERSION}-startup-admin-candidate.apk')
+unsigned=scratch/'unsigned.apk';aligned=scratch/'aligned.apk';final=OUT/(f'PvZ2-v{VERSION}-silent-raid-test.apk' if '--silent-raid-test' in sys.argv else f'PvZ2-v{VERSION}-shop-clock-test.apk' if '--shop-clock-test' in sys.argv else f'PvZ2-v{VERSION}-pvp-scene-candidate.apk' if VERSION>=43 else f'PvZ2-v{VERSION}-startup-admin-candidate.apk')
 with zipfile.ZipFile(BASE) as src,zipfile.ZipFile(unsigned,'w',allowZip64=True) as dst:
  for item in src.infolist():
   if item.filename.startswith('META-INF/'):continue
