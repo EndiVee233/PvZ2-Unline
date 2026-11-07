@@ -50,6 +50,9 @@ struct Economy {U magic,version,user,coins,home,sequence,checksum,reserved;Local
  U retaliationCount;Retaliation retaliations[64];
  U raidTestMask,raidTestDue,raidTestDone;
 #endif
+#ifdef PVP_NEIGHBOR_PROTECTION
+ U cups,neighborProtectedUntil[NPC_COUNT];
+#endif
 };
 static constexpr U LEGACY_ECONOMY_SIZE=32+12*TRAIN_COUNT;
 static constexpr U V2_ECONOMY_SIZE=LEGACY_ECONOMY_SIZE+44;
@@ -73,7 +76,8 @@ static constexpr U DAVE_WINS_LIMIT=1;
 struct EconomyRuntime {U user,lastTick;bool loaded,blocked,busy,loadedFromDisk;P camp;Economy state;};
 static EconomyRuntime economyRuntime;
 static bool same(const char*a,const char*b){while(*a&&*a==*b){++a;++b;}return *a==*b;}
-static U checkEconomy(const Economy&s){const unsigned char*p=reinterpret_cast<const unsigned char*>(&s);U h=2166136261u;for(U i=0;i<(s.version==1?LEGACY_ECONOMY_SIZE:s.version==2?V2_ECONOMY_SIZE:s.version==3?V3_ECONOMY_SIZE:s.version==4?V4_ECONOMY_SIZE:s.version==5?V5_ECONOMY_SIZE:s.version==6?V6_ECONOMY_SIZE:s.version==7?V7_ECONOMY_SIZE:s.version==8?V8_ECONOMY_SIZE:s.version==9?V9_ECONOMY_SIZE:s.version==10?V10_ECONOMY_SIZE:s.version==11?V11_ECONOMY_SIZE:s.version==12?V12_ECONOMY_SIZE:s.version==13?V13_ECONOMY_SIZE:s.version==14||s.version==15?V14_ECONOMY_SIZE:sizeof(s));++i)if(i<24||i>=28)h=(h^p[i])*16777619u;return h;}
+static constexpr U V16_ECONOMY_SIZE=2840;
+static U checkEconomy(const Economy&s){const unsigned char*p=reinterpret_cast<const unsigned char*>(&s);U h=2166136261u;for(U i=0;i<(s.version==1?LEGACY_ECONOMY_SIZE:s.version==2?V2_ECONOMY_SIZE:s.version==3?V3_ECONOMY_SIZE:s.version==4?V4_ECONOMY_SIZE:s.version==5?V5_ECONOMY_SIZE:s.version==6?V6_ECONOMY_SIZE:s.version==7?V7_ECONOMY_SIZE:s.version==8?V8_ECONOMY_SIZE:s.version==9?V9_ECONOMY_SIZE:s.version==10?V10_ECONOMY_SIZE:s.version==11?V11_ECONOMY_SIZE:s.version==12?V12_ECONOMY_SIZE:s.version==13?V13_ECONOMY_SIZE:s.version==14||s.version==15?V14_ECONOMY_SIZE:s.version==16?V16_ECONOMY_SIZE:sizeof(s));++i)if(i<24||i>=28)h=(h^p[i])*16777619u;return h;}
 static bool validEconomy(const Economy&s,U user){
  bool version=s.version==1||s.version==2;
 #ifdef PVP_BATTLE_ECONOMY
@@ -162,6 +166,10 @@ static bool validEconomy(const Economy&s,U user){
  version=version||s.version==16;
  if(s.version>=16&&!validSilentRaids(s))return false;
 #endif
+#ifdef PVP_NEIGHBOR_PROTECTION
+ version=version||s.version==17;
+ if(s.version>=17&&s.cups>2000000000u)return false;
+#endif
  if(s.version>=13){
   if(s.historyCount>10)return false;
   for(U i=0;i<s.historyCount;++i){const auto& h=s.history[i];
@@ -232,6 +240,9 @@ static bool saveEconomy(U b,Economy&s){
 #ifdef PVP_SILENT_RAIDS
  s.version=16;
 #endif
+#ifdef PVP_NEIGHBOR_PROTECTION
+ s.version=17;
+#endif
  s.checksum=checkEconomy(s);if(!validEconomy(s,s.user))return false;
  char dst[160],tmp[160];economyPath(s.user,dst,false);economyPath(s.user,tmp,true);
  I fd=call<I>(b,0x148448,tmp,0x241,0600);if(fd<0)return false;U done=0;
@@ -284,7 +295,10 @@ static I loadEconomy(U b,Economy&s){
  length=length||(s.version==15&&done==V14_ECONOMY_SIZE);
 #endif
 #ifdef PVP_SILENT_RAIDS
- length=length||(s.version==16&&done==sizeof(s));
+ length=length||(s.version==16&&done==V16_ECONOMY_SIZE);
+#endif
+#ifdef PVP_NEIGHBOR_PROTECTION
+ length=length||(s.version==17&&done==sizeof(s));
 #endif
  return length&&extra==0&&validEconomy(s,owner(b))?1:-1;
 }
@@ -294,16 +308,34 @@ static void economyNotice(U b,const char*message){
 }
 static U realNow(U b){return call<U>(b,0x147824,0);}
 static void notifyTraining(U b,P m){U response[5]={0,0,0,0,at<U>(m,4)};call<void>(b,0x104a544,m,response);}
+static U trainingSeconds(const Economy&state,U now){
+ U seconds=0;
+ for(U i=0;i<TRAIN_COUNT;++i){
+  const LocalTrain&t=state.trains[i];
+  if(!t.queued)continue;
+  U remaining=(t.due>now?t.due-now:0)+(t.queued-1)*TRAIN_SPECS[i].seconds;
+  if(remaining>seconds)seconds=remaining;
+ }
+ return seconds;
+}
 static void applyEconomy(U b,P m){
  EconomyRuntime&r=economyRuntime;P a=at<P>(m,0x20);
  if(!a){a=call<P>(b,0x14c1a7d,0x1c);call<void>(b,0x104b5d8,a);at<P>(m,0x20)=a;}
  call<void>(b,0x104b628,a);at<U>(a,4)=r.state.initialized?campCapacity(r.state.campLevel):40;at<U>(a,8)=6;U now=realNow(b);P clock=call<P>(b,0x1f7380);float gameTime=at<float>(clock,0x24);
+#ifdef PVP_NEIGHBOR_PROTECTION
+ // The original Training_Timer path also selects MENU_TRAINING's work/idle clip.
+ U remaining=trainingSeconds(r.state,now);
+ at<float>(m,0x78)=remaining?gameTime+float(remaining):0x1.fffffep127f;
+#endif
  for(U i=0;i<TRAIN_COUNT;++i){const LocalTrain&t=r.state.trains[i];if(!t.held&&!t.queued)continue;
   alignas(8) U entry[8]={0,t.held,t.queued,0xbf800000,0x7f7fffff,0,0,0};narrow(b,reinterpret_cast<P>(entry),TRAIN_SPECS[i].name);
   if(t.queued){at<float>(reinterpret_cast<P>(entry),12)=float(TRAIN_SPECS[i].seconds);at<float>(reinterpret_cast<P>(entry),16)=gameTime+float(t.due>now?t.due-now:0);}
   call<void>(b,0x104d6e4,a,entry);release(b,reinterpret_cast<P>(entry[0]));
  }
  r.camp=a;call<void>(b,0x1042a5c,m,r.state.coins);
+#ifdef PVP_NEIGHBOR_PROTECTION
+ if(at<U>(m,12)!=r.state.cups)call<void>(b,0x1042af4,m,r.state.cups);
+#endif
  // g is the native garden level, distinct from ag (star coins) at manager+4.
  if(at<U>(m,0x10)<1)at<U>(m,0x10)=r.state.home;
  if(r.state.initialized)applyProgression(b,m);
@@ -431,6 +463,9 @@ extern "C" void offlineTrainingTick(U b,P camp){P m=manager(b);if(ensureEconomy(
  settleResearch(b,m);
 #endif
  call<void>(b,0x104c894,camp);completeLocalBattle(b);inspectArena(b);
+#ifdef PVP_NEIGHBOR_PROTECTION
+ expireNeighborLabels(b,m);
+#endif
 #ifdef PVP_NPC_RAIDS
  raidTick(b);
 #endif
@@ -439,11 +474,7 @@ static bool trainingFinishPrompt;
 // Read the local queues, rather than the obsolete cash-product availability.
 // Different types train in parallel; each type's queue is sequential.
 static U trainingMinutes(U b){
- U now=realNow(b),seconds=0;
- for(U i=0;i<TRAIN_COUNT;++i){const LocalTrain&t=economyRuntime.state.trains[i];
-  if(t.queued){U n=(t.due>now?t.due-now:0)+(t.queued-1)*TRAIN_SPECS[i].seconds;if(n>seconds)seconds=n;}
- }
- return (seconds+59)/60;
+ return (trainingSeconds(economyRuntime.state,realNow(b))+59)/60;
 }
 extern "C" void offlineTrainingDisplay(U b,P ui){
  if(!regular(b)||!ensureEconomy(b,manager(b)))return;

@@ -24,7 +24,10 @@ if '--v99' in sys.argv:VERSION=99
 if '--v101' in sys.argv:VERSION=101
 if '--v104' in sys.argv:VERSION=104
 if '--v105' in sys.argv:VERSION=105
-OUT=ROOT/(f'work/pvp-v{VERSION}-test' if '--shop-clock-test' in sys.argv or '--silent-raid-test' in sys.argv else f'work/pvp-v{VERSION}');OUT.mkdir(exist_ok=True)
+if '--v106' in sys.argv:VERSION=106
+OUT=ROOT/(f'work/pvp-v{VERSION}-test' if '--shop-clock-test' in sys.argv or '--silent-raid-test' in sys.argv else f'work/pvp-v{VERSION}')
+if '--output-dir' in sys.argv:OUT=Path(sys.argv[sys.argv.index('--output-dir')+1]).resolve()
+OUT.mkdir(parents=True,exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
 generate(OUT/'generated',expansion=VERSION>=93,rich=VERSION>=95)
@@ -190,6 +193,7 @@ if VERSION>=99:flags.append('-DPVP_SILENT_RAIDS')
 if VERSION>=101:flags.append('-DPVP_SELL_TROOPS')
 if VERSION>=104:flags.append('-DPVP_DAVE_REFERENCE')
 if VERSION>=105:flags.append('-DPVP_BUSINESS_REPLACE')
+if VERSION>=106:flags.append('-DPVP_NEIGHBOR_PROTECTION')
 if '--silent-raid-test' in sys.argv:flags.append('-DPVP_SILENT_RAID_TEST')
 if '--shop-clock-test' in sys.argv:flags.append('-DPVP_EXCHANGE_CLOCK_TEST')
 subprocess.run([compiler,*flags,'-c',str(ROOT/'src/offline-pvp/offline.cpp'),'-o',str(OUT/'offline.o')],check=True)
@@ -431,6 +435,13 @@ if VERSION>=67:
  site=0x10129f0;assert bytes(b[site:site+4])==bl(site,0x100cc74)
  target=custom_stub('push {r0-r4,lr}\nmov r1,r2\n'+baseasm()+f'bl #{symbols["offlineDaveLabel"]}\npop {{r0-r4,lr}}\nb #0x100cc74')
  b[site:site+4]=bl(site,target);patches.append(dict(site=hex(site),symbol='offlineDaveLabel',role='Project saved Dave counter immediately before native map title formatting'))
+
+if VERSION>=106:
+ site=0x1012af8
+ assert bytes(b[site:site+8])==bl(site,0xf754ac)+bl(site+4,0xf7530c)
+ target=custom_stub('push {r1-r4,ip,lr}\nmov r1,r4\n'+baseasm()+f'bl #{symbols["offlineNeighborMapClock"]}\npop {{r1-r4,ip,pc}}')
+ b[site:site+8]=bl(site,target)+struct.pack('<I',0xe1a00000)
+ patches.append(dict(site=hex(site),symbol='offlineNeighborMapClock',scope='local residential protection countdown'))
 
 if VERSION>=68:
  site=0x100ad18;first=struct.unpack_from('<I',b,site)[0];assert first==0xe92d4ff0

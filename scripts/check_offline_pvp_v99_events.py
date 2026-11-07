@@ -34,6 +34,7 @@ def check_events(c):
    if value<4294960000 and low<=value%10000<high:return n
   raise AssertionError('missing deterministic fixture seed')
  def funded(raw,now,rng):
+  if len(raw)>2840:struct.pack_into("<I",raw,2840,7)
   for at,value in [(12,100000),(180,50000),(204,now),(208,0),(212,0),(788,1),(792,rng),(796,now)]:struct.pack_into('<I',raw,at,value)
  e=fixture();out=e.alloc(16)
  for strength,kind,stars,expected in [(5,8,0,(8800,500,500,200)),(405,8,0,(9776,24,0,200)),(5,0,0,(9000,500,500,0)),(405,1,1,(500,0,9500,0)),(0,1,0,(10000,0,0,0))]:
@@ -44,6 +45,7 @@ def check_events(c):
  f.advance(DAY);tick(f);h=rows(f)[0]
  assert h[3:]==(3,5000,3) and word(f,832)==2500 and word(f,748)==1
  assert (f.get(M+4),f.get(M+8),f.held(),f.gems)==(95000,47500,army,gems)
+ if len(f.files[key(f)])>2840:assert f.get(M+12)==2 and word(f,2840)==2
  assert len(f.loads)==loads and rows(f)[1:]==history
  frozen=next(k for k in f.files if k.endswith('.npc'));assert len(f.files[frozen])==760
  saved={k:bytes(v) for k,v in f.files.items()};tick(f);assert {k:bytes(v) for k,v in f.files.items()}==saved
@@ -73,7 +75,11 @@ def check_events(c):
  def small(raw):
   funded(raw,seed.now,rng_for(0,500));struct.pack_into('<I',raw,12,19);struct.pack_into('<I',raw,180,19)
   struct.pack_into('<I',raw,1032,1);struct.pack_into('<7I',raw,1036,target,7654321,0,seed.now+1,0,lo,hi)
- tiny=reload(seed,small);tiny.advance(2);tick(tiny);assert rows(tiny)[0][3:]==(3,0,3) and (tiny.get(M+4),tiny.get(M+8))==(19,19)
+ tiny=reload(seed,small)
+ if len(tiny.files[key(tiny)])>2840:tiny=reload(tiny,lambda raw:struct.pack_into("<I",raw,2840,2))
+ tiny.advance(2);tick(tiny)
+ assert tiny.get(M+12)==0
+ assert rows(tiny)[0][3:]==(3,0,3) and (tiny.get(M+4),tiny.get(M+8))==(19,19)
  # A failed snapshot/write leaves the RNG, clocks, funds and report together
  # unchanged; a later successful retry applies the same trial exactly once.
  failure=reload(e,lambda raw:funded(raw,e.now,rng_for(0,200)));old=bytes(failure.files[key(failure)]);failure.failwrite=True;failure.advance(DAY);tick(failure)
@@ -90,6 +96,7 @@ def check_events(c):
  assert lost.owned()==0 and word(lost,808) and lost.get(lost.shops()[0]+8)==word(lost,808)
  assert (lost.get(M+4),lost.get(M+8),lost.held())==(95000,47500,oldarmy)
  assert (word(lost,420),word(lost,424))==(960,480) and bytes(lost.files[garrison])==line
+ if len(lost.files[key(lost)])>2840:assert lost.get(M+12)==7
  assert rows(lost)[0][3:]==(3,5000,4) and word(lost,872)==0x71000001
  saved_stock=(word(lost,420),word(lost,424));lost.advance(DAY);tick(lost);assert (word(lost,420),word(lost,424))==saved_stock
  # Scout and recapture an NPC-held merchant using the existing real local

@@ -96,7 +96,13 @@ static void settleResearch(U b,P m);
 static U finishResearchWithGems(U b,P timer);
 static bool researchFinishPrompt;
 #endif
+#ifdef PVP_NEIGHBOR_PROTECTION
+static void expireNeighborLabels(U b,P m);
+#endif
 #include "economy.h"
+#ifdef PVP_NEIGHBOR_PROTECTION
+#include "neighbor_protection.h"
+#endif
 #ifdef PVP_SELL_TROOPS
 #include "selling.h"
 #endif
@@ -802,6 +808,13 @@ static bool persistBattleArmy(U b,P m,bool daveVictory=false,U stars=0){
  U beforeReward=next.coins;
 #endif
  if(rewarded&&!settleBattleReward(b,next,stars))return false;
+#ifdef PVP_NEIGHBOR_PROTECTION
+ if(n&&!n->evil&&stars){
+  U cups=starCups(stars);
+  next.cups+=cups>2000000000u-next.cups?2000000000u-next.cups:cups;
+  next.neighborProtectedUntil[n-NPCS]=neighborProtectionDeadline(b);
+ }
+#endif
 #ifdef PVP_HISTORY
  appendHistory(b,next,arenaNpc,stars,next.coins-beforeReward);
 #ifdef PVP_DAVE_REFERENCE
@@ -846,6 +859,9 @@ extern "C" U offlineBattleResult(U b,P m,U stars,U id,U kind){
 #endif
  if((!n&&!shop)||stars>3||((shop||n&&!n->evil)&&(id!=arenaNpc||kind!=2||!ensureEconomy(b,m)||!paidBattleMatches(b,economyRuntime.state)))){log(b,"battle-result-unpaid-or-stale",stars,id);return 1;}
  U previousCoins=economyRuntime.state.coins;
+#ifdef PVP_NEIGHBOR_PROTECTION
+ U previousCups=economyRuntime.state.cups;
+#endif
 #ifdef PVP_DAVE_REFERENCE
  U previousMedals=economyRuntime.state.medals;
 #endif
@@ -865,6 +881,11 @@ extern "C" U offlineBattleResult(U b,P m,U stars,U id,U kind){
   at<U>(m,0xc4)=economyRuntime.state.coins-previousCoins;at<U>(m,0xc8)=at<U>(m,0xcc)=0;
 #ifdef PVP_DAVE_REFERENCE
   at<U>(m,0xc8)=economyRuntime.state.medals-previousMedals;
+#endif
+#ifdef PVP_NEIGHBOR_PROTECTION
+  at<U>(m,0xb4)=economyRuntime.state.cups;
+  at<U>(m,0xcc)=economyRuntime.state.cups-previousCups;
+  continueProtectedNeighbor=n&&!n->evil&&stars?n->id:0;
 #endif
   log(b,"battle-reward-saved",stars,at<U>(m,0xc4));
  }
@@ -891,6 +912,9 @@ extern "C" U offlineResultContinue(U b,P window,U button){
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
  if(!resultSaved||arenaUser!=owner(b)||!arenaModule(b)||at<P>(app,0x139c)!=window)return 0;
  if(button!=0)return 1;
+#ifdef PVP_NEIGHBOR_PROTECTION
+ beginProtectionOnReturn(b);
+#endif
 #ifdef PVP_SILENT_RAIDS
  clearRevenge();
 #endif

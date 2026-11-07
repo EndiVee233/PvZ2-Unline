@@ -19,7 +19,7 @@ class EconomyEngine(Engine):
   if off==0xd07ae8:return
   if off==0x147824:result=self.now
   elif off==0x1f7380:result=M+0x5000
-  elif off==0x1042a5c:assert x==M;self.put(M+4,y)
+  elif off in (0x1042a5c,0x1042af4):assert x==M;self.put(M+(4 if off==0x1042a5c else 12),y)
   elif off==0x104b628:self.put(x+16,self.get(x+12))
   elif off==0x104d6e4:
    assert self.txt(self.get(y)).startswith('pvp_'),'non-training alias rejected'

@@ -2,7 +2,11 @@
 // user's explicit probability rules and never create/finish a Board.
 #include "silent_raid_policy.h"
 #include "frozen_encounters.h"
-static_assert(sizeof(Economy)==2840,"silent raid save layout");
+#ifdef PVP_NEIGHBOR_PROTECTION
+static_assert(sizeof(Economy)==V16_ECONOMY_SIZE+4+4*NPC_COUNT,"v17 economy save layout");
+#else
+static_assert(sizeof(Economy)==V16_ECONOMY_SIZE,"silent raid save layout");
+#endif
 extern "C" void offlineSilentOdds(U,U strength,P out){RaidOdds odds=defenseOdds(strength);at<U>(out,0)=odds.attack;at<U>(out,4)=odds.win;}
 extern "C" U offlineSilentHomePower(U b){Store saved{};return readStore(b,saved)?defenseStrength(saved):0xffffffffu;}
 struct RevengeContext {U user,serial;bool ready;NeighborEncounter opponent;};
@@ -148,6 +152,12 @@ static bool appendSilentDefense(U b,Economy&next,const NeighborEncounter&enemy,U
  if(next.sequence>=0xfffffffeu)return false;
  U coins=stars?raidLoss(next.coins):0,medals=stars?raidLoss(next.medals):0;
  next.coins-=coins;next.medals-=medals;
+#ifdef PVP_NEIGHBOR_PROTECTION
+ if(!defended){
+  U loss=starCups(stars);
+  next.cups-=loss<next.cups?loss:next.cups;
+ }
+#endif
  U id=activeEncounterId,seed=activeEncounterSeed,kind=activeEncounterKind;
  activeEncounterId=enemy.id;activeEncounterSeed=enemy.seed;activeEncounterKind=enemy.kind;
  appendHistory(b,next,enemy.id,stars,coins);

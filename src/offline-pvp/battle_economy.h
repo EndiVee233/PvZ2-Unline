@@ -9,6 +9,9 @@ static void closeBattleJournal(Economy&s){
 static bool beginBattleFee(U b,P m,const NpcPreset&n,bool live){
  if(n.evil)return true;
  if(!ensureEconomy(b,m))return false;
+#ifdef PVP_NEIGHBOR_PROTECTION
+ if(rejectProtectedNeighbor(b,n))return false;
+#endif
  Economy next=economyRuntime.state;
  if(next.battleOpen){log(b,"battle-payment-already-open",next.battleOpen,next.battleNpc);return false;}
  if(!next.coins){economyNotice(b,"[PVP_ERROR_PVPCOIN_NOT_ENOUCH]");return false;}

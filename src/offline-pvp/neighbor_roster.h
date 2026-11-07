@@ -152,6 +152,13 @@ static void projectDynamicNeighbor(U b,P m,const NpcPreset&n){
  const auto*e=encounter(b,n.id);if(!e||!e->seed)return;
  U title[40]{};neighborName(e->seed,e->kind,title);
  alignas(8) U record[16]={n.id,0,0,n.level,e->cups,0,100,n.zone,n.position,1,0,0,0,0,1,0};
+#ifdef PVP_NEIGHBOR_PROTECTION
+ record[5]=starCups(3);
+ if(U until=neighborProtectionUntil(b,n)){
+  record[9]=2;
+  record[10]=until;
+ }
+#endif
  char alloc=0;call<void>(b,0x14eb451,reinterpret_cast<P>(record)+8,title,&alloc);
  call<void>(b,0x104678c,m,record);release(b,reinterpret_cast<P>(record[2]),true);
 }
@@ -171,6 +178,9 @@ static U neighborAction(U b,P panel,U button){
  const NpcPreset*n=nullptr;
  for(U i=0;i<NPC_COUNT;++i)if(!NPCS[i].evil&&NPCS[i].zone==at<U>(panel,0xac)&&NPCS[i].position==at<U>(panel,0xa8)){n=NPCS+i;break;}
  if(!n||!ensureNeighborRoster(b,manager(b))||!regionOpen(n->zone))return 1;
+#ifdef PVP_NEIGHBOR_PROTECTION
+ if(rejectProtectedNeighbor(b,*n))return 1;
+#endif
  P map=at<P>(panel,0xc0);if(!map)return 1;
  auto*next=reinterpret_cast<NeighborRoster*>(call<P>(b,0x147938,sizeof(NeighborRoster)));if(!next)return 1;*next=*neighborRoster;
  auto*entry=findEncounter(*next,n->id);const auto*old=findEncounter(*neighborRoster,n->id);
