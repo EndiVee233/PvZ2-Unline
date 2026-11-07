@@ -157,6 +157,12 @@ static void projectDynamicNeighbor(U b,P m,const NpcPreset&n){
 }
 extern "C" void offlinePvpPanelReady(U b,P panel){
  offlineRegionPanelReady(b,panel);neighborPanel=nullptr;
+#ifdef PVP_BUSINESS_REPLACE
+ businessReplacePanel=nullptr;
+ if(panel&&at<U>(panel,0xa4)==3&&localBusinessPanel(b,panel)){
+  businessReplacePanel=panel;businessReplaceUser=owner(b);
+ }
+#endif
  if(panel&&regular(b)&&at<U>(panel,0xa4)==5){neighborPanel=panel;neighborPanelUser=owner(b);}
 }
 static U neighborAction(U b,P panel,U button){

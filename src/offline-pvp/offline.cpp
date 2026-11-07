@@ -144,6 +144,9 @@ static void projectBusinessOwners(U b,P m){
 #ifdef PVP_RANDOM_NEIGHBORS
 #include "neighbor_roster.h"
 #endif
+#ifdef PVP_BUSINESS_REPLACE
+#include "business_replace.h"
+#endif
 #ifdef PVP_HISTORY
 #include "history.h"
 #endif

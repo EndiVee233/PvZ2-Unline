@@ -5,6 +5,11 @@ static const BusinessPlot BUSINESSES[]={
  {0x71000001,3,2,{0x5496,0x5561,0x5e97,0}},
  {0x71000002,3,3,{0x5546,0x5e97,0}}
 };
+#ifdef PVP_BUSINESS_REPLACE
+static P businessReplacePanel;
+static U businessReplaceUser;
+static U replaceBusinessOpponent(U b,P panel);
+#endif
 extern "C" U offlineBusinessMapMode(){return 1;}
 #ifdef PVP_BUSINESS_OWNER
 // The original getter parses the server account id, which is zero offline.
@@ -93,6 +98,9 @@ static bool localBusinessPanel(U b,P panel){
 // through into old server requests. Closing the panel remains the original
 // handler; residence and own-base events pass.
 extern "C" U offlineBusinessAction(U b,P panel,U button){
+#ifdef PVP_BUSINESS_REPLACE
+ if(button==204&&panel&&panel==businessReplacePanel&&businessReplaceUser!=owner(b))return 1;
+#endif
 #ifdef PVP_RANDOM_NEIGHBORS
  if(neighborAction(b,panel,button))return 1;
 #endif
@@ -100,6 +108,9 @@ extern "C" U offlineBusinessAction(U b,P panel,U button){
  if(regionAction(b,panel,button))return 1;
 #endif
  if(button==203||!localBusinessPanel(b,panel))return 0;
+#ifdef PVP_BUSINESS_REPLACE
+ if(button==204)return replaceBusinessOpponent(b,panel);
+#endif
 #ifdef PVP_BUSINESS_COLLECTION
  if(button==200&&at<U>(panel,0xa4)==2){
   const BusinessPlot*s=businessPlot(at<U>(panel,0xac),at<U>(panel,0xa8));

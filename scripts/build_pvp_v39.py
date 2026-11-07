@@ -23,6 +23,7 @@ if '--v98' in sys.argv:VERSION=98
 if '--v99' in sys.argv:VERSION=99
 if '--v101' in sys.argv:VERSION=101
 if '--v104' in sys.argv:VERSION=104
+if '--v105' in sys.argv:VERSION=105
 OUT=ROOT/(f'work/pvp-v{VERSION}-test' if '--shop-clock-test' in sys.argv or '--silent-raid-test' in sys.argv else f'work/pvp-v{VERSION}');OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -188,6 +189,7 @@ if VERSION>=98:flags.append('-DPVP_NPC_RAIDS')
 if VERSION>=99:flags.append('-DPVP_SILENT_RAIDS')
 if VERSION>=101:flags.append('-DPVP_SELL_TROOPS')
 if VERSION>=104:flags.append('-DPVP_DAVE_REFERENCE')
+if VERSION>=105:flags.append('-DPVP_BUSINESS_REPLACE')
 if '--silent-raid-test' in sys.argv:flags.append('-DPVP_SILENT_RAID_TEST')
 if '--shop-clock-test' in sys.argv:flags.append('-DPVP_EXCHANGE_CLOCK_TEST')
 subprocess.run([compiler,*flags,'-c',str(ROOT/'src/offline-pvp/offline.cpp'),'-o',str(OUT/'offline.o')],check=True)
