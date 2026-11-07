@@ -21,6 +21,7 @@ if '--v96' in sys.argv:VERSION=96
 if '--v97' in sys.argv:VERSION=97
 if '--v98' in sys.argv:VERSION=98
 if '--v99' in sys.argv:VERSION=99
+if '--v101' in sys.argv:VERSION=101
 OUT=ROOT/(f'work/pvp-v{VERSION}-test' if '--shop-clock-test' in sys.argv or '--silent-raid-test' in sys.argv else f'work/pvp-v{VERSION}');OUT.mkdir(exist_ok=True)
 BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
@@ -93,12 +94,26 @@ if VERSION>=58:
   from prepare_offline_pvp_seagull import prepare as prepare_seagull
   legacy=Path(sys.argv[sys.argv.index('--legacy-zombie1')+1]) if '--legacy-zombie1' in sys.argv else ROOT/'work/pvp-v61/original175-zombie1.smf'
   skill_art,seagull_record=prepare_seagull(skill_art,legacy.read_bytes(),OUT/'generated');economy_record['seagull']=seagull_record
+ if VERSION>=100:
+  from prepare_offline_pvp_seagull_hd import prepare as prepare_seagull_hd,normal_resource
+  hd_predecessor=hashlib.sha256(skill_art).hexdigest()
+  normal1=normal_resource(BASE)
+  skill_art,hd_record=prepare_seagull_hd(skill_art,normal1,legacy.read_bytes(),OUT/'generated');economy_record['seagull_hd']=hd_record
+ if VERSION>=101:
+  from prepare_offline_pvp_extra_art import prepare as prepare_extra_art
+  extra_predecessor=hashlib.sha256(skill_art).hexdigest()
+  skill_art,extra_record=prepare_extra_art(skill_art,normal1,normal_resource(BASE,'zombie2.rsb.smf'),normal_resource(BASE,'zombie3.rsb.smf'),legacy.read_bytes(),(ROOT/'work/pvp-v32/original175-zombie2.rsb').read_bytes(),OUT/'generated');economy_record['extra_art']=extra_record
  new_art_sha=hashlib.sha256(skill_art).hexdigest()
  art_method='.method private static isPvpResourcePredecessor(Ljava/lang/String;)Z\n    .registers 2'
  art_extra=f'\n\n    const-string v0, "{old_art_sha}"\n    invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z\n    move-result v0\n    if-eqz v0, :v58_art_predecessors\n    const/4 v0, 0x1\n    return v0\n    :v58_art_predecessors'
  if VERSION>=61:
   art_extra+=f'\n\n    const-string v0, "{art_predecessor}"\n    invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z\n    move-result v0\n    if-eqz v0, :v61_art_predecessors\n    const/4 v0, 0x1\n    return v0\n    :v61_art_predecessors'
+ if VERSION>=100:
+  art_extra+=f'\n\n    const-string v0, "{hd_predecessor}"\n    invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z\n    move-result v0\n    if-eqz v0, :v100_art_predecessors\n    const/4 v0, 0x1\n    return v0\n    :v100_art_predecessors'
+ if VERSION>=101:
+  art_extra+=f'\n\n    const-string v0, "{extra_predecessor}"\n    invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z\n    move-result v0\n    if-eqz v0, :v101_art_predecessors\n    const/4 v0, 0x1\n    return v0\n    :v101_art_predecessors'
  art_marker=('.pvp-seagull-v61-' if VERSION>=61 else '.pvp-art-v58-')+new_art_sha[:12]
+ if VERSION>=101:art_marker='.pvp-extra-art-v101-'+new_art_sha[:12]
  dex=rebuild_bootstrap(dex,OUT/'bootstrap-art',{old_art_sha:new_art_sha,art_method:art_method+art_extra,'.pvp-skills-v32-'+old_art_sha[:12]:art_marker,hex(len(old_art)):hex(len(skill_art))},ROOT/'tools/apktool.jar')
 if VERSION>=86:
  from build_preset_importer import build as build_profile_importer
@@ -129,6 +144,7 @@ if VERSION>=93:
  for zone,level,capacity in [(2,6,12000),(3,7,18000),(4,8,27000),(5,9,39000),(6,9,39000)]:
   strings[f'V93_REGION_{zone}_REQUIRED']=f'请先将基地升至{level}级，星币容量需达到{capacity}，才能解锁此地区。'
 if VERSION>=99:strings.update(V99_REVENGE_USED='这条战报已经发起过复仇。',V99_REVENGE_EXPIRED='这条战报已过期，请返回地图。',V99_TEST_ARMED='袭击验收已安排：30秒后出现一次FBI袭击，以及已占领商铺的失守。不会自动进入草坪。',V99_TEST_ALREADY='本轮袭击验收已经安排，不会重复触发。')
+if VERSION>=101:strings['V101_SALE_CHANGED']='部队数量已变化，请重新选择要出售的僵尸。'
 b,localization=add_exchange_localization(b,strings)
 e=ELFFile(BytesIO(b));index,tail=[(i,s) for i,s in enumerate(e.iter_segments()) if s['p_type']=='PT_LOAD'][-1]
 old=len(b);assert tail['p_offset']+tail['p_filesz']==old
@@ -169,6 +185,7 @@ if VERSION>=96:flags.append('-DPVP_UNIQUE_NEIGHBORS')
 if VERSION>=97:flags.append('-DPVP_TUTORIAL_DEFENSE')
 if VERSION>=98:flags.append('-DPVP_NPC_RAIDS')
 if VERSION>=99:flags.append('-DPVP_SILENT_RAIDS')
+if VERSION>=101:flags.append('-DPVP_SELL_TROOPS')
 if '--silent-raid-test' in sys.argv:flags.append('-DPVP_SILENT_RAID_TEST')
 if '--shop-clock-test' in sys.argv:flags.append('-DPVP_EXCHANGE_CLOCK_TEST')
 subprocess.run([compiler,*flags,'-c',str(ROOT/'src/offline-pvp/offline.cpp'),'-o',str(OUT/'offline.o')],check=True)
@@ -234,6 +251,13 @@ def custom_stub(asm):
  c=bytearray(Ks(KS_ARCH_ARM,KS_MODE_ARM).asm(asm,addr=va)[0]);p=c.index(struct.pack('<I',0x11223344));struct.pack_into('<I',c,p,va+p);b.extend(c);return va
 def redirect(site,target):
  before=bytes(b[site:site+4]);struct.pack_into('<I',b,site,0xea000000|(((target-site-8)//4)&0xffffff));patches.append(dict(site=hex(site),before=before.hex(),after=bytes(b[site:site+4]).hex()))
+if VERSION>=101:
+ site=0x10584d0;first=struct.unpack_from('<I',original,site)[0];assert first==0xe92d4ff0
+ target=custom_stub('push {r4,r5,r6,lr}\nmov r4,r0\nbl sale_ready_original\nmov r5,r0\nmov r1,r4\n'+baseasm()+f'bl #{symbols["offlineSellReady"]}\nmov r0,r5\npop {{r4,r5,r6,pc}}\nsale_ready_original: .word {first}\nb #{site+4}')
+ redirect(site,target)
+ site=0x10591e8;first=struct.unpack_from('<I',original,site)[0];assert first==0xe92d4ff0
+ target=custom_stub('push {r0-r4,lr}\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlineSellConfirm"]}\ncmp r0,#0\npop {{r0-r4,lr}}\nbne sale_handled\n.word {first}\nb #{site+4}\nsale_handled: bx lr')
+ redirect(site,target)
 if VERSION>=88:
  site=0x11c7740;assert bytes(b[site:site+4])==bl(site,0x1405fd0)
  target=custom_stub('push {r4,lr}\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl #{symbols["retainedResourceLookup"]}\npop {{r4,pc}}')
@@ -543,13 +567,14 @@ if VERSION==69:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pv
 if VERSION==70:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v70_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION==71:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v71_arm.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION==72:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v72_arm.py'),str(OUT)],cwd=ROOT,check=True)
-if VERSION>=73:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v99_focused.py' if VERSION>=99 else 'scripts/check_offline_pvp_v98_focused.py' if VERSION>=98 else 'scripts/check_offline_pvp_v97_focused.py' if VERSION>=97 else 'scripts/check_offline_pvp_v96_focused.py' if VERSION>=96 else 'scripts/check_offline_pvp_v95_focused.py' if VERSION>=95 else 'scripts/check_offline_pvp_v94_focused.py' if VERSION>=94 else 'scripts/check_offline_pvp_v93_focused.py' if VERSION>=93 else 'scripts/check_offline_pvp_v91_focused.py' if VERSION>=91 else 'scripts/check_offline_pvp_v90_focused.py' if VERSION>=90 else 'scripts/check_offline_pvp_v82_focused.py' if VERSION>=82 else 'scripts/check_offline_pvp_v81_focused.py' if VERSION>=81 else 'scripts/check_offline_pvp_v80_focused.py' if VERSION>=80 else 'scripts/check_offline_pvp_v79_focused.py' if VERSION>=79 else 'scripts/check_offline_pvp_v78_focused.py' if VERSION>=78 else 'scripts/check_offline_pvp_v77_focused.py' if VERSION>=77 else 'scripts/check_offline_pvp_v76_focused.py' if VERSION==76 else 'scripts/check_offline_pvp_v75_arm.py' if VERSION>=75 else 'scripts/check_offline_pvp_v74_arm.py' if VERSION>=74 else 'scripts/check_offline_pvp_v73_arm.py')),str(OUT)],cwd=ROOT,check=True)
+if VERSION>=73:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v101_focused.py' if VERSION>=101 else 'scripts/check_offline_pvp_v99_focused.py' if VERSION>=99 else 'scripts/check_offline_pvp_v98_focused.py' if VERSION>=98 else 'scripts/check_offline_pvp_v97_focused.py' if VERSION>=97 else 'scripts/check_offline_pvp_v96_focused.py' if VERSION>=96 else 'scripts/check_offline_pvp_v95_focused.py' if VERSION>=95 else 'scripts/check_offline_pvp_v94_focused.py' if VERSION>=94 else 'scripts/check_offline_pvp_v93_focused.py' if VERSION>=93 else 'scripts/check_offline_pvp_v91_focused.py' if VERSION>=91 else 'scripts/check_offline_pvp_v90_focused.py' if VERSION>=90 else 'scripts/check_offline_pvp_v82_focused.py' if VERSION>=82 else 'scripts/check_offline_pvp_v81_focused.py' if VERSION>=81 else 'scripts/check_offline_pvp_v80_focused.py' if VERSION>=80 else 'scripts/check_offline_pvp_v79_focused.py' if VERSION>=79 else 'scripts/check_offline_pvp_v78_focused.py' if VERSION>=78 else 'scripts/check_offline_pvp_v77_focused.py' if VERSION>=77 else 'scripts/check_offline_pvp_v76_focused.py' if VERSION==76 else 'scripts/check_offline_pvp_v75_arm.py' if VERSION>=75 else 'scripts/check_offline_pvp_v74_arm.py' if VERSION>=74 else 'scripts/check_offline_pvp_v73_arm.py')),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=83:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v83_drag.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=84:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v84_cursor.py'),str(OUT),*(['--legacy-regions-fixture'] if VERSION>=93 else [])],cwd=ROOT,check=True)
 if VERSION>=85:subprocess.run([sys.executable,str(ROOT/'scripts/check_input_v23_native.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=88:subprocess.run([sys.executable,str(ROOT/'scripts/check_resource_index_v88.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=89:subprocess.run([sys.executable,str(ROOT/'scripts/check_map_buffer_v89.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=92:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v92_visual.py'),str(OUT)],cwd=ROOT,check=True)
+if VERSION>=101:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v101_art.py'),str(OUT)],cwd=ROOT,check=True)
 if '--native-only' in sys.argv:raise SystemExit(0)
 scratch=Path(sys.argv[sys.argv.index('--intermediate-dir')+1]).resolve() if '--intermediate-dir' in sys.argv else OUT
 scratch.mkdir(parents=True,exist_ok=True)

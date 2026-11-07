@@ -16,11 +16,11 @@ NORMAL='ZombiePirateSeagullGroup_1536'
 HD_ID='ATLASIMAGE_ATLAS_ZOMBIEPVPSEAGULLGROUP_1536_HD_00'
 HD_PATH=['atlases','ZombiePVPSeagullGroup_1536_HD_00']
 
-def normal_resource(apk):
+def normal_resource(apk,basename='zombie1.rsb.smf'):
  stream=ResourceZip(apk)
  try:
   with ZipFile(stream) as z:
-   path=next(n for n in z.namelist() if n.endswith('/zombie1.rsb.smf'))
+   path=next(n for n in z.namelist() if n.endswith('/'+basename))
    return z.read(path)
  finally:stream.map.close();stream.file.close()
 

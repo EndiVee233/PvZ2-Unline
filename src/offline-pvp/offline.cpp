@@ -97,6 +97,9 @@ static U finishResearchWithGems(U b,P timer);
 static bool researchFinishPrompt;
 #endif
 #include "economy.h"
+#ifdef PVP_SELL_TROOPS
+#include "selling.h"
+#endif
 #ifdef PVP_BUSINESS_PRODUCTION
 static bool produceBusinesses(Economy& next,U now);
 static void projectBusinessStocks(U b,P m);
