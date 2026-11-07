@@ -38,7 +38,17 @@ static bool validSilentRaids(const Economy&s){
   const auto&h=s.history[i];
   if(h.kind==4){if(!businessId(s.historyDefended[i]))return false;}
   else if(s.historyDefended[i])return false;
-  if(h.kind<3&&(s.historyMedals[i]||s.historyFlags[i]))return false;
+  if(h.kind<3){
+   if(s.historyFlags[i])return false;
+   if(s.historyMedals[i]){
+#ifdef PVP_DAVE_REFERENCE
+    const NpcPreset* opponent=npc(h.target);
+    if(h.kind!=1||!opponent||!opponent->evil||!h.stars||s.historyMedals[i]<250||s.historyMedals[i]>500||s.historyMedals[i]%50)return false;
+#else
+    return false;
+#endif
+   }
+  }
   if(h.kind>=3&&!h.stars&&(h.coins||s.historyMedals[i]||s.historyFlags[i]))return false;
  }
  for(U i=0;i<s.retaliationCount;++i){const auto&j=s.retaliations[i];const NpcPreset*n=npc(j.target);

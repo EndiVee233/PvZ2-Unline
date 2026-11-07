@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "source": "User-supplied six formation/reward screenshot pairs, 2026-11-07. Coordinates are zero-based row/column; levels confirmed by the user: 1,1,2,2,2,3.",
+  "legend": {
+    "P": "peashooter",
+    "N": "wallnut",
+    "T": "tallnut",
+    "B": "bonkchoy",
+    "M": "potatomine",
+    "D": "snapdragon",
+    "S": "spikeweed",
+    "K": "kernelpult",
+    "I": "snowpea",
+    "R": "bloomerang",
+    "A": "starfruit",
+    "W": "wintermelon",
+    "U": "turnip",
+    "H": "peach",
+    "Z": "bamboo"
+  },
+  "rounds": [
+    {
+      "formation_image": "codex-clipboard-1fb1b2d2-91a3-4b27-bcfa-614434577317.png",
+      "reward_image": "codex-clipboard-67de8fd2-776a-40a3-a0b3-5bcc92492dd0.png",
+      "level": 1,
+      "coins": 0,
+      "medals": 250,
+      "rows": [
+        "..PN.....",
+        "..RB.....",
+        "I.MM.....",
+        "..RB.....",
+        ".P.N....."
+      ]
+    },
+    {
+      "formation_image": "codex-clipboard-99e7933d-5ec2-4f0c-a3a3-b91aa8224ac2.png",
+      "reward_image": "codex-clipboard-ceecbd2e-1ceb-4478-916a-95178344c4e6.png",
+      "level": 1,
+      "coins": 0,
+      "medals": 300,
+      "rows": [
+        ".PBU.....",
+        ".RHB.....",
+        "I.ZZU....",
+        ".RHB.....",
+        ".PBU....."
+      ]
+    },
+    {
+      "formation_image": "codex-clipboard-f1ea5e56-9abf-42f7-bd8c-a116d049713b.png",
+      "reward_image": "codex-clipboard-a6e95240-23f5-447f-ac51-913fe66ec5fe.png",
+      "level": 2,
+      "coins": 0,
+      "medals": 350,
+      "rows": [
+        "KPPN.....",
+        "ISDBT....",
+        "I.SSBN...",
+        "ISDBT....",
+        "KPPN....."
+      ]
+    },
+    {
+      "formation_image": "codex-clipboard-48e10377-ba0c-4d5a-a788-a3ae7640a6ff.png",
+      "reward_image": "codex-clipboard-e5653d80-db7c-425e-bfed-9bf475c3711f.png",
+      "level": 2,
+      "coins": 0,
+      "medals": 400,
+      "rows": [
+        "I.PN.....",
+        ".KRBA....",
+        "I.MMN....",
+        ".KRBA....",
+        "IP.N....."
+      ]
+    },
+    {
+      "formation_image": "codex-clipboard-379bbf07-e5f6-417e-be46-cacb3600cd65.png",
+      "reward_image": "codex-clipboard-b11e5816-1647-45eb-aa4c-930ec9b3803e.png",
+      "level": 2,
+      "coins": 0,
+      "medals": 450,
+      "rows": [
+        "KPBUN....",
+        "WRHBN....",
+        "IAZZUN...",
+        "WRHBN....",
+        "KPBUN...."
+      ]
+    },
+    {
+      "formation_image": "codex-clipboard-b178e822-0c0d-4a28-80e1-c6000bb740ee.png",
+      "reward_image": "codex-clipboard-8bdf74af-5dec-4281-9736-f425e450a53a.png",
+      "level": 3,
+      "coins": 0,
+      "medals": 500,
+      "rows": [
+        "PKPN.....",
+        "ISDBT....",
+        "WISSBN...",
+        "ISDBT....",
+        "PKPN....."
+      ]
+    }
+  ]
+}

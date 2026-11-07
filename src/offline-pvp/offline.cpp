@@ -364,6 +364,9 @@ static bool preset(U b,P m,const NpcPreset&n){
   s.pos[k]={plants[k][0],plants[k][1],plants[k][2]};
   bool seen=false;for(U j=0;j<s.infos;++j)if(s.info[j].type==s.pos[k].type)seen=true;
   if(!seen){Info&v=s.info[s.infos++];v.type=s.pos[k].type;v.level=1;
+#ifdef PVP_DAVE_REFERENCE
+   if(n.evil)v.level=DAVE_ROUNDS[arenaDaveRound].level;
+#endif
 #ifdef PVP_RANDOM_NEIGHBORS
    if(rich)v.level=rich->plants[k].level;
 #endif
@@ -763,6 +766,11 @@ static bool persistBattleArmy(U b,P m,bool daveVictory=false,U stars=0){
  if(daveVictory){
 #ifdef PVP_DAVE_ROUNDS
   if(arenaDaveRound>=DAVE_ROUND_COUNT||next.daveWins!=arenaDaveRound){log(b,"dave-result-stale",arenaDaveRound,next.daveWins);return false;}
+#ifdef PVP_DAVE_REFERENCE
+  U reward=DAVE_ROUNDS[arenaDaveRound].medals;
+  if(next.medals>2000000000u-reward)return false;
+  next.medals+=reward;
+#endif
   ++next.daveWins;
 #else
   next.daveWins=1;
@@ -793,6 +801,9 @@ static bool persistBattleArmy(U b,P m,bool daveVictory=false,U stars=0){
  if(rewarded&&!settleBattleReward(b,next,stars))return false;
 #ifdef PVP_HISTORY
  appendHistory(b,next,arenaNpc,stars,next.coins-beforeReward);
+#ifdef PVP_DAVE_REFERENCE
+ if(daveVictory)next.historyMedals[0]=DAVE_ROUNDS[arenaDaveRound].medals;
+#endif
 #endif
 #ifdef PVP_SILENT_RAIDS
  if(n&&!n->evil&&!planSilentRevenge(b,next,n->id,stars))return false;
@@ -832,6 +843,9 @@ extern "C" U offlineBattleResult(U b,P m,U stars,U id,U kind){
 #endif
  if((!n&&!shop)||stars>3||((shop||n&&!n->evil)&&(id!=arenaNpc||kind!=2||!ensureEconomy(b,m)||!paidBattleMatches(b,economyRuntime.state)))){log(b,"battle-result-unpaid-or-stale",stars,id);return 1;}
  U previousCoins=economyRuntime.state.coins;
+#ifdef PVP_DAVE_REFERENCE
+ U previousMedals=economyRuntime.state.medals;
+#endif
 #endif
  if(!persistBattleArmy(b,m,n&&n->evil&&stars>0,stars)){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return 1;}
 #ifdef PVP_BATTLE_ECONOMY
@@ -846,6 +860,9 @@ extern "C" U offlineBattleResult(U b,P m,U stars,U id,U kind){
   at<U>(m,0xac)=economyRuntime.state.coins;at<U>(m,0xb0)=economyRuntime.state.medals;at<U>(m,0xb4)=at<U>(m,12);
   at<U>(m,0xb8)=at<U>(m,0xbc)=at<U>(m,0xc0)=0;
   at<U>(m,0xc4)=economyRuntime.state.coins-previousCoins;at<U>(m,0xc8)=at<U>(m,0xcc)=0;
+#ifdef PVP_DAVE_REFERENCE
+  at<U>(m,0xc8)=economyRuntime.state.medals-previousMedals;
+#endif
   log(b,"battle-reward-saved",stars,at<U>(m,0xc4));
  }
 #ifdef PVP_BUSINESS_BATTLE
