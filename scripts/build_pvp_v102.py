@@ -23,35 +23,36 @@ def sha256(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def main():
-    assert sha256(BASE) == "78e4290ad387410ee7d73b3726a112043013637b6911c617d2f129698aababc5"
-    OUT.mkdir(parents=True, exist_ok=True)
-    unsigned = OUT / "unsigned.apk"
-    aligned = OUT / "aligned.apk"
-    final = OUT / "PvZ2-v102-pvp-art-alignment.apk"
-    with ZipFile(BASE) as source:
+def build(base, out, base_hash, prepare_art, marker_from, marker_to, apk_name):
+    assert sha256(base) == base_hash
+    out.mkdir(parents=True, exist_ok=True)
+    unsigned = out / "unsigned.apk"
+    aligned = out / "aligned.apk"
+    final = out / apk_name
+    with ZipFile(base) as source:
         old = source.read(ART)
-        art, changes = prepare(old)
+        art, changes = prepare_art(old)
         old_hash = hashlib.sha256(old).hexdigest()
         new_hash = hashlib.sha256(art).hexdigest()
         method = ".method private static isPvpResourcePredecessor(Ljava/lang/String;)Z\n    .registers 2"
+        label = marker_to.strip(".-").replace("-", "_") + "_previous"
         predecessor = f"""
 
     const-string v0, "{old_hash}"
     invoke-virtual {{v0, p0}}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
     move-result v0
-    if-eqz v0, :v102_previous
+    if-eqz v0, :{label}
     const/4 v0, 0x1
     return v0
-    :v102_previous"""
+    :{label}"""
         replacements = {
             old_hash: new_hash,
             method: method + predecessor,
-            ".pvp-extra-art-v101-" + old_hash[:12]: ".pvp-art-alignment-v102-" + new_hash[:12],
+            marker_from + old_hash[:12]: marker_to + new_hash[:12],
         }
         if len(old) != len(art):
             replacements[hex(len(old))] = hex(len(art))
-        dex = rebuild_bootstrap(source.read(DEX), OUT / "bootstrap", replacements, ROOT / "tools/apktool.jar")
+        dex = rebuild_bootstrap(source.read(DEX), out / "bootstrap", replacements, ROOT / "tools/apktool.jar")
         with ZipFile(unsigned, "w", allowZip64=True) as target:
             for item in source.infolist():
                 if item.filename.startswith("META-INF/"):
@@ -72,11 +73,11 @@ def main():
     ], check=True)
     subprocess.run([*signer, "verify", str(final)], check=True)
     subprocess.run([align, "-c", "4", str(final)], check=True)
-    with ZipFile(BASE) as base, ZipFile(final) as candidate:
+    with ZipFile(base) as original, ZipFile(final) as candidate:
         def payloads(archive):
             return {i.filename: (i.file_size, i.CRC) for i in archive.infolist() if not i.filename.startswith("META-INF/")}
 
-        before, after = payloads(base), payloads(candidate)
+        before, after = payloads(original), payloads(candidate)
         assert before.keys() == after.keys()
         assert {name for name in before if before[name] != after[name]} == {ART, DEX}
         assert candidate.read(ART) == art and candidate.read(DEX) == dex
@@ -88,9 +89,12 @@ def main():
         "changes": changes,
         "runtime_game_verified": False,
     }
-    (OUT / "build.json").write_text(json.dumps(build, indent=2) + "\n", encoding="utf8")
+    (out / "build.json").write_text(json.dumps(build, indent=2) + "\n", encoding="utf8")
     print(json.dumps(build, indent=2))
 
 
 if __name__ == "__main__":
-    main()
+    build(
+        BASE, OUT, "78e4290ad387410ee7d73b3726a112043013637b6911c617d2f129698aababc5",
+        prepare, ".pvp-extra-art-v101-", ".pvp-art-alignment-v102-", "PvZ2-v102-pvp-art-alignment.apk",
+    )
