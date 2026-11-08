@@ -1,0 +1,61 @@
+{
+  "format": "pvz2-offline-pvp",
+  "version": 2,
+  "名字": "寒霜花园",
+  "奖杯": 100,
+  "特殊值": true,
+  "出现概率": 3,
+  "columns": 9,
+  "rows": 5,
+  "tierMask": 5,
+  "阵容": [
+    {
+      "type": "wintermelon",
+      "row": 0,
+      "column": 0,
+      "level": 1
+    },
+    {
+      "type": "wintermelon",
+      "row": 1,
+      "column": 0,
+      "level": 3
+    },
+    {
+      "type": "wintermelon",
+      "row": 2,
+      "column": 0,
+      "level": 1
+    },
+    {
+      "type": "wintermelon",
+      "row": 3,
+      "column": 0,
+      "level": 3
+    },
+    {
+      "type": "wintermelon",
+      "row": 4,
+      "column": 0,
+      "level": 1
+    },
+    {
+      "type": "tallnut",
+      "row": 0,
+      "column": 2,
+      "level": 1
+    },
+    {
+      "type": "tallnut",
+      "row": 2,
+      "column": 2,
+      "level": 1
+    },
+    {
+      "type": "tallnut",
+      "row": 4,
+      "column": 2,
+      "level": 1
+    }
+  ]
+}

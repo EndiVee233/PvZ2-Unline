@@ -1,0 +1,61 @@
+{
+  "format": "pvz2-offline-pvp",
+  "version": 2,
+  "名字": "玉米防线",
+  "奖杯": 24,
+  "特殊值": false,
+  "出现概率": null,
+  "columns": 9,
+  "rows": 5,
+  "tierMask": 5,
+  "阵容": [
+    {
+      "type": "kernelpult",
+      "row": 0,
+      "column": 0,
+      "level": 1
+    },
+    {
+      "type": "kernelpult",
+      "row": 1,
+      "column": 0,
+      "level": 3
+    },
+    {
+      "type": "kernelpult",
+      "row": 2,
+      "column": 0,
+      "level": 1
+    },
+    {
+      "type": "kernelpult",
+      "row": 3,
+      "column": 0,
+      "level": 3
+    },
+    {
+      "type": "kernelpult",
+      "row": 4,
+      "column": 0,
+      "level": 1
+    },
+    {
+      "type": "tallnut",
+      "row": 0,
+      "column": 2,
+      "level": 1
+    },
+    {
+      "type": "tallnut",
+      "row": 2,
+      "column": 2,
+      "level": 1
+    },
+    {
+      "type": "tallnut",
+      "row": 4,
+      "column": 2,
+      "level": 1
+    }
+  ]
+}

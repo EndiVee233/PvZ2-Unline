@@ -1,0 +1,61 @@
+{
+  "format": "pvz2-offline-pvp",
+  "version": 2,
+  "名字": "冰豌豆防线",
+  "奖杯": 6,
+  "特殊值": false,
+  "出现概率": null,
+  "columns": 9,
+  "rows": 5,
+  "tierMask": 5,
+  "阵容": [
+    {
+      "type": "snowpea",
+      "row": 0,
+      "column": 0,
+      "level": 1
+    },
+    {
+      "type": "snowpea",
+      "row": 1,
+      "column": 0,
+      "level": 3
+    },
+    {
+      "type": "snowpea",
+      "row": 2,
+      "column": 0,
+      "level": 1
+    },
+    {
+      "type": "snowpea",
+      "row": 3,
+      "column": 0,
+      "level": 3
+    },
+    {
+      "type": "snowpea",
+      "row": 4,
+      "column": 0,
+      "level": 1
+    },
+    {
+      "type": "potatomine",
+      "row": 0,
+      "column": 2,
+      "level": 1
+    },
+    {
+      "type": "potatomine",
+      "row": 2,
+      "column": 2,
+      "level": 1
+    },
+    {
+      "type": "potatomine",
+      "row": 4,
+      "column": 2,
+      "level": 1
+    }
+  ]
+}

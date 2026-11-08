@@ -1,0 +1,61 @@
+{
+  "format": "pvz2-offline-pvp",
+  "version": 2,
+  "名字": "西瓜花园",
+  "奖杯": 72,
+  "特殊值": false,
+  "出现概率": null,
+  "columns": 9,
+  "rows": 5,
+  "tierMask": 5,
+  "阵容": [
+    {
+      "type": "melonpult",
+      "row": 0,
+      "column": 0,
+      "level": 1
+    },
+    {
+      "type": "melonpult",
+      "row": 1,
+      "column": 0,
+      "level": 3
+    },
+    {
+      "type": "melonpult",
+      "row": 2,
+      "column": 0,
+      "level": 1
+    },
+    {
+      "type": "melonpult",
+      "row": 3,
+      "column": 0,
+      "level": 3
+    },
+    {
+      "type": "melonpult",
+      "row": 4,
+      "column": 0,
+      "level": 1
+    },
+    {
+      "type": "wallnut",
+      "row": 0,
+      "column": 2,
+      "level": 1
+    },
+    {
+      "type": "wallnut",
+      "row": 2,
+      "column": 2,
+      "level": 1
+    },
+    {
+      "type": "wallnut",
+      "row": 4,
+      "column": 2,
+      "level": 1
+    }
+  ]
+}
