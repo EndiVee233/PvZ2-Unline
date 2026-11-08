@@ -1,0 +1,43 @@
+{
+  "format": "pvz2-offline-pvp",
+  "version": 2,
+  "名字": "",
+  "奖杯": 10,
+  "特殊值": false,
+  "出现概率": null,
+  "columns": 9,
+  "rows": 5,
+  "tierMask": 1,
+  "阵容": [
+    {
+      "type": "bloomerang",
+      "row": 4,
+      "column": 0,
+      "level": 1
+    },
+    {
+      "type": "peapod",
+      "row": 1,
+      "column": 0,
+      "level": 1
+    },
+    {
+      "type": "endurian",
+      "row": 1,
+      "column": 2,
+      "level": 1
+    },
+    {
+      "type": "kernelpult",
+      "row": 0,
+      "column": 0,
+      "level": 1
+    },
+    {
+      "type": "groundcherry",
+      "row": 0,
+      "column": 2,
+      "level": 1
+    }
+  ]
+}

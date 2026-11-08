@@ -1,0 +1,37 @@
+{
+  "format": "pvz2-offline-pvp",
+  "version": 2,
+  "名字": "",
+  "奖杯": 8,
+  "特殊值": false,
+  "出现概率": null,
+  "columns": 9,
+  "rows": 5,
+  "tierMask": 1,
+  "阵容": [
+    {
+      "type": "xshot",
+      "row": 4,
+      "column": 0,
+      "level": 1
+    },
+    {
+      "type": "spikeweed",
+      "row": 3,
+      "column": 1,
+      "level": 1
+    },
+    {
+      "type": "tallnut",
+      "row": 3,
+      "column": 2,
+      "level": 1
+    },
+    {
+      "type": "puffshroom",
+      "row": 0,
+      "column": 1,
+      "level": 1
+    }
+  ]
+}

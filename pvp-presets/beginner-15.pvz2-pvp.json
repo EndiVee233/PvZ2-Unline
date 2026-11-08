@@ -1,0 +1,31 @@
+{
+  "format": "pvz2-offline-pvp",
+  "version": 2,
+  "名字": "",
+  "奖杯": 2,
+  "特殊值": false,
+  "出现概率": null,
+  "columns": 9,
+  "rows": 5,
+  "tierMask": 1,
+  "阵容": [
+    {
+      "type": "splitpea",
+      "row": 3,
+      "column": 0,
+      "level": 1
+    },
+    {
+      "type": "turnip",
+      "row": 0,
+      "column": 0,
+      "level": 1
+    },
+    {
+      "type": "wallnut",
+      "row": 3,
+      "column": 2,
+      "level": 1
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "format": "pvz2-offline-pvp",
+  "version": 2,
+  "名字": "",
+  "奖杯": 3,
+  "特殊值": false,
+  "出现概率": null,
+  "columns": 9,
+  "rows": 5,
+  "tierMask": 1,
+  "阵容": [
+    {
+      "type": "peapod",
+      "row": 2,
+      "column": 1,
+      "level": 1
+    },
+    {
+      "type": "asparagus",
+      "row": 0,
+      "column": 1,
+      "level": 1
+    }
+  ]
+}
