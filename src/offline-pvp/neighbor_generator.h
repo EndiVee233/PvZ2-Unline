@@ -1,6 +1,17 @@
 #include "neighbor_catalog.h"
 struct NeighborPlant {U type,level,row,col;};
-struct NeighborEncounter {U id,seed,kind,cups,count;NeighborPlant plants[45];};
+struct NeighborEncounter {
+ U id,seed,kind,cups,count;
+ NeighborPlant plants[45];
+#ifdef PVP_GITHUB_PRESETS
+ U title[40];
+#endif
+};
+#ifdef PVP_GITHUB_PRESETS
+static constexpr U SHARED_NEIGHBOR=8;
+static constexpr U LEGACY_ENCOUNTER_BYTES=20+45*sizeof(NeighborPlant);
+static_assert(sizeof(NeighborEncounter)==LEGACY_ENCOUNTER_BYTES+160,"shared neighbor layout");
+#endif
 static U neighborRandom(U&state){state^=state<<13;state^=state>>17;state^=state<<5;return state;}
 static U neighborMix(U value){value^=value>>16;value*=0x7feb352d;value^=value>>15;value*=0x846ca68b;value^=value>>16;return value?value:1;}
 static U neighborRemainder(U value,U divisor){
@@ -17,6 +28,7 @@ static U specialNeighborRoll(U roll){
 extern "C" U offlineNeighborRoll(U,U roll){return specialNeighborRoll(roll);}
 static void neighborName(U seed,U kind,U*out){
  for(U i=0;i<40;++i)out[i]=0;U used=0;
+ if(kind>7)kind=0;
  if(kind&&kind!=4){for(U i=0;i<39&&NEIGHBOR_SPECIAL_NAMES[kind][i];++i)out[used++]=NEIGHBOR_SPECIAL_NAMES[kind][i];return;}
  const U*first=NEIGHBOR_PREFIXES[neighborMix(seed)%NEIGHBOR_PREFIXES_COUNT];
  for(U i=0;i<39&&first[i];++i)out[used++]=first[i];

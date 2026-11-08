@@ -2,6 +2,16 @@
 using U=unsigned;using P=unsigned char*;using I=int;using U64=unsigned long long;
 template<class T>T& at(P p,U o){return *reinterpret_cast<T*>(p+o);}
 template<class R,class...A>R call(U b,U o,A...a){return reinterpret_cast<R(*)(A...)>(b+o)(a...);}
+#ifdef PVP_PRESET_EDITOR
+static bool presetEditing;
+static bool presetRequest(U b,U action);
+static bool presetSave(U b);
+#ifdef PVP_PRESET_STOCK_BOARD
+static constexpr char PRESET_BOARD_NAME[]="arena_plant_test";
+#else
+static constexpr char PRESET_BOARD_NAME[]="arena_preset_editor";
+#endif
+#endif
 #ifdef PVP_RECT_SKILLS
 #include "skill_ranges.h"
 #endif
@@ -20,6 +30,12 @@ static bool regular(U b){P p=profile(b);return p&&at<U>(p,0x75c)>=9;}
 static const NpcPreset* npc(U id){for(U i=0;i<NPC_COUNT;++i)if(NPCS[i].id==id)return NPCS+i;return nullptr;}
 #ifdef PVP_RANDOM_NEIGHBORS
 #include "neighbor_generator.h"
+#ifdef PVP_GITHUB_PRESETS
+static NeighborEncounter* sharedBattle;
+static U sharedSpawnGrade;
+static bool freezeEncounter(U b,const NeighborEncounter&e,U*id);
+static I readFrozen(U b,U lo,U hi,NeighborEncounter&out);
+#endif
 static void projectDynamicNeighbor(U b,P m,const NpcPreset&n);
 static U neighborAction(U b,P panel,U button);
 #endif
@@ -356,11 +372,21 @@ static bool preset(U b,P m,const NpcPreset&n){
  Store s{};s.user=owner(b);s.positions=count;
 #ifdef PVP_RANDOM_NEIGHBORS
  const NeighborEncounter* rich=nullptr;activeEncounterId=activeEncounterSeed=activeEncounterKind=0;
+#ifdef PVP_GITHUB_PRESETS
+ if(sharedBattle)sharedBattle->kind=0;
+#endif
  if(!n.evil){
 #ifdef PVP_SILENT_RAIDS
   rich=revengeEncounter(b,n.id);
 #endif
   if(!rich)rich=encounter(b,n.id);if(!rich||!rich->seed)return false;count=s.positions=rich->count;
+#ifdef PVP_GITHUB_PRESETS
+  if(rich->kind==SHARED_NEIGHBOR){
+   if(!sharedBattle)sharedBattle=call<NeighborEncounter*>(b,0x147938,sizeof(NeighborEncounter));
+   if(!sharedBattle)return false;
+   *sharedBattle=*rich;
+  }
+#endif
 #ifdef PVP_SILENT_RAIDS
   rememberBattleEncounter(b,*rich);
 #endif
@@ -429,6 +455,9 @@ static void finishArenaBoard(U b){
  bool local=board&&at<P>(board,0xc4)&&same(reinterpret_cast<const char*>(at<P>(board,0xc4)),"arena_battle_test");
 #ifdef PVP_DEFENSE_FINISH
  if(board&&regular(b)&&at<P>(board,0xc4)&&same(reinterpret_cast<const char*>(at<P>(board,0xc4)),"arena_plant_test"))local=true;
+#ifdef PVP_PRESET_EDITOR
+ if(board&&presetEditing&&at<P>(board,0xc4)&&same(reinterpret_cast<const char*>(at<P>(board,0xc4)),PRESET_BOARD_NAME))local=true;
+#endif
 #endif
  if(local&&at<U>(board,0xc0)!=9){
   // The original PvP return handlers finish the board before changing scenes.
@@ -444,6 +473,18 @@ static bool sameText(P text,const char* expected){
  if(!text)return false;U i=0;while(expected[i]){if(text[i]!=U(expected[i]))return false;++i;}return text[i]==0;
 }
 static U requestedArenaView;
+#ifdef PVP_GITHUB_PRESETS
+extern "C" void offlineSharedSpawnBegin(U,P board,U col,U row){
+ sharedSpawnGrade=0;
+ if(!sharedBattle||sharedBattle->kind!=SHARED_NEIGHBOR||sharedBattle->id!=arenaNpc||
+    !board||!sameText(at<P>(board,0xc4),"arena_battle_test"))return;
+ for(U i=0;i<sharedBattle->count;++i){
+  const auto& plant=sharedBattle->plants[i];
+  if(plant.col==col&&plant.row==row){sharedSpawnGrade=plant.level;return;}
+ }
+}
+extern "C" void offlineSharedSpawnEnd(U){sharedSpawnGrade=0;}
+#endif
 static bool arenaPending(U b,const char*level,U mode){
  P g=at<P>(reinterpret_cast<P>(b),0x1835eec);
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
@@ -540,7 +581,11 @@ static bool attackBusiness(U b,const BusinessPlot&s){
  log(b,"business-battle-loaded",s.id);return true;
 }
 #endif
-extern "C" __attribute__((section(".text.entry"))) void offlineGarden(U b){neighbors(b,manager(b));
+extern "C" __attribute__((section(".text.entry"))) void offlineGarden(U b){
+#ifdef PVP_PRESET_EDITOR
+ if(presetEditing)return;
+#endif
+ neighbors(b,manager(b));
 #ifdef PVP_SILENT_RAIDS
  clearRevenge();
 #endif
@@ -556,6 +601,12 @@ static U defenseSessionUser;
 #endif
 #ifdef PVP_BUSINESS_DEFENSE
 #include "garrison_editor.h"
+#endif
+#ifdef PVP_PRESET_EDITOR
+#ifdef PVP_MUSIC
+#include "pvp_music.h"
+#endif
+#include "preset_editor.h"
 #endif
 #ifdef PVP_TUTORIAL_DEFENSE
 #include "tutorial_defense.h"
@@ -579,6 +630,9 @@ extern "C" void offlineOwn(U b){
 #endif
  call<void>(b,0x85e7d8);}
 extern "C" void offlineSave(U b,P network,P json,U zone,U type){
+#ifdef PVP_PRESET_EDITOR
+ if(presetEditing){presetSave(b);return;}
+#endif
  if(!regular(b)){call<void>(b,0xf87cc4,network,json,zone,type);return;}
 #ifdef PVP_BUSINESS_DEFENSE
  saveLocalDefense(b);return;
@@ -693,6 +747,9 @@ extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
 // The offline session acknowledges the original three-second heartbeat using
 // the same monotonic clock as ArenaBattleModule's native timeout check.
 extern "C" void offlineBattleRequest(U b,P m,U action){
+#ifdef PVP_PRESET_EDITOR
+ if(presetRequest(b,action))return;
+#endif
 #ifdef PVP_TUTORIAL_DEFENSE
  if(tutorialDefenseRequest(b,action))return;
 #endif

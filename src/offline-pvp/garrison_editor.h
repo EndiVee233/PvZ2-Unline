@@ -6,6 +6,12 @@ static bool defenseSessionActive;
 // enables the existing BaseCursor retain/promotion/cancel lifecycle. The
 // desktop hover, preview draw and crosshair passes already handle that slot.
 extern "C" void offlineDefenseCursorReady(U b,P board,P cursor){
+#ifdef PVP_PRESET_EDITOR
+ if(presetEditing&&cursor&&board){
+  I x=at<I>(cursor,4),y=at<I>(cursor,8);
+  at<I>(cursor,12)=x-10;at<I>(cursor,16)=y-10;at<I>(cursor,20)=20;at<I>(cursor,24)=20;return;
+ }
+#endif
  if(!defenseSessionActive||!cursor||!board||defenseSessionUser!=owner(b)||!regular(b)||
     !sameText(at<P>(board,0xc4),"arena_plant_test")||at<U>(board,0xc0)==9)return;
  I x=at<I>(cursor,4),y=at<I>(cursor,8);

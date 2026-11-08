@@ -123,11 +123,11 @@ static bool chooseRaidOpponent(U b,Economy&next,bool fbi,NeighborEncounter&out){
  if(!ensureNeighborRoster(b,manager(b)))return false;
  U count=0;
  for(U i=0;i<NEIGHBOR_SLOT_COUNT;++i){const auto&e=neighborRoster->entries[i];const auto*n=npc(e.id);
-  if(e.seed&&n&&regionOpen(n->zone)&&((e.kind==1)==fbi))++count;
+  if(e.seed&&e.kind<=7&&n&&regionOpen(n->zone)&&((e.kind==1)==fbi))++count;
  }
  if(count){U pick=raidRoll(next.raidRng,count);
   for(U i=0;i<NEIGHBOR_SLOT_COUNT;++i){const auto&e=neighborRoster->entries[i];const auto*n=npc(e.id);
-   if(e.seed&&n&&regionOpen(n->zone)&&((e.kind==1)==fbi)){if(!pick){out=e;return true;}--pick;}
+   if(e.seed&&e.kind<=7&&n&&regionOpen(n->zone)&&((e.kind==1)==fbi)){if(!pick){out=e;return true;}--pick;}
   }
  }
  // FBI can still make its single global daily roll after all visible FBI
@@ -140,7 +140,7 @@ static bool chooseRaidOpponent(U b,Economy&next,bool fbi,NeighborEncounter&out){
 static bool planSilentRevenge(U b,Economy&next,U target,U stars){
  const NeighborEncounter*e=lastBattleEncounter&&lastBattleEncounter->ready&&lastBattleEncounter->user==owner(b)&&lastBattleEncounter->opponent.id==target?&lastBattleEncounter->opponent:encounter(b,target);
  if(!e||!e->seed)return false;
- if(e->kind==1&&!stars)return true;
+ if(e->kind>7||e->kind==1&&!stars)return true;
  Store home{};if(e->kind!=1&&!readStore(b,home))return true;
  if(next.retaliationCount>=64){log(b,"silent-revenge-queue-full");return false;}
  U now=realNow(b);initializeSilent(b,next,now);U frozen[2]{};

@@ -4,9 +4,9 @@
 
 一个面向 Windows Subsystem for Android / 普通 Android 的单文件直装版
 
-**v1.7.5 v106 是离线 PvP 正式版。** 已恢复住宅侦察与攻防、商铺争夺和收租、部队训练与出售、基地布阵、奖章兑换、邪恶戴夫六轮挑战，以及住宅免战和玩家奖杯。
+**v1.7.5 v123 是当前离线 PvP 正式版。** 本版加入按奖杯匹配、混阶阵容编辑与共享关卡，并恢复花园战争的街区和对战音乐。
 
-[下载 v106](https://github.com/EndiVee233/PvZ2-Unline/releases/tag/v1.7.5-v106) · [发布说明与待办](docs/recovery/pvp-v106-release.md) · [分项验收记录](docs/recovery/README.md)
+[下载 v123](https://github.com/EndiVee233/PvZ2-Unline/releases/tag/v1.7.5-v123) · [发布说明与待办](docs/recovery/pvp-v123-release.md) · [分项验收记录](docs/recovery/README.md)
 
 ## 特性
 
@@ -22,12 +22,12 @@
 
 ## 下载安装
 
-v106 的实机验收覆盖训练场动画、住宅免战及奖杯的重启保存。详见 [v106 验收记录](docs/recovery/pvp-v106-result.md)。
+v123 已在 WSA 上验收实验室音乐连续播放、对战音乐切换、起播淡入和退出 PvP 后恢复原版音乐。
 
-到 [Releases](../../releases) 下载 `PvZ2-v106-protection-cups.apk`：
+到 [Releases](../../releases) 下载 `PvZ2-v123-preset-editor.apk`：
 
 ```bat
-adb install -r PvZ2-v106-protection-cups.apk
+adb install -r PvZ2-v123-preset-editor.apk
 ```
 
 首次启动会请求存储权限，请允许；否则无法写入 `Android/data`。

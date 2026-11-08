@@ -21,6 +21,10 @@ static void appendHistory(U b,Economy&next,U target,U stars,U coins){
 #ifdef PVP_SILENT_RAIDS
  next.historyMedals[0]=next.historyDefended[0]=next.historyFlags[0]=0;
  next.historyFrozen[0][0]=next.historyFrozen[0][1]=0;
+#ifdef PVP_GITHUB_PRESETS
+ if(rich&&activeEncounterKind==SHARED_NEIGHBOR&&sharedBattle&&sharedBattle->seed==activeEncounterSeed)
+  freezeEncounter(b,*sharedBattle,next.historyFrozen[0]);
+#endif
 #endif
  next.history[0]={next.sequence+1,realNow(b),target,stars,coins,businessId(target)?2u:1u};
  if(next.historyCount<10)++next.historyCount;
@@ -54,6 +58,16 @@ extern "C" P offlineHistoryLookup(U b,U serial,U high){
 #ifdef PVP_RANDOM_NEIGHBORS
  U title[40]{};U nameIndex=U(h-economyRuntime.state.history);
  if(economyRuntime.state.historySeeds[nameIndex]){neighborName(economyRuntime.state.historySeeds[nameIndex],economyRuntime.state.historyKinds[nameIndex],title);name=title;}
+#ifdef PVP_GITHUB_PRESETS
+ if(economyRuntime.state.historyKinds[nameIndex]==SHARED_NEIGHBOR){
+  NeighborEncounter snapshot{};
+  auto& frozen=economyRuntime.state.historyFrozen[nameIndex];
+  if(readFrozen(b,frozen[0],frozen[1],snapshot)==1){
+   for(U i=0;i<40;++i)title[i]=snapshot.title[i];
+   name=title;
+  }
+ }
+#endif
 #endif
  if(name){char alloc=0;call<void>(b,0x14eb451,historyBrief+0x9c,name,&alloc);}
  return historyBrief;

@@ -107,7 +107,7 @@ extern "C" __attribute__((section(".text.entry"))) void desktopInput(U b,P drive
  if(key==45)slot=4;if(key==51)slot=5;if(key==33)slot=6;if(key==46)slot=7;
  if(slot>=0){
 #ifdef DESKTOP_PVP_SEEDS
-  if(equal(at<const char*>(board,0xc4),"arena_plant_test"))target=defensePacket(b,board,U(slot));
+  if(equal(at<const char*>(board,0xc4),"arena_plant_test")||equal(at<const char*>(board,0xc4),"arena_preset_editor"))target=defensePacket(b,board,U(slot));
   else {
 #endif
   P bank=widget(b,"UISeedBank");if(!enabled(b,bank))return;

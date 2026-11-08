@@ -153,7 +153,11 @@ static bool validEconomy(const Economy&s,U user){
 #ifdef PVP_RANDOM_NEIGHBORS
  version=version||s.version==14;
  if(s.version>=14)for(U i=0;i<10;++i){
+#ifdef PVP_GITHUB_PRESETS
+  if(s.historyKinds[i]>SHARED_NEIGHBOR||!s.historySeeds[i]&&s.historyKinds[i])return false;
+#else
   if(s.historyKinds[i]>7||!s.historySeeds[i]&&s.historyKinds[i])return false;
+#endif
   if(i>=s.historyCount&&(s.historySeeds[i]||s.historyKinds[i]))return false;
   if(s.historySeeds[i]){const NpcPreset*n=npc(s.history[i].target);if(!n||n->evil)return false;}
  }
@@ -455,7 +459,11 @@ extern "C" void offlineTraining(U b,P camp,P name,U action){
  ++next.sequence;if(!saveEconomy(b,next)){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return;}
  r.state=next;applyEconomy(b,m);notifyTraining(b,m);log(b,"training-updated",index,action);
 }
-extern "C" void offlineTrainingTick(U b,P camp){P m=manager(b);if(ensureEconomy(b,m))settleTraining(b,m);tickProgression(b);
+extern "C" void offlineTrainingTick(U b,P camp){
+#ifdef PVP_PRESET_EDITOR
+ if(presetEditing)return;
+#endif
+ P m=manager(b);if(ensureEconomy(b,m))settleTraining(b,m);tickProgression(b);
 #ifdef PVP_EVOLUTION
  settleEvolution(b,m);
 #endif

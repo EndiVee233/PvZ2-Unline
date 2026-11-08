@@ -26,6 +26,22 @@ if '--v104' in sys.argv:VERSION=104
 if '--v105' in sys.argv:VERSION=105
 if '--v106' in sys.argv:VERSION=106
 if '--v107' in sys.argv:VERSION=107
+if '--v108' in sys.argv:VERSION=108
+if '--v109' in sys.argv:VERSION=109
+if '--v110' in sys.argv:VERSION=110
+if '--v111' in sys.argv:VERSION=111
+if '--v112' in sys.argv:VERSION=112
+if '--v113' in sys.argv:VERSION=113
+if '--v114' in sys.argv:VERSION=114
+if '--v115' in sys.argv:VERSION=115
+if '--v116' in sys.argv:VERSION=116
+if '--v117' in sys.argv:VERSION=117
+if '--v118' in sys.argv:VERSION=118
+if '--v119' in sys.argv:VERSION=119
+if '--v120' in sys.argv:VERSION=120
+if '--v121' in sys.argv:VERSION=121
+if '--v122' in sys.argv:VERSION=122
+if '--v123' in sys.argv:VERSION=123
 OUT=ROOT/(f'work/pvp-v{VERSION}-test' if '--shop-clock-test' in sys.argv or '--silent-raid-test' in sys.argv else f'work/pvp-v{VERSION}')
 if '--output-dir' in sys.argv:OUT=Path(sys.argv[sys.argv.index('--output-dir')+1]).resolve()
 OUT.mkdir(parents=True,exist_ok=True)
@@ -196,6 +212,17 @@ if VERSION>=104:flags.append('-DPVP_DAVE_REFERENCE')
 if VERSION>=105:flags.append('-DPVP_BUSINESS_REPLACE')
 if VERSION>=106:flags.append('-DPVP_NEIGHBOR_PROTECTION')
 if VERSION>=107:flags.append('-DPVP_CUP_MATCHING')
+if VERSION>=108:
+ from prepare_pvp_preset_editor import prepare as prepare_editor
+ allowed_ids={p['id'] for p in economy_record['neighbor_catalogue']['plants']} if VERSION>=121 else None
+ _, editor_catalogue=prepare_editor(resource,(ROOT/'work/libSrc_orig.so').read_bytes(),OUT/'generated',
+                                   register_level=VERSION>=111,allowed_ids=allowed_ids)
+ flags.append('-DPVP_PRESET_EDITOR')
+if VERSION>=110:flags.append('-DPVP_PRESET_NATIVE_PAGES')
+if VERSION>=113:flags.append('-DPVP_PRESET_STOCK_BOARD')
+if VERSION>=114:flags.append('-DPVP_PRESET_EDIT_TOOLS')
+if VERSION>=115:flags.append('-DPVP_GITHUB_PRESETS')
+if VERSION>=122:flags.append('-DPVP_MUSIC')
 if '--silent-raid-test' in sys.argv:flags.append('-DPVP_SILENT_RAID_TEST')
 if '--shop-clock-test' in sys.argv:flags.append('-DPVP_EXCHANGE_CLOCK_TEST')
 subprocess.run([compiler,*flags,'-c',str(ROOT/'src/offline-pvp/offline.cpp'),'-o',str(OUT/'offline.o')],check=True)
@@ -261,6 +288,82 @@ def custom_stub(asm):
  c=bytearray(Ks(KS_ARCH_ARM,KS_MODE_ARM).asm(asm,addr=va)[0]);p=c.index(struct.pack('<I',0x11223344));struct.pack_into('<I',c,p,va+p);b.extend(c);return va
 def redirect(site,target):
  before=bytes(b[site:site+4]);struct.pack_into('<I',b,site,0xea000000|(((target-site-8)//4)&0xffffff));patches.append(dict(site=hex(site),before=before.hex(),after=bytes(b[site:site+4]).hex()))
+if VERSION>=122:
+ site=0x1363898
+ first=struct.unpack_from('<I',b,site)[0];assert first==0xe92d4878
+ target=custom_stub('push {r0-r4,lr}\n'+baseasm()+
+  f'bl #{symbols["offlinePvpMusicEffectiveGain"]}\nstr r0,[sp,#4]\npop {{r0-r4,lr}}\n.word {first}\nb #{site+4}')
+ redirect(site,target)
+if VERSION>=108:
+ # These prologues contain no PC-relative instructions. Preserve both arguments
+ # and original return values; never hook the ordinary editor's save globally.
+ post_hooks=[(0x102675c,'offlinePresetBankReady'),(0x109564c,'offlinePresetSpawnDone')]
+ if VERSION==108:
+  post_hooks.append((0x8e5a1c,'offlinePresetSettingsReady'))
+ else:
+  # Add rows after User ID, before the scroll view is attached and laid out.
+  site=0x8e6114
+  assert bytes(b[site:site+4])==bl(site,0x8e4678)
+  assert bytes(b[site-4:site])==bytes.fromhex('bc1094e5') # ldr r1, [r4, #0xbc]
+  target=custom_stub('push {r0-r4,lr}\nmov r1,r4\n'+baseasm()+f'bl #{symbols["offlinePresetSettingsReady"]}\npop {{r0-r4,lr}}\nb #0x8e4678')
+  b[site:site+4]=bl(site,target);patches.append(dict(site=hex(site),symbol='offlinePresetSettingsReady'))
+ for site,symbol in post_hooks:
+  first=struct.unpack_from('<I',b,site)[0];assert first>>16==0xe92d
+  target=custom_stub('push {r4,r5,r6,lr}\nmov r4,r0\nbl preset_original\nmov r5,r0\nmov r1,r4\n'+baseasm()+f'bl #{symbols[symbol]}\nmov r0,r5\npop {{r4,r5,r6,pc}}\npreset_original: .word {first}\nb #{site+4}')
+  redirect(site,target)
+ for site,symbol,returns in ((0x8e8884,'offlinePresetSettingsClick',False),(0x708e18,'offlinePresetUnlock',True),(0x10430d8,'offlinePresetGrade',True),(0x1095900,'offlinePresetSaveClick',False)):
+  first=struct.unpack_from('<I',b,site)[0];assert first>>16==0xe92d,(hex(site),hex(first))
+  result='strne r0,[sp]\n' if returns else ''
+  route=''
+  if VERSION>=110 and site==0x8e8884:
+   # Return 2 routes the new root entries through the stock data-sharing transition.
+   route='cmp r0,#2\nmoveq r0,#9\nstreq r0,[sp,#4]\nmoveq r0,#0\n'
+  target=custom_stub('push {r0-r4,lr}\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl #{symbols[symbol]}\n'+route+'cmp r0,#0\n'+result+'pop {r0-r4,lr}\nbne preset_handled\n'+f'.word {first}\nb #{site+4}\npreset_handled: bx lr')
+  redirect(site,target)
+ if VERSION>=110:
+  site=0x8e7868
+  assert bytes(b[site:site+4])==bl(site,0x8e4560)
+  target=custom_stub('push {r0-r4,lr}\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlinePresetPageTitle"]}\npop {{r0-r4,pc}}')
+  b[site:site+4]=bl(site,target);patches.append(dict(site=hex(site),symbol='offlinePresetPageTitle'))
+  site=0x8e7b34
+  assert bytes(b[site:site+4])==bl(site,0x8e5924)
+  target=custom_stub('push {r0-r4,lr}\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlinePresetPageRows"]}\ncmp r0,#0\npop {{r0-r4,lr}}\nbeq #0x8e5924\nb #0x8e7be4')
+  b[site:site+4]=bl(site,target);patches.append(dict(site=hex(site),symbol='offlinePresetPageRows'))
+ site=0x109586c;assert bytes(b[site:site+4])==bl(site,0x21ab00)
+ target=custom_stub('push {r0-r4,lr}\n'+baseasm()+f'bl #{symbols["offlinePresetSpawnGrade"]}\npop {{r0-r4,lr}}\nb #0x21ab00')
+ b[site:site+4]=bl(site,target);patches.append(dict(site=hex(site),symbol='offlinePresetSpawnGrade'))
+ if VERSION>=120:
+  # The stock defense board classifies as mode 2 and uses the normal profile
+  # when creating a plant. Route only the isolated editor through the existing
+  # grade getter and virtual setter after PlantInit has installed its type.
+  site=0x4b6804
+  assert struct.unpack_from('<I',b,site)[0]==0xe3570000 # cmp r7,#0
+  target=custom_stub('push {r0-r4,lr}\n'+baseasm()+
+    f'bl #{symbols["offlinePresetUsePlacementGrade"]}\ncmp r0,#0\npop {{r0-r4,lr}}\nbne #0x4b6ce0\ncmp r7,#0\nb #{site+4}')
+  redirect(site,target)
+ if VERSION>=113:
+  site=0x225a54
+  assert bytes(b[site:site+4])==bl(site,0x440dc4)
+  target=custom_stub('push {r4,lr}\nmov r3,r2\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlinePresetLevelDefinition"]}\npop {{r4,pc}}')
+  b[site:site+4]=bl(site,target);patches.append(dict(site=hex(site),symbol='offlinePresetLevelDefinition'))
+  if VERSION>=114:
+   site,original_target,symbol=0x1097918,0x1097d00,'offlinePresetAdvanceDefensePhase'
+  else:
+   site,original_target,symbol=0x109790c,0x9766f4,'offlinePresetHideTutorialSave'
+  assert bytes(b[site:site+4])==bl(site,original_target)
+  target=custom_stub('push {r4,lr}\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl #{symbols[symbol]}\npop {{r4,pc}}')
+  b[site:site+4]=bl(site,target);patches.append(dict(site=hex(site),symbol=symbol))
+ if VERSION>=115:
+  # The two ArenaBattle paths create the same plant with six stack arguments.
+  # Scope the imported grade to that call, including early returns in AddPlant.
+  stack_copy=''.join(f'ldr r12,[sp,#{32+i*4}]\nstr r12,[sp,#{i*4}]\n' for i in range(6))
+  target=custom_stub('push {r0-r4,lr}\nmov r3,r2\nmov r2,r1\nmov r1,r0\n'+baseasm()+
+    f'bl #{symbols["offlineSharedSpawnBegin"]}\npop {{r0-r4,lr}}\npush {{r4,lr}}\nsub sp,sp,#24\n'+stack_copy+
+    'bl #0x21ab00\nadd sp,sp,#24\npush {r0,r1}\n'+baseasm()+
+    f'bl #{symbols["offlineSharedSpawnEnd"]}\npop {{r0,r1}}\npop {{r4,pc}}')
+  for site in (0x108d204,0x108ddf0):
+   assert bytes(b[site:site+4])==bl(site,0x21ab00)
+   b[site:site+4]=bl(site,target);patches.append(dict(site=hex(site),symbol='offlineSharedSpawnBegin'))
 if VERSION>=101:
  site=0x10584d0;first=struct.unpack_from('<I',original,site)[0];assert first==0xe92d4ff0
  target=custom_stub('push {r4,r5,r6,lr}\nmov r4,r0\nbl sale_ready_original\nmov r5,r0\nmov r1,r4\n'+baseasm()+f'bl #{symbols["offlineSellReady"]}\nmov r0,r5\npop {{r4,r5,r6,pc}}\nsale_ready_original: .word {first}\nb #{site+4}')

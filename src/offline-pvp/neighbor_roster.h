@@ -16,15 +16,24 @@ static const NeighborPlantSpec* legacyNeighborPlant(U id){
  return nullptr;
 }
 #endif
-static U neighborChecksum(const NeighborRoster&r){
- const auto*p=reinterpret_cast<const unsigned char*>(&r);U hash=2166136261;
- for(U i=0;i<sizeof(r);++i)if(i<20||i>=24)hash=(hash^p[i])*16777619u;
+static U neighborChecksumBytes(const unsigned char*p,U size){
+ U hash=2166136261;
+ for(U i=0;i<size;++i)if(i<20||i>=24)hash=(hash^p[i])*16777619u;
  return hash;
 }
-static bool validEncounter(const NeighborEncounter&e,U expected,bool legacy=false){
+static U neighborChecksum(const NeighborRoster&r){return neighborChecksumBytes(reinterpret_cast<const unsigned char*>(&r),sizeof(r));}
+static bool validEncounter(const NeighborEncounter&e,U expected,bool legacy=false,bool allowUnnamed=false){
  if(e.id!=expected)return false;
  if(!e.seed){if(e.kind||e.cups||e.count)return false;return true;}
- if(e.kind>7||e.count<5||e.count>45||e.kind==1&&e.cups!=999||e.kind!=1&&e.cups>230||e.kind==2&&e.cups<60||e.kind==3&&e.cups<40)return false;
+ bool shared=false;
+#ifdef PVP_GITHUB_PRESETS
+ shared=e.kind==SHARED_NEIGHBOR;
+ if(shared){
+  if(legacy||(!allowUnnamed&&!e.title[0])||e.title[39])return false;
+  for(U ch:e.title)if((ch&&ch<32)||(ch>=127&&ch<=159)||(ch>=0xd800&&ch<=0xdfff)||ch>0x10ffff)return false;
+ }
+#endif
+ if((!shared&&e.kind>7)||e.count<(shared?1u:5u)||e.count>45||e.kind==1&&e.cups!=999||e.kind!=1&&e.cups>(shared?99999u:230u)||e.kind==2&&e.cups<60||e.kind==3&&e.cups<40)return false;
  U spent=0;bool varied=false;
  for(U i=0;i<e.count;++i){const auto&q=e.plants[i];const auto*p=neighborPlant(q.type);
 #ifdef PVP_UNIQUE_NEIGHBORS
@@ -34,18 +43,21 @@ static bool validEncounter(const NeighborEncounter&e,U expected,bool legacy=fals
   spent+=p->cost;varied|=q.level!=e.plants[0].level;U copies=1;
   for(U j=0;j<i;++j){const auto&other=e.plants[j];
    if(other.row==q.row&&other.col==q.col)return false;
-   if(other.type==q.type){if(other.level!=q.level)return false;++copies;}
+   if(other.type==q.type){if(!shared&&other.level!=q.level)return false;++copies;}
   }
   if(e.kind!=1&&copies>10)return false;
   if(e.kind==1&&(q.type!=e.plants[0].type||q.level!=p->maxLevel))return false;
  }
- return e.kind==1?e.count==45:spent<=NEIGHBOR_MAX_SUN&&varied;
+ return e.kind==1?e.count==45:spent<=NEIGHBOR_MAX_SUN&&(varied||shared);
 }
 static bool validRoster(const NeighborRoster&r,U user){
  bool version=r.version==1;
 #ifdef PVP_UNIQUE_NEIGHBORS
  version=version||r.version==2;U seen=0;
- if(r.version==2)for(U i=0;i<NEIGHBOR_SLOT_COUNT;++i){U kind=r.entries[i].kind;if(kind<2||kind>7)continue;
+#ifdef PVP_GITHUB_PRESETS
+ version=version||r.version==3;
+#endif
+ if(r.version>=2)for(U i=0;i<NEIGHBOR_SLOT_COUNT;++i){U kind=r.entries[i].kind;if(kind<2||kind>7)continue;
   if(seen&(1u<<kind))return false;seen|=1u<<kind;
  }
 #endif
@@ -59,6 +71,9 @@ static void neighborPath(U user,char*out,bool tmp){
  while(*suffix)out[length++]=*suffix++;out[length]=0;
 }
 static bool saveRoster(U b,NeighborRoster&r){
+#ifdef PVP_GITHUB_PRESETS
+ r.version=3;
+#endif
  r.checksum=neighborChecksum(r);if(!validRoster(r,r.user))return false;
  char file[160],tmp[160];neighborPath(r.user,file,false);neighborPath(r.user,tmp,true);
  I fd=call<I>(b,0x148448,tmp,0x241,0600);if(fd<0)return false;U done=0;
@@ -70,6 +85,21 @@ static I readRoster(U b,NeighborRoster&r,U user){
  char file[160];neighborPath(user,file,false);I fd=call<I>(b,0x148448,file,0,0);if(fd<0)return 0;
  U done=0;while(done<sizeof(r)){I n=call<I>(b,0x148460,fd,reinterpret_cast<P>(&r)+done,sizeof(r)-done);if(n<=0)break;done+=U(n);}
  char tail;I extra=call<I>(b,0x148460,fd,&tail,1);call<I>(b,0x147b90,fd);
+#ifdef PVP_GITHUB_PRESETS
+ constexpr U oldSize=24+NEIGHBOR_SLOT_COUNT*LEGACY_ENCOUNTER_BYTES;
+ if(done==oldSize&&!extra&&(r.version==1||r.version==2)){
+  P raw=reinterpret_cast<P>(&r);
+  if(r.checksum!=neighborChecksumBytes(raw,oldSize))return -1;
+  // Expand from the end so the input records can be read in place.
+  for(U i=NEIGHBOR_SLOT_COUNT;i>0;--i){
+   NeighborEncounter entry{};
+   bytes(reinterpret_cast<P>(&entry),raw+24+(i-1)*LEGACY_ENCOUNTER_BYTES,LEGACY_ENCOUNTER_BYTES);
+   r.entries[i-1]=entry;
+  }
+  r.checksum=neighborChecksum(r);
+  return validRoster(r,user)?1:-1;
+ }
+#endif
  return done==sizeof(r)&&!extra&&validRoster(r,user)?1:-1;
 }
 static NeighborEncounter* findEncounter(NeighborRoster&r,U id){
@@ -106,7 +136,10 @@ static U matchedNeighborCups(U playerCups,U seed){
  return low+neighborRemainder(neighborRandom(rng),center+radius-low+1);
 }
 #endif
-static void generateRosterNeighbor(NeighborRoster&r,NeighborEncounter&e,U id,U seed,U kind=0){
+#ifdef PVP_GITHUB_PRESETS
+#include "shared_neighbors.h"
+#endif
+static void generateRosterNeighbor(NeighborRoster&r,NeighborEncounter&e,U id,U seed,U kind=0,U excludeShared=0){
  U cups=0xffffffffu;
 #ifdef PVP_CUP_MATCHING
  cups=matchedNeighborCups(economyRuntime.state.cups,seed);
@@ -114,6 +147,9 @@ static void generateRosterNeighbor(NeighborRoster&r,NeighborEncounter&e,U id,U s
  generateNeighbor(e,id,seed,kind,cups);
 #ifdef PVP_UNIQUE_NEIGHBORS
  if(e.kind>=2&&e.kind<=7&&(presentSpecials(r,id)&(1u<<e.kind)))generateNeighbor(e,id,seed,8,cups);
+#endif
+#ifdef PVP_GITHUB_PRESETS
+ if(!e.kind)pickSharedNeighbor(r,e,id,seed,cups,excludeShared);
 #endif
 }
 static bool ensureNeighborRoster(U b,P m){
@@ -165,6 +201,10 @@ static const NeighborEncounter* encounter(U b,U id){
 static void projectDynamicNeighbor(U b,P m,const NpcPreset&n){
  const auto*e=encounter(b,n.id);if(!e||!e->seed)return;
  U title[40]{};neighborName(e->seed,e->kind,title);
+ const U*displayName=title;
+#ifdef PVP_GITHUB_PRESETS
+ if(e->kind==SHARED_NEIGHBOR)displayName=e->title;
+#endif
  alignas(8) U record[16]={n.id,0,0,n.level,e->cups,0,100,n.zone,n.position,1,0,0,0,0,1,0};
 #ifdef PVP_NEIGHBOR_PROTECTION
  record[5]=starCups(3);
@@ -173,7 +213,7 @@ static void projectDynamicNeighbor(U b,P m,const NpcPreset&n){
   record[10]=until;
  }
 #endif
- char alloc=0;call<void>(b,0x14eb451,reinterpret_cast<P>(record)+8,title,&alloc);
+ char alloc=0;call<void>(b,0x14eb451,reinterpret_cast<P>(record)+8,displayName,&alloc);
  call<void>(b,0x104678c,m,record);release(b,reinterpret_cast<P>(record[2]),true);
 }
 extern "C" void offlinePvpPanelReady(U b,P panel){
@@ -198,12 +238,19 @@ static U neighborAction(U b,P panel,U button){
  P map=at<P>(panel,0xc0);if(!map)return 1;
  auto*next=reinterpret_cast<NeighborRoster*>(call<P>(b,0x147938,sizeof(NeighborRoster)));if(!next)return 1;*next=*neighborRoster;
  auto*entry=findEncounter(*next,n->id);const auto*old=findEncounter(*neighborRoster,n->id);
- generateRosterNeighbor(*next,*entry,n->id,neighborRandom(next->rng));
+ U excludeShared=0;
+#ifdef PVP_GITHUB_PRESETS
+ if(old->kind==SHARED_NEIGHBOR)excludeShared=old->seed;
+#endif
+ generateRosterNeighbor(*next,*entry,n->id,neighborRandom(next->rng),0,excludeShared);
  U kind=entry->kind;
  for(U attempt=0;attempt<16;++attempt){
+#ifdef PVP_GITHUB_PRESETS
+  if(entry->kind==SHARED_NEIGHBOR)break;
+#endif
   bool sameName=false;if(kind==old->kind&&(kind==0||kind==4)){U a[40]{},c[40]{};neighborName(entry->seed,kind,a);neighborName(old->seed,kind,c);sameName=true;for(U i=0;i<40;++i)if(a[i]!=c[i])sameName=false;}
   if(!sameName&&(kind==1||entry->cups!=old->cups))break;
-  generateRosterNeighbor(*next,*entry,n->id,neighborRandom(next->rng),kind?kind:8);
+  generateRosterNeighbor(*next,*entry,n->id,neighborRandom(next->rng),kind?kind:8,excludeShared);
  }
  if(entry->kind==1&&old->kind==1&&entry->plants[0].type==old->plants[0].type){
   U type=old->plants[0].type==34?314:34;
