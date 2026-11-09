@@ -4,13 +4,13 @@
 
 一个面向 Windows Subsystem for Android / 普通 Android 的单文件直装版
 
-**v1.7.5 v123 是当前离线 PvP 正式版。** 本版加入按奖杯匹配、混阶阵容编辑与共享关卡，并恢复花园战争的街区和对战音乐。
+**当前发布版为 PvZ2-Unline v147。** 应用图标使用 `PVP.png`，开始界面使用等比铺满窗口的新版背景。
 
-[下载 v123](https://github.com/EndiVee233/PvZ2-Unline/releases/tag/v1.7.5-v123) · [发布说明与待办](docs/recovery/pvp-v123-release.md) · [分项验收记录](docs/recovery/README.md)
+[下载 v147](https://github.com/EndiVee233/PvZ2-Unline/releases/tag/v1.7.5-v147) · [离线 PvP 功能与待办](docs/recovery/pvp-v123-release.md) · [分项验收记录](docs/recovery/README.md)
 
 ## 特性
 
-- **程序名**：植物大战僵尸2
+- **程序名** 植物大战僵尸2-Unline
 - **单文件直装**：资源以分卷形式内置在 APK 中 首次启动自动解压
 - **尝试跳过“服务器通讯中”**：`AndroidHttpProxy.GetNetworkStatus()` 固定返回 `0`
 - **WSA 纹理兼容层**：`libRestart.so` 作为 GL shim
@@ -22,12 +22,10 @@
 
 ## 下载安装
 
-v123 已在 WSA 上验收实验室音乐连续播放、对战音乐切换、起播淡入和退出 PvP 后恢复原版音乐。
-
-到 [Releases](../../releases) 下载 `PvZ2-v123-preset-editor.apk`：
+到 [Releases](../../releases) 下载 `PvZ2-Unline-v147.apk` 后覆盖安装。
 
 ```bat
-adb install -r PvZ2-v123-preset-editor.apk
+adb install -r PvZ2-Unline-v147.apk
 ```
 
 首次启动会请求存储权限，请允许；否则无法写入 `Android/data`。

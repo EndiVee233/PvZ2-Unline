@@ -42,6 +42,26 @@ if '--v120' in sys.argv:VERSION=120
 if '--v121' in sys.argv:VERSION=121
 if '--v122' in sys.argv:VERSION=122
 if '--v123' in sys.argv:VERSION=123
+if '--v128' in sys.argv:VERSION=128
+if '--v129' in sys.argv:VERSION=129
+if '--v130' in sys.argv:VERSION=130
+if '--v131' in sys.argv:VERSION=131
+if '--v132' in sys.argv:VERSION=132
+if '--v133' in sys.argv:VERSION=133
+if '--v134' in sys.argv:VERSION=134
+if '--v135' in sys.argv:VERSION=135
+if '--v136' in sys.argv:VERSION=136
+if '--v137' in sys.argv:VERSION=137
+if '--v138' in sys.argv:VERSION=138
+if '--v139' in sys.argv:VERSION=139
+if '--v140' in sys.argv:VERSION=140
+if '--v141' in sys.argv:VERSION=141
+if '--v142' in sys.argv:VERSION=142
+if '--v143' in sys.argv:VERSION=143
+if '--v144' in sys.argv:VERSION=144
+if '--v145' in sys.argv:VERSION=145
+if '--v146' in sys.argv:VERSION=146
+if '--v147' in sys.argv:VERSION=147
 OUT=ROOT/(f'work/pvp-v{VERSION}-test' if '--shop-clock-test' in sys.argv or '--silent-raid-test' in sys.argv else f'work/pvp-v{VERSION}')
 if '--output-dir' in sys.argv:OUT=Path(sys.argv[sys.argv.index('--output-dir')+1]).resolve()
 OUT.mkdir(parents=True,exist_ok=True)
@@ -217,12 +237,31 @@ if VERSION>=108:
  allowed_ids={p['id'] for p in economy_record['neighbor_catalogue']['plants']} if VERSION>=121 else None
  _, editor_catalogue=prepare_editor(resource,(ROOT/'work/libSrc_orig.so').read_bytes(),OUT/'generated',
                                    register_level=VERSION>=111,allowed_ids=allowed_ids)
+ if VERSION>=138:
+  from prepare_opening_tutorial_resources import prepare as prepare_opening_resources
+  editor_resource=OUT/'generated/dynamic-preset-editor.rsb.smf'
+  editor_resource.write_bytes(prepare_opening_resources(editor_resource.read_bytes(),egypt2_reward=VERSION>=139))
+ if VERSION>=144:
+  from prepare_menu_background import prepare as prepare_title_atlas
+  encoder=Path('K:/pvz2-tools/astcenc-5.7.1/bin/astcenc-avx2.exe')
+  editor_resource.write_bytes(prepare_title_atlas(editor_resource.read_bytes(),ROOT/'1.png',encoder,OUT/'generated'))
+ if VERSION>=145:
+  from unline_branding import patch_about
+  editor_resource.write_bytes(patch_about(editor_resource.read_bytes(),credits=VERSION>=146))
  flags.append('-DPVP_PRESET_EDITOR')
 if VERSION>=110:flags.append('-DPVP_PRESET_NATIVE_PAGES')
 if VERSION>=113:flags.append('-DPVP_PRESET_STOCK_BOARD')
 if VERSION>=114:flags.append('-DPVP_PRESET_EDIT_TOOLS')
 if VERSION>=115:flags.append('-DPVP_GITHUB_PRESETS')
 if VERSION>=122:flags.append('-DPVP_MUSIC')
+if VERSION>=140:flags.append('-DBRANCH_GATE_AUDIO')
+if VERSION>=141:flags.append('-DBRANCH_GATE_SPEND')
+if VERSION>=142:flags.append('-DSPEED_FEEDBACK')
+if VERSION>=143:flags.append('-DMENU_BACKGROUND_ASPECT')
+if VERSION>=144:flags.append('-DMENU_BACKGROUND_COVER')
+if VERSION>=128:flags.append('-DBOARD_CAMERA_BOUNDS')
+if VERSION>=130:flags.append('-DADVENTURE_OPENING_TUTORIAL')
+if VERSION>=135:flags.append('-DADVENTURE_TUTORIAL_SEEDS')
 if '--silent-raid-test' in sys.argv:flags.append('-DPVP_SILENT_RAID_TEST')
 if '--shop-clock-test' in sys.argv:flags.append('-DPVP_EXCHANGE_CLOCK_TEST')
 subprocess.run([compiler,*flags,'-c',str(ROOT/'src/offline-pvp/offline.cpp'),'-o',str(OUT/'offline.o')],check=True)
@@ -230,7 +269,9 @@ subprocess.run([compiler,*flags,'-c',str(ROOT/'src/offline-pvp/offline.cpp'),'-o
 # would work at base zero in analysis and crash after Android relocates the SO.
 objects=[OUT/'offline.o']
 if VERSION>=85:
- subprocess.run([compiler,*flags,'-DDESKTOP_PVP_SEEDS','-c',str(ROOT/'src/desktop-input/shortcuts.cpp'),'-o',str(OUT/'desktop-input.o')],check=True)
+ input_flags=['-DDESKTOP_PVP_SEEDS']
+ if VERSION>=129:input_flags.append('-DDESKTOP_EXTENDED_INPUT')
+ subprocess.run([compiler,*flags,*input_flags,'-c',str(ROOT/'src/desktop-input/shortcuts.cpp'),'-o',str(OUT/'desktop-input.o')],check=True)
  objects.append(OUT/'desktop-input.o')
 if VERSION>=88:
  subprocess.run([compiler,*flags,'-c',str(ROOT/'src/resource-index/retained_lookup.cpp'),'-o',str(OUT/'resource-index.o')],check=True)
@@ -288,12 +329,188 @@ def custom_stub(asm):
  c=bytearray(Ks(KS_ARCH_ARM,KS_MODE_ARM).asm(asm,addr=va)[0]);p=c.index(struct.pack('<I',0x11223344));struct.pack_into('<I',c,p,va+p);b.extend(c);return va
 def redirect(site,target):
  before=bytes(b[site:site+4]);struct.pack_into('<I',b,site,0xea000000|(((target-site-8)//4)&0xffffff));patches.append(dict(site=hex(site),before=before.hex(),after=bytes(b[site:site+4]).hex()))
+if VERSION>=130:
+ # IntroCinema has just marked intro1 complete. Divert before the China
+ # build selects egypt_level_1 and commits egypt1 as the current level.
+ site=0x3d6c4c
+ assert bytes(b[site:site+4])==bytes.fromhex('e4869fe5')
+ egypt_literal=struct.unpack_from('<I',b,site+8+0x6e4)[0]
+ # Read the board through the same game singleton GOT slot used at 0x3d6ce0.
+ assert struct.unpack_from('<i',b,0x3d7344)[0]==-0x13f4
+ target=custom_stub('push {r0-r4,lr}\n'+baseasm()+
+  f'bl #{symbols["adventureOpeningTutorial"]}\ncmp r0,#0\npop {{r0-r4,lr}}\nbeq egypt\n'
+  'movw r3,#0x13f4\nldr r3,[r7,-r3]\nldr r3,[r3]\nldr r0,[r3,#0x6bc]\n'
+  'bl #0x226d50\nbl #0x9e8684\nb #0x3d6d48\n'
+  f'egypt: movw r8,#{egypt_literal&0xffff}\nmovt r8,#{egypt_literal>>16}\nb #{site+4}')
+ redirect(site,target)
+ patches[-1]['symbol']='adventureOpeningTutorial'
+if VERSION>=131:
+ # A tutorial seed bank can use its scripted preset without a SeedBankNew
+ # properties handle. Follow the normal autofill path when the handle is empty.
+ for site in (0x896b74,0x896b94):
+  assert bytes(b[site:site+4])==bytes.fromhex('003090e5')
+  target=custom_stub('cmp r0,#0\nbeq #0x896ba8\nldr r3,[r0]\n'+
+   f'b #{site+4}')
+  redirect(site,target)
+  patches[-1]['symbol']='seedBankOptionalProperties'
+if VERSION>=132:
+ # The stock SkipTutorial dialog associates YES_SKIP with the continue
+ # callback and NO_DONT_SKIP with the callback that completes days 1–3.
+ for literal,add_pc,before_callback,after_callback in (
+  (0x9663dc,0x965ebc,0x964ad4,0x96449c),
+  (0x9663ec,0x965f5c,0x96449c,0x964ad4),
+ ):
+  before=struct.unpack_from('<i',b,literal)[0]
+  assert add_pc+8+before==before_callback
+  after=after_callback-add_pc-8
+  struct.pack_into('<i',b,literal,after)
+  patches.append(dict(site=hex(literal),symbol='tutorialSkipDialogCallback',
+                      before=hex(before_callback),after=hex(after_callback)))
+if VERSION>=133:
+ # The continue delegate receives the live TutorialLevel1 module as r0.
+ # Keep the original prompt cleanup and notification, bypassing the Egypt
+ # selection and the old board shutdown. Enter the existing first hint state.
+ site=0x964af4
+ assert struct.unpack_from('<I',b,site)[0]==0xe1a00006
+ target=custom_stub('str r0,[fp,#-0x30]\n'+baseasm()+
+  'movw r8,#0x2a68\nmovt r8,#0x182\nadd r8,r0,r8\n'
+  'sub r4,fp,#0x24\nsub r5,fp,#0x2c\nb #0x964bbc')
+ redirect(site,target)
+ patches[-1]['symbol']='tutorialContinueKeepBoard'
+ assert struct.unpack_from('<I',b,0x964c10)[0]==0xe5973000
+ redirect(0x964c10,0x964c2c)
+ site=0x964d3c
+ assert struct.unpack_from('<I',b,site)[0]==0xe24bd01c
+ target=custom_stub('ldr r0,[fp,#-0x30]\ncmp r0,#0\nbeq finish\n'
+  'ldr r1,[r0,#0x30]\ncmp r1,#0\nmoveq r1,#1\nbleq #0x965c98\n'
+  'finish: sub sp,fp,#0x1c\nb #0x964d40')
+ redirect(site,target)
+ patches[-1]['symbol']='tutorialContinueFirstHint'
+if VERSION>=134:
+ # The bypassed Egypt setup used to construct the string at fp-0x28.
+ # Its destructor is separate from the retained UI_SkipTutorial string.
+ assert struct.unpack_from('<I',b,0x964d2c)[0]==0xe51b0028
+ redirect(0x964d2c,0x964d3c)
+if VERSION==135:
+ # The widget tree has just been attached. The board and the native seed
+ # module are both available before the tutorial positions its first arrow.
+ site=0x229888
+ assert struct.unpack_from('<I',b,site)[0]==0xe1a00004
+ target=custom_stub('push {r1-r3,lr}\nmov r1,r4\n'+baseasm()+
+  f'bl #{symbols["adventureTutorialSeeds"]}\npop {{r1-r3,lr}}\nmov r0,r4\nb #{site+4}')
+ redirect(site,target)
+ patches[-1]['symbol']='adventureTutorialSeeds'
+if VERSION>=136:
+ # Populate the live SeedBankNew's autofill vector just before it counts
+ # the packets. This is reached even when the board skips the attach tail.
+ site=0x896ba8
+ assert struct.unpack_from('<I',b,site)[0]==0xe59a2134
+ target=custom_stub('push {r0-r4,lr}\nmov r1,sl\n'+baseasm()+
+  f'bl #{symbols["adventureTutorialSeedRefresh"]}\npop {{r0-r4,lr}}\n'
+  f'ldr r2,[sl,#0x134]\nb #{site+4}')
+ redirect(site,target)
+ patches[-1]['symbol']='adventureTutorialSeedRefresh'
+ # The first lesson uses this bank to place its hints. It can be reached
+ # after a refresh issued before the board had its level identity.
+ site=0x965cdc
+ assert bytes(b[site:site+4])==bl(site,0x20bb34)
+ target=custom_stub('push {r4,lr}\nmov r1,r0\nmov r2,r5\n'+baseasm()+
+  f'bl #{symbols["adventureTutorialHintBank"]}\npop {{r4,pc}}')
+ b[site:site+4]=bl(site,target)
+ patches.append(dict(site=hex(site),symbol='adventureTutorialHintBank'))
+if VERSION>=137:
+ # SeedPacket's touch-down allows selection in the opening phase only for
+ # egypt1. Extend that exception to the restored opening lessons and keep
+ # the original packet, cursor and planting checks.
+ site=0x8ad3c4
+ assert struct.unpack_from('<II',b,site)==(0xe3500000,0x0affffb0)
+ target=custom_stub('cmp r0,#0\nbeq #0x8ad290\npush {r1-r3,lr}\n'
+  'ldr r1,[r4]\nldr r1,[r1,#0x6bc]\n'+baseasm()+
+  f'bl #{symbols["adventureTutorialAllowsIntroCards"]}\ncmp r0,#0\npop {{r1-r3,lr}}\n'
+  'bne #0x8ad290\nb #0x8ad3cc')
+ redirect(site,target)
+ patches[-1]['symbol']='adventureTutorialAllowsIntroCards'
+if VERSION>=128:
+ # This call is inside Board::Draw, after libczProject has translated the camera.
+ # Leave the entry intact because libczProject builds a runtime trampoline there.
+ site=0x23aa00
+ assert bytes(b[site:site+4])==bl(site,0x235048)
+ target=custom_stub('push {r4,lr}\nmov r2,r1\nmov r1,r0\n'+baseasm()+
+   f'bl #{symbols["boardCameraDraw"]}\npop {{r4,pc}}')
+ b[site:site+4]=bl(site,target)
+ patches.append(dict(site=hex(site),symbol='boardCameraDraw'))
 if VERSION>=122:
  site=0x1363898
  first=struct.unpack_from('<I',b,site)[0];assert first==0xe92d4878
  target=custom_stub('push {r0-r4,lr}\n'+baseasm()+
   f'bl #{symbols["offlinePvpMusicEffectiveGain"]}\nstr r0,[sp,#4]\npop {{r0-r4,lr}}\n.word {first}\nb #{site+4}')
  redirect(site,target)
+if VERSION==140:
+ # Profile event state has advanced and the world-map event has resolved.
+ # The saved caller selects the map confirmation routes, never profile loading.
+ site=0x746a90
+ assert struct.unpack_from('<I',b,site)[0]==0xe5983010
+ target=custom_stub('push {r0-r4,lr}\nldr r1,[r8,#0x10]\nldr r2,[fp]\nmov r3,r6\n'+baseasm()+
+  f'bl #{symbols["offlineBranchGateOpened"]}\npop {{r0-r4,lr}}\n'
+  f'ldr r3,[r8,#0x10]\nb #{site+4}')
+ redirect(site,target)
+ patches[-1]['symbol']='offlineBranchGateOpened'
+if VERSION>=141:
+ # The paid gate callbacks consume the world-specific keys before opening
+ # the branch. Preserve that call and observe the actual wallet delta.
+ for site,event in ((0x9f2110,'mov r4,r6'),(0x9f2b90,'ldr r4,[sb,#0x170]'),
+                    (0x9f2e18,'ldr r4,[sb,#0x170]'),(0x9f305c,'ldr r4,[sb,#0x170]')):
+  assert bytes(b[site:site+4])==bl(site,0x748b50)
+  target=custom_stub('push {r4,lr}\nsub sp,sp,#8\n'+event+'\nstr r4,[sp]\n'
+   'mov r3,r2\nmov r2,r1\nmov r1,r0\n'+baseasm()+
+   f'bl #{symbols["offlineBranchGateSpend"]}\nadd sp,sp,#8\npop {{r4,pc}}')
+  b[site:site+4]=bl(site,target)
+  patches.append(dict(site=hex(site),symbol='offlineBranchGateSpend'))
+if VERSION>=145:
+ from unline_branding import SETTINGS_FOOTER
+ site=0x8e6314
+ assert bytes(b[site:site+4])==bl(site,0x1137190)
+ footer_bytes=','.join(str(value) for value in SETTINGS_FOOTER.encode('ascii')+b'\0')
+ target=custom_stub('adr r1,footer\nb #0x1137190\nfooter: .byte '+footer_bytes+'\n.align 2')
+ b[site:site+4]=bl(site,target)
+ patches.append(dict(site=hex(site),symbol='unlineSettingsFooter'))
+ # About already supplies the localized version label and copyright text.
+ about_format=0x8e7028
+ assert struct.unpack_from('<I',b,about_format)[0]==0xe2fcf4
+ struct.pack_into('<I',b,about_format,0xe2fcf8)  # Skip "Ver:" before %s.
+ site=0x8e6e38
+ assert struct.unpack_from('<I',b,site)[0]==0xfa300f14
+ struct.pack_into('<I',b,site,0xe1a00000)
+ patches.append(dict(site=hex(site),symbol='unlineAboutCopyright'))
+if VERSION>=143:
+ # Only replace the scaled draw of IMAGE_UI_MAINMENU_BACKGROUND, in the
+ # interactive title screen and its loading transition.
+ for site in (0x462a00,0x95e3bc):
+  assert bytes(b[site:site+4])==bl(site,0x11698b4)
+  target=custom_stub('push {r4,lr}\nsub sp,sp,#16\n'
+   'ldr r4,[sp,#24]\nstr r4,[sp,#4]\nldr r4,[sp,#28]\nstr r4,[sp,#8]\n'
+   'str r3,[sp]\nmov r3,r2\nmov r2,r1\nmov r1,r0\n'+baseasm()+
+   f'bl #{symbols["drawWideMenuBackground"]}\nadd sp,sp,#16\npop {{r4,pc}}')
+  b[site:site+4]=bl(site,target)
+  patches.append(dict(site=hex(site),symbol='drawWideMenuBackground'))
+if VERSION>=144:
+ # Always route the title artwork through the aspect-aware draw, including
+ # windows smaller than the bitmap which used to take the unscaled path.
+ for site,expected in ((0x462958,0xda00008a),(0x95e2d8,0xda000278)):
+  assert struct.unpack_from('<I',b,site)[0]==expected
+  struct.pack_into('<I',b,site,0xe1a00000)
+  patches.append(dict(site=hex(site),symbol='titleAspectAllSizes'))
+if VERSION>=142:
+ # Observe the real multiplier around SpeedChange, the common mouse/V route.
+ site=0x8f3588
+ first=struct.unpack_from('<I',b,site)[0];assert first==0xe92d4ff0
+ target=custom_stub('push {r4-r6,lr}\nmov r4,r0\n'+baseasm()+
+  f'mov r5,r0\nbl #{symbols["offlineSpeedFeedbackRate"]}\nmov r6,r0\n'
+  'mov r0,r4\nbl speed_original\npush {r0,r1}\nmov r0,r5\nmov r1,r6\n'+
+  f'bl #{symbols["offlineSpeedFeedbackChanged"]}\npop {{r0,r1}}\npop {{r4-r6,pc}}\n'
+  f'speed_original: .word {first}\nb #{site+4}')
+ redirect(site,target)
+ patches[-1]['symbol']='offlineSpeedFeedbackChanged'
 if VERSION>=108:
  # These prologues contain no PC-relative instructions. Preserve both arguments
  # and original return values; never hook the ordinary editor's save globally.

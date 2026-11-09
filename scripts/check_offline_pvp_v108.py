@@ -5,7 +5,7 @@ from check_offline_pvp_v76_focused import Definitions
 
 def main():
     sys.meta_path.insert(0,Definitions());core=importlib.import_module('check_offline_pvp_arm')
-    core.OUT=Path(sys.argv[1]);from unicorn.arm_const import UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3,UC_ARM_REG_PC,UC_ARM_REG_LR,UC_ARM_REG_SP
+    core.OUT=Path(sys.argv[1]);from unicorn.arm_const import UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R2,UC_ARM_REG_R3,UC_ARM_REG_R6,UC_ARM_REG_R9,UC_ARM_REG_PC,UC_ARM_REG_LR,UC_ARM_REG_SP
     class EditorEngine(core.Engine):
         def __init__(self):
             super().__init__();self.heap=core.M+0x30000;self.app=core.M+0x6000;self.board=core.M+0x8000
@@ -36,10 +36,39 @@ def main():
             elif off in (0x1da034,0x43af38,0x10290ac):result=0
             elif off in (0x4b6808,0x4b6ce0):self.native_calls.append(('plant-grade-path',off))
             elif off==0x15de9dc:result=struct.unpack('<I',struct.pack('<f',struct.unpack('<d',struct.pack('<II',x,y))[0]))[0]
+            elif off==0x15deccc:
+                left,right=struct.unpack('<ff',struct.pack('<II',x,y))
+                result=struct.unpack('<I',struct.pack('<f',left*right))[0]
+            elif off==0x706da0:result=self.keys
+            elif off==0x748b50:
+                self.native_calls.append(('key-debit',x,y,z))
+                self.keys=max(0,self.keys-z)
             elif off==0x1363898:return
             elif off==0x136389c:
                 self.native_calls.append(('music-gain',x,y))
                 em.reg_write(UC_ARM_REG_SP,em.reg_read(UC_ARM_REG_SP)+24)
+            elif off==0x235048:
+                translation=struct.unpack('<f',struct.pack('<I',self.get(y+8)))[0]
+                self.native_calls.append(('board-draw',self.get(x+0x2c),translation,self.get(y+0x20),self.get(y+0x28)))
+            elif off==0x8f358c and 'offlineSpeedFeedbackRate' in self.exports:
+                assert x==self.speed_widget
+                if self.speed_target is not None:
+                    self.put(self.speed_controller+0x30,self.speed_target)
+                em.reg_write(UC_ARM_REG_SP,em.reg_read(UC_ARM_REG_SP)+36)
+                result=0x1234
+            elif off==0x1166c30:
+                em.mem_write(x+0x4c,bytes(em.mem_read(y,16)))
+            elif off==0x1167010:
+                height=self.get(em.reg_read(UC_ARM_REG_SP))
+                self.native_calls.append(('bar',y,z,w,height,self.get(x+0x4c)))
+            elif off==0x11698b4:
+                stack=em.reg_read(UC_ARM_REG_SP)
+                self.native_calls.append(('art',z,w,self.get(stack),self.get(stack+4),self.get(x+0x4c)))
+            elif off==0x11699c4:
+                destination=struct.unpack('<4i',em.mem_read(z,16))
+                source=struct.unpack('<4i',em.mem_read(w,16))
+                self.native_calls.append(('cover',destination,source))
+            elif off==0x15ddedc:result=x//y
             else:return super().hook(em,a,size,data)
             em.reg_write(UC_ARM_REG_R0,result);em.reg_write(UC_ARM_REG_PC,em.reg_read(UC_ARM_REG_LR)&~1)
         def values(self,values):p=self.alloc(4*len(values));self.u.mem_write(p,struct.pack('<'+'I'*len(values),*values));return p
@@ -142,4 +171,113 @@ def main():
         e.stub(0x1363898,mixer,gain)
         assert e.native_calls[-1]==('music-gain',mixer,gain)
         print('PASS: lobby/map/lab continuity, PvP board track, scoped mixer mute and original music gain restoration')
+    if 'offlineBranchGateOpened' in e.exports or 'offlineBranchGateSpend' in e.exports:
+        def float_bits(value):return struct.unpack('<I',struct.pack('<f',value))[0]
+        e.u.mem_write(e.app+0x90,struct.pack('<d',0.5))
+        if 'offlineBranchGateSpend' in e.exports:
+            gate,scene,world=e.alloc(0xb0),e.alloc(0x200),e.alloc(4)
+            e.put(scene+0x170,gate)
+            for site in (0x9f2110,0x9f2b90,0x9f2e18,0x9f305c):
+                for kind,cost,keys,plays in ((8,2,4,True),(8,2,1,False),(8,0,4,False),(7,2,4,False)):
+                    e.keys=keys
+                    e.put(gate+0x10,kind)
+                    e.u.reg_write(UC_ARM_REG_R6,gate);e.u.reg_write(UC_ARM_REG_R9,scene)
+                    e.stub(site,core.PROFILE,world,cost)
+                    assert e.native_calls[-1]==('key-debit',core.PROFILE,world,cost)
+                    assert e.keys==max(0,keys-cost)
+                    assert e.poll()==([17,float_bits(0.5)] if plays else []) and e.poll()==[]
+        else:
+            for gate,caller,state in ((7,0x809bec,3),(8,0x809bec,2),(8,0x228058,3)):
+                e.run('offlineBranchGateOpened',gate,core.BASE+caller,state)
+                assert e.poll()==[]
+            for caller in (0x809bec,0x74abb8,0x9f258c):
+                e.run('offlineBranchGateOpened',8,core.BASE+caller,3)
+                assert e.poll()==[17,float_bits(0.5)] and e.poll()==[]
+        assert e.command(10,[1])==1
+        _,target,ducked=e.native_calls[-1]
+        assert target==mixer and abs(struct.unpack('<f',struct.pack('<I',ducked))[0]-0.0375)<1e-7
+        e.u.mem_write(e.app+0x88,struct.pack('<d',0.5))
+        e.stub(0x1363898,mixer,float_bits(0.5))
+        assert e.native_calls[-1]==('music-gain',mixer,float_bits(0.025))
+        assert e.command(10,[0])==1
+        assert e.native_calls[-1]==('music-gain',mixer,float_bits(0.5))
+        print('PASS: key-gate success only, one-shot dispatch and 5% mixer gain restored to current slider')
+    if 'offlineSpeedFeedbackRate' in e.exports:
+        e=EditorEngine()
+        e.speed_controller=e.alloc(0x80)
+        e.speed_widget=e.alloc(0x100)
+        e.put(core.BASE+0x1830528,e.speed_controller)
+        e.put(e.app+0x6bc,e.board)
+        e.u.mem_write(e.app+0x90,struct.pack('<d',0.5))
+        normal,fast=0x3f800000,0x40000000
+        for phase,paused,before,target,event in (
+            (5,0,normal,fast,[18,2,0x3f000000]),
+            (5,0,fast,normal,[18,1,0x3f000000]),
+            (5,0,normal,None,[]),
+            (5,1,normal,fast,[]),
+            (3,0,normal,fast,[]),
+        ):
+            e.put(e.board+0xc0,phase)
+            e.u.mem_write(e.board+0x8d5,bytes([paused]))
+            e.put(e.speed_controller+0x30,before)
+            e.speed_target=target
+            e.stub(0x8f3588,e.speed_widget)
+            assert e.u.reg_read(UC_ARM_REG_R0)==0x1234
+            assert e.get(e.speed_controller+0x30)==(before if target is None else target)
+            assert e.poll()==event and e.poll()==[]
+        print('PASS: speed hook preserves the stock handler and emits one cue per valid transition')
+    if 'boardCameraDraw' in e.exports:
+        board,graphics=e.board,e.alloc(0xc0)
+        for offset,value in ((0x34,3395),(0x994,-557)):e.put(board+offset,value)
+        def draw(x,width):
+            e.put(board+0x2c,x)
+            e.put(e.app+0x524,width)
+            e.put(graphics+8,struct.unpack('<I',struct.pack('<f',x))[0])
+            e.put(graphics+0x20,0);e.put(graphics+0x28,width)
+            e.stub(0x23aa00,board,graphics)
+            assert (e.get(graphics+0x20),e.get(graphics+0x28))==(0,width)
+            tag,actual,translation,clip_x,clip_width=e.native_calls[-1]
+            assert tag=='board-draw'
+            return struct.unpack('<i',struct.pack('<I',actual))[0],translation,clip_x,clip_width
+        assert draw(-1223,2462)==(-1223,-1223,0,2462) # no stage yet
+        e.put(board+0x938,core.M+0x24000)
+        assert draw(-1223,2462)==(-933,-933,0,2462) # after the extra intro offset
+        assert draw(-589,2462)==(-589,-589,0,2462) # seed selection
+        assert draw(650,2462)==(557,557,0,2462) # left edge
+        assert draw(-1223,3000)==(-395,-395,0,3000) # resized before draw
+        assert draw(-1223,4352)==(757,757,200,3952) # center and clip only the world
+        print('PASS: draw call clamps the post-offset camera at both edges and scopes ultrawide clipping')
+    if 'drawWideMenuBackground' in e.exports:
+        graphics,image=e.alloc(0xc0),e.alloc(0x80)
+        if e.get(core.BASE+0x462958)==0xe1a00000:
+            assert e.get(core.BASE+0x95e2d8)==0xe1a00000
+            e.put(image+0x28,2306);e.put(image+0x2c,1538)
+            for site in (0x462a00,0x95e3bc):
+                for width,height,source in (
+                    (2306,1538,(0,0,2306,1538)),
+                    (1024,768,(128,0,2050,1538)),
+                    (2560,1440,(0,120,2306,1297)),
+                    (3840,1080,(0,256,2306,648)),
+                ):
+                    e.native_calls.clear()
+                    e.stub(site,graphics,image,10,20,width,height)
+                    assert e.native_calls==[('cover',(10,20,width,height),source)],e.native_calls
+            print('PASS: both title draws cover the viewport and crop only the source artwork')
+        else:
+            e.put(image+0x28,2272);e.put(image+0x2c,1536)
+            color=struct.pack('<4I',230,240,250,255)
+            for site in (0x462a00,0x95e3bc):
+                e.u.mem_write(graphics+0x4c,color)
+                for width,height,expected in (
+                    (2272,1536,[('art',10,20,2272,1536,230)]),
+                    (2560,1440,[('bar',10,20,215,1440,0),('bar',2355,20,215,1440,0),
+                                ('art',225,20,2130,1440,230)]),
+                    (3841,1536,[('bar',10,20,784,1536,0),('bar',3066,20,785,1536,0),
+                                ('art',794,20,2272,1536,230)]),
+                ):
+                    e.native_calls.clear()
+                    e.stub(site,graphics,image,10,20,width,height)
+                    assert e.native_calls==expected,e.native_calls
+                    assert bytes(e.u.mem_read(graphics+0x4c,16))==color
+            print('PASS: both title draws center proportional art, fill wide margins and restore tint')
 if __name__=='__main__':main()

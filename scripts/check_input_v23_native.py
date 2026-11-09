@@ -37,6 +37,14 @@ for base in [0,0x20000000]:
  pvp_manager,pvp_module,pvp_bank=0x6050000,0x6052000,0x6054000
  pvp_packets=[0x6058000+i*0x200 for i in range(16)];pvp_bank_type=True;pvp_packet_type=True;pvp_occluded=False
  pvp_slot_reads=[];preview_positions=[]
+ belt=0x6070000
+ belt_packets=[0x6074000+i*0x200 for i in range(10)]
+ belt_y={p:100+(9-i)*27 for i,p in enumerate(belt_packets)}
+ active_belt=0
+ food_plant=0
+ cursor=0x6080000
+ put(belt,table)
+ for p in belt_packets:put(p,table)
  put(pvp_bank,table)
  for p in pvp_packets:put(p,table)
  put(pvp_manager+0xa8,1);put(board+0x938,pvp_module);put(pvp_module+0x48,pvp_bank);put(pvp_module+0x4c,1)
@@ -58,11 +66,21 @@ for base in [0,0x20000000]:
   elif off==0x976720:result=0 if disabled else 1
   elif off==0x976478:
    index=pvp_packets.index(a1) if a1 in pvp_packets else -1
-   put(a0,150+index*64 if index>=0 else 150);put(a0+4,550 if index>=0 else 250)
+   put(a0,150+index*64 if index>=0 else 150);put(a0+4,550 if index>=0 else belt_y.get(a1,250))
   elif off==0x9775d4:
    index=(a0-150)//64
-   result=(0 if pvp_occluded else pvp_packets[index]) if a1==550 and 0<=index<16 else packet
-  elif off in [0x11d74b4,0x8ac6f4,0x27c56c,0x10290ac,0x102dc20,0x1030720]:result=base+off
+   if a0>=500 and a1!=550:result=0
+   elif active_belt:result=next((p for p,y in belt_y.items() if y==a1),0)
+   else:result=(0 if pvp_occluded else pvp_packets[index]) if a1==550 and 0<=index<16 else packet
+  elif off in [0x11d74b4,0x8ac6f4,0x27c56c,0x10290ac,0x102dc20,0x1030720,0x29a23c]:result=base+off
+  elif off==0x20bb34:result=active_belt
+  elif off==0x15dee64:result=0x3f800000
+  elif off==0x203990:
+   assert (a0,a1,a2)==(board,4,1) and string(get(a3))=='smallChestnut'
+   result=food_plant
+  elif off==0x4e7f60:
+   assert a0==food_plant
+   actions.append('plantfood')
   elif off==0x7fa754:result=pvp_manager
   elif off==0x43af38:result=pvp_module if a0==pvp_module and a1==base+0x10290ac else 0
   elif off==0x895f0c:
@@ -84,7 +102,8 @@ for base in [0,0x20000000]:
    if a1==base+0x27c56c:result=int(a0==collectible)
    elif a1==base+0x102dc20:result=int(a0==pvp_bank and pvp_bank_type)
    elif a1==base+0x1030720:result=int(a0 in pvp_packets and pvp_packet_type)
-   elif a1==base+0x8ac6f4:result=int(a0==packet)
+   elif a1==base+0x8ac6f4:result=int(a0==packet or a0 in belt_packets)
+   elif a1==base+0x29a23c:result=int(a0==belt)
   elif a==0x6100020:actions.append(('down',get(a1+8),get(a1+12)))
   elif a==0x6100030:actions.append('blocked' if blocked else 'up')
   elif a==0x6100040:actions.append('resume');u.mem_write(board+0x8d5,bytes([a1]))
@@ -96,8 +115,8 @@ for base in [0,0x20000000]:
   else:handled=False
   if handled:uc.reg_write(UC_ARM_REG_R0,result);uc.reg_write(UC_ARM_REG_PC,uc.reg_read(UC_ARM_REG_LR))
  u.hook_add(UC_HOOK_CODE,hook)
- def run(key,mode=6):
-  actions.clear();put(evt+8,key);put(evt+16,-1);put(evt+20,-1)
+ def run(key,mode=6,point=(-1,-1)):
+  actions.clear();put(evt+8,key);put(evt+16,point[0]);put(evt+20,point[1])
   for rr,val in [(UC_ARM_REG_R0,base),(UC_ARM_REG_R1,driver),(UC_ARM_REG_R2,evt),(UC_ARM_REG_R3,mode),(UC_ARM_REG_LR,0x6101000),(UC_ARM_REG_SP,stack+0x1f00)]:u.reg_write(rr,val)
   u.emu_start(base+entry,0,count=20000)
   assert u.reg_read(UC_ARM_REG_PC)==0x6101000
@@ -147,3 +166,27 @@ for base in [0,0x20000000]:
   u.emu_start(base+entry,0,count=20000);assert preview_positions[-1]==(475,285)
   assert actions==[('down',150,550),'up']
   print('PVP home bank: eight keys, visible pages, merchant exclusion, type/bounds/UI guards and hover restoration passed',hex(base))
+  if '--extended-input' in sys.argv:
+   put(board+0xc4,0);put(board+0x94c,0);put(board+0x2c,0);put(board+0x30,0)
+   active_belt=belt;put(belt+0x48,children);put(belt+0x4c,children+80)
+   u.mem_write(belt+0x11d,b'\x0a')
+   for i,p in enumerate(belt_packets):
+    put(children+i*8,p);put(children+i*8+4,1)
+    put(p+0x10c,2)
+   for i,key in enumerate((8,9,10,11,45,51,33,46)):
+    assert run(key)==[('down',150,100+i*27),'up']
+   for key in (52,54):assert run(key)==[('down',150,100),'up']
+   put(board+0x94c,cursor);put(cursor,base+0x179b940);put(cursor+0x28,belt_packets[2])
+   put(cursor+0x2c,1)
+   assert run(52)==[('down',150,316),'up'] # slot 8 to slot 9
+   assert run(54)==[('down',150,262),'up'] # slot 8 to slot 7
+   put(cursor+0x28,belt_packets[0]);assert run(52)==[]
+   put(board+0x94c,0);active_belt=0
+   put(board+0xc0,5);food_plant=0x6081000
+   assert run(101,point=(500,260))==[]
+   put(board+0x11c,1)
+   assert run(101,point=(500,260))==['plantfood']
+   put(board+0xc4,level);assert run(101,point=(500,260))==[]
+   put(board+0xc4,0);put(board+0x895,1);assert run(101,point=(500,260))==[]
+   put(board+0x895,0);food_plant=0;assert run(101,point=(500,260))==[]
+   print('Conveyor order, relative slots, and native plant food guards passed',hex(base))

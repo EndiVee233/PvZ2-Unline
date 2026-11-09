@@ -39,12 +39,17 @@ public final class PresetEditor {
                 Activity current=activity();
                 boolean network=options(current).getBoolean("network_enabled",false);
                 command(5,new int[]{network?1:0});
-                UI.post(()->GithubPresetCatalog.refresh(current,network));
+                UI.post(()->{
+                    SpeedFeedback.preload(current);
+                    GithubPresetCatalog.refresh(current,network);
+                });
                 loaded=true;
             }
             int[] next; synchronized(COMMANDS){next=COMMANDS.poll();}
             if(next!=null){int result=command(next[0],Arrays.copyOfRange(next,1,next.length));
-                if(result==0)UI.post(()->message("暂时不能打开或修改预设，请退出当前关卡后从开始界面的设置重试。"));}
+                if(next[0]==10){
+                    if(result!=0&&next[1]!=0){int token=next[1];UI.post(()->GateUnlockAudio.duckApplied(token));}
+                }else if(result==0)UI.post(()->message("暂时不能打开或修改预设，请退出当前关卡后从开始界面的设置重试。"));}
             int sample=musicSample();
             if(sample!=lastMusicSample){
                 lastMusicSample=sample;
@@ -52,7 +57,15 @@ public final class PresetEditor {
                 UI.post(()->PvpMusic.update(current,sample));
             }
             final int[] event=poll();
-            if(event!=null&&event.length>0)UI.post(()->handle(event));
+            if(event!=null&&event.length>0){
+                if(event[0]==17&&event.length==2){
+                    Activity current=activity();
+                    UI.post(()->GateUnlockAudio.play(current,event[1]));
+                }else if(event[0]==18&&event.length==3){
+                    Activity current=activity();
+                    UI.post(()->SpeedFeedback.play(current,event[1],event[2]));
+                }else UI.post(()->handle(event));
+            }
         }catch(Throwable e){failed=true;android.util.Log.e("PvpPresetEditor","bridge failed",e);}
     }
     static void send(int cmd,int... data){int[] p=new int[data.length+1];p[0]=cmd;System.arraycopy(data,0,p,1,data.length);

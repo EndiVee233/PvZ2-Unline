@@ -232,6 +232,9 @@ extern "C" U offlinePresetCommand(U b,U command,const U*data,U size){
   return 1;
  }
 #endif
+#ifdef BRANCH_GATE_AUDIO
+ if(command==10&&size==1){branchGateDuck(b,data[0]!=0);return 1;}
+#endif
  if(command==1){
   if(presetEditing||!editorSettings||!offlinePresetValidate(data,size))return 0;
   P g=at<P>(reinterpret_cast<P>(b),0x1835eec),m=manager(b),app=editorApp(b);
@@ -300,7 +303,27 @@ extern "C" U offlinePresetPoll(U b,U*out,U capacity){
    editorSession->ending=true;
   if(editorSession->ending){editorRestore(b);if(editorEvent!=11)editorEvent=12;}
  }
- if(!out||capacity<185||!editorEvent)return 0;
+ if(!out||capacity<185)return 0;
+#ifdef BRANCH_GATE_AUDIO
+ if(!editorEvent&&branchGatePending){
+  branchGatePending=false;
+  P app=pvpMusicApp(b);
+  out[0]=17;
+  out[1]=app?call<U>(b,0x15de9dc,at<U64>(app,0x90)):0;
+  return 2;
+ }
+#endif
+#ifdef SPEED_FEEDBACK
+ if(!editorEvent&&pendingSpeedFeedback){
+  P app=pvpMusicApp(b);
+  out[0]=18;
+  out[1]=pendingSpeedFeedback;
+  out[2]=app?call<U>(b,0x15de9dc,at<U64>(app,0x90)):0;
+  pendingSpeedFeedback=0;
+  return 3;
+ }
+#endif
+ if(!editorEvent)return 0;
  U event=editorEvent;editorEvent=0;out[0]=event;
  if(event==11){for(U i=0;i<editorOutputSize;++i)out[i+1]=editorOutput[i];return editorOutputSize+1;}
  return 1;

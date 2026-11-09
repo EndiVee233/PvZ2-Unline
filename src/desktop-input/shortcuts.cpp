@@ -58,6 +58,70 @@ static bool click(U b,P app,P board,P p,Touch *source){
  if(at<P>(app,0x6bc)==board)virt<void>(app,0x1cc,&t);
  return true;
 }
+#ifdef DESKTOP_EXTENDED_INPUT
+static P selectedPacket(U b,P board){
+ P cursor=at<P>(board,0x94c);
+ // PlantCursor retains the originating packet, even as the belt moves.
+ if(!cursor||at<U>(cursor,0)!=b+0x179b940||at<unsigned char>(cursor,0x1d))return nullptr;
+ return resolve(b,reinterpret_cast<Weak*>(cursor+0x28));
+}
+static P seedShortcut(U b,P board,int slot,int step){
+ P belt=cast(b,call<P>(b,0x20bb34,board),0x29a23c);
+ P bank=belt?belt:widget(b,"UISeedBank");
+ if(!enabled(b,bank))return nullptr;
+ U begin=at<U>(bank,0x48),end=at<U>(bank,0x4c);
+ int limit=at<signed char>(bank,0x11d);
+ if(!begin||end<begin||end-begin>32*8||limit<=0)return nullptr;
+ U count=0;
+ struct Card { P packet; int y; };
+ Card cards[32];
+ for(U entry=begin;entry<end&&int((entry-begin)/8)<limit;entry+=8){
+  P p=cast(b,resolve(b,reinterpret_cast<Weak*>(entry)),0x8ac6f4);
+  if(p&&(at<U>(p,0x10c)&(belt?16|32:2|16|32)))p=nullptr;
+  if(!belt){cards[count++]={p,0};continue;}
+  if(!enabled(b,p))continue;
+  int center[2];call<void>(b,0x976478,center,p);
+  if(call<P>(b,0x9775d4,center[0],center[1],200)!=p)continue;
+  U index=count++;
+  while(index&&cards[index-1].y>center[1]){
+   cards[index]=cards[index-1];--index;
+  }
+  cards[index]={p,center[1]};
+ }
+ if(step){
+  slot=0;
+  P current=selectedPacket(b,board);
+  for(U index=0;current&&index<count;++index)
+   if(cards[index].packet==current){slot=int(index)+step;break;}
+ }
+ return U(slot)<count?cards[slot].packet:nullptr;
+}
+static void plantfoodShortcut(U b,P driver,P app,P board,Touch *source){
+ if(at<U>(board,0xc0)!=5||at<unsigned char>(board,0x895))return;
+ const char *level=at<const char*>(board,0xc4);
+ if(level&&level[0]=='a'&&level[1]=='r'&&level[2]=='e'&&level[3]=='n'&&level[4]=='a'&&level[5]=='_')return;
+ U key=at<U>(board,0x120);
+ if(!((__builtin_rotateright32(at<U>(board,0x11c),key&31)^key)&255))return;
+ if(!enabled(b,widget(b,"UIPlantfood"))||source->px<0||source->py<0)return;
+
+ Touch t=*source;
+ t.x=source->px;t.y=source->py;
+ call<void>(b,0x1327d0c,driver,&t);
+ if(call<P>(b,0x9775d4,t.x,t.y,200))return;
+ U scale=at<U>(app,0x690);
+ if(!(scale&0x7fffffff))return;
+ // Match the native cursor's screen-to-lawn conversion and plant priority.
+ U inverse=call<U>(b,0x15dee64,0x3f800000u,scale);
+ int col=call<int>(b,0x24105c,scaled(b,t.x-at<int>(board,0x2c),inverse));
+ int row=call<int>(b,0x2410b8,scaled(b,t.y-at<int>(board,0x30),inverse));
+ if(U(col)>=9||U(row)>=5)return;
+ P name=nullptr;char alloc=0;
+ call<void>(b,0x14ed0e1,&name,"smallChestnut",&alloc);
+ P plant=call<P>(b,0x203990,board,col,row,&name);
+ call<void>(b,0x14ebf59,name-12,&alloc);
+ if(plant)call<bool>(b,0x4e7f60,plant);
+}
+#endif
 static void collect(U b,P app,P board,Touch *source,bool all){
  if(!playable(board)||modal(app))return;
  P dispatcher=at<P>(board,0x93c);if(!dispatcher)return;
@@ -99,17 +163,27 @@ extern "C" __attribute__((section(".text.entry"))) void desktopInput(U b,P drive
   return;
  }
  if(!playable(board)||modal(app))return;
+#ifdef DESKTOP_EXTENDED_INPUT
+ if(key==101){plantfoodShortcut(b,driver,app,board,event);return;}
+#endif
  if(key==100){call<void>(b,0x20963c,board);return;}
  if(key==29){collect(b,app,board,event,true);return;}
  P target=nullptr;
  int slot=-1;
  if(key>=8&&key<=11)slot=key-8;
  if(key==45)slot=4;if(key==51)slot=5;if(key==33)slot=6;if(key==46)slot=7;
+#ifdef DESKTOP_EXTENDED_INPUT
+ if(key==54||key==52)target=seedShortcut(b,board,-1,key==54?-1:1);
+ else
+#endif
  if(slot>=0){
 #ifdef DESKTOP_PVP_SEEDS
   if(equal(at<const char*>(board,0xc4),"arena_plant_test")||equal(at<const char*>(board,0xc4),"arena_preset_editor"))target=defensePacket(b,board,U(slot));
   else {
 #endif
+#ifdef DESKTOP_EXTENDED_INPUT
+  target=seedShortcut(b,board,slot,0);
+#else
   P bank=widget(b,"UISeedBank");if(!enabled(b,bank))return;
   U n=(at<U>(bank,0x4c)-at<U>(bank,0x48))/8;
   if(n>32||U(slot)>=n||slot>=at<signed char>(bank,0x11d))return;
@@ -117,6 +191,7 @@ extern "C" __attribute__((section(".text.entry"))) void desktopInput(U b,P drive
   // Normal packets only: do not bind trial/free gift cards.
   target=cast(b,target,0x8ac6f4);if(!target)return;
   if(at<U>(target,0x10c)&(2|16|32))return;
+#endif
 #ifdef DESKTOP_PVP_SEEDS
   }
 #endif

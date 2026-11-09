@@ -2,6 +2,12 @@
 using U=unsigned;using P=unsigned char*;using I=int;using U64=unsigned long long;
 template<class T>T& at(P p,U o){return *reinterpret_cast<T*>(p+o);}
 template<class R,class...A>R call(U b,U o,A...a){return reinterpret_cast<R(*)(A...)>(b+o)(a...);}
+#ifdef BOARD_CAMERA_BOUNDS
+#include "board_camera.h"
+#endif
+#ifdef MENU_BACKGROUND_ASPECT
+#include "menu_background.h"
+#endif
 #ifdef PVP_PRESET_EDITOR
 static bool presetEditing;
 static bool presetRequest(U b,U action);
@@ -42,6 +48,20 @@ static U neighborAction(U b,P panel,U button);
 static void bytes(P d,const unsigned char*s,U n){for(U i=0;i<n;++i)d[i]=s[i];}
 static void narrow(U b,P dst,const char*src){char a=0;call<void>(b,0x14ed0e1,dst,src,&a);}
 static void release(U b,P value,bool wide=false){if(value){char a=0;call<void>(b,wide?0x14ea239:0x14ebf59,value-12,&a);}}
+#ifdef ADVENTURE_OPENING_TUTORIAL
+extern "C" bool adventureOpeningTutorial(U b){
+ P player=profile(b);
+ if(!player)return false;
+ auto completed=[&](const char*level){
+  P key=nullptr;
+  narrow(b,reinterpret_cast<P>(&key),level);
+  bool done=call<bool>(b,0x708190,player,&key);
+  release(b,key);
+  return done;
+ };
+ return !completed("egypt1")&&!completed("tutorial4");
+}
+#endif
 static void log(U b,const char*what,U a=0,U c=0){call<I>(b,0x147adc,4,"OfflinePvP","%s a=%u b=%u",what,a,c);}
 #ifdef PVP_RESIDENT_NEIGHBORS
 #include "residences.h"
@@ -472,6 +492,73 @@ static void finishArenaBoard(U b){
 static bool sameText(P text,const char* expected){
  if(!text)return false;U i=0;while(expected[i]){if(text[i]!=U(expected[i]))return false;++i;}return text[i]==0;
 }
+#ifdef ADVENTURE_TUTORIAL_SEEDS
+static U adventureTutorialDay(P board){
+ static constexpr char levels[][10]={"tutorial1","tutorial2","tutorial3","tutorial4"};
+ if(!board)return 0;
+ P level=at<P>(board,0xc4);
+ U day=0;
+ while(day<4&&!sameText(level,levels[day]))++day;
+ return day==4?0:day+1;
+}
+extern "C" bool adventureTutorialAllowsIntroCards(U,P board){
+ return adventureTutorialDay(board)!=0;
+}
+static bool seedAdventureTutorial(U b,P board,P bank,U day){
+ struct NativeStrings{P* begin;P* end;P* capacity;};
+ // The same four aliases appear in the stock Tutorial1–4 level presets.
+ static constexpr char names[][11]={"peashooter","sunflower","wallnut","potatomine"};
+ auto& autofill=at<NativeStrings>(bank,0x130);
+ if(autofill.begin&&autofill.end-autofill.begin==day){
+  U i=0;
+  while(i<day&&sameText(autofill.begin[i],names[i]))++i;
+  if(i==day)return false;
+ }
+ P modules=at<P>(board,0x938);
+ P module=modules?call<P>(b,0x20b958,modules):nullptr;
+ P properties=module?call<P>(b,0x1da034,call<P>(b,0x11d74b4),module+0x10):nullptr;
+ if(properties){
+  auto& preset=at<NativeStrings>(properties,0x24);
+  if(preset.begin&&preset.end-preset.begin==day){
+   call<void>(b,0x267fd4,&autofill,&preset);
+   return true;
+  }
+ }
+ P keys[4]{};
+ for(U i=0;i<day;++i)narrow(b,reinterpret_cast<P>(keys+i),names[i]);
+ NativeStrings preset{keys,keys+day,keys+day};
+ call<void>(b,0x267fd4,&autofill,&preset);
+ for(U i=0;i<day;++i)release(b,keys[i]);
+ return true;
+}
+extern "C" void adventureTutorialSeeds(U b,P board){
+ U day=adventureTutorialDay(board);
+ if(!day)return;
+ P bank=call<P>(b,0x20bb34,board);
+ if(bank&&seedAdventureTutorial(b,board,bank,day))call<void>(b,0x896b54,bank);
+}
+extern "C" void adventureTutorialSeedRefresh(U b,P bank){
+ P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
+ P board=app?at<P>(app,0x6bc):nullptr;
+ U day=adventureTutorialDay(board);
+ if(day){
+  P primary=call<P>(b,0x20bb34,board);
+  if((!primary||primary==bank)&&seedAdventureTutorial(b,board,bank,day))
+   log(b,"tutorial-refresh-deck",day,0);
+ }
+}
+extern "C" P adventureTutorialHintBank(U b,P board,U phase){
+ P bank=call<P>(b,0x20bb34,board);
+ U day=adventureTutorialDay(board);
+ if(bank&&day){
+  if(seedAdventureTutorial(b,board,bank,day)||phase==2||at<unsigned char>(bank,0x11d)<day)
+   call<void>(b,0x896b54,bank);
+  if(phase==2)call<void>(b,0x9766f4,bank,1);
+  log(b,"tutorial-hint-bank",phase,at<unsigned char>(bank,0x11d));
+ }
+ return bank;
+}
+#endif
 static U requestedArenaView;
 #ifdef PVP_GITHUB_PRESETS
 extern "C" void offlineSharedSpawnBegin(U,P board,U col,U row){
@@ -605,6 +692,9 @@ static U defenseSessionUser;
 #ifdef PVP_PRESET_EDITOR
 #ifdef PVP_MUSIC
 #include "pvp_music.h"
+#endif
+#ifdef SPEED_FEEDBACK
+#include "speed_feedback.h"
 #endif
 #include "preset_editor.h"
 #endif

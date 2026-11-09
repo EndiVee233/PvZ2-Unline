@@ -66,6 +66,8 @@ public final class PvpMusic {
     }
 
     public static void setForeground(boolean active) {
+        GateUnlockAudio.setForeground(active);
+        SpeedFeedback.setForeground(active);
         foreground = active;
         if (!prepared) return;
         try {
@@ -105,6 +107,8 @@ public final class PvpMusic {
     }
 
     public static void shutdown() {
+        GateUnlockAudio.setForeground(false);
+        SpeedFeedback.shutdown();
         release();
         track = 0;
         foreground = false;
