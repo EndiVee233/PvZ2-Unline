@@ -1,12 +1,14 @@
-> **基于《植物大战僵尸2》中文版 1.7.5（失落之城，包名 `com.popcap.pvz2cthd`）制作。**
+# PvZ2-Unline:Aster
 > 启动器/资源方案来自 [DreamMoonCai/Pvz2Tool](https://github.com/DreamMoonCai/Pvz2Tool)；
 > ASTC 解码基于 [google/astc-codec](https://github.com/google/astc-codec)。
 
 一个面向 Windows Subsystem for Android / 普通 Android 的单文件直装版
 
-**当前发布版为 PvZ2-Unline v147。** 应用图标使用 `PVP.png`，开始界面使用等比铺满窗口的新版背景。
+**当前 GitHub 正式包为更名前的 PvZ2-Unline v147。** 应用图标使用 `PVP.png`，开始界面使用等比铺满窗口的新版背景。
 
-[下载 v147](https://github.com/EndiVee233/PvZ2-Unline/releases/tag/v1.7.5-v147) · [离线 PvP 功能与待办](docs/recovery/pvp-v123-release.md) · [分项验收记录](docs/recovery/README.md)
+[下载 v147](https://github.com/EndiVee233/PvZ2-Unline-Aster/releases/tag/v1.7.5-v147) · [离线 PvP 功能与待办](docs/recovery/pvp-v123-release.md) · [分项验收记录](docs/recovery/README.md)
+
+**全量 RGBA8888 预览版。** v163 的 19 个 RSB 中，773 张实际引用的图集已在构建时转为 RGBA8888。APK 约 2.87 GB，首次解包后的资源约 13.30 GB。已在 WSA 核对覆盖安装、资源迁移和启动画面，各世界及 PvP 尚待逐项验收。下载两段后按发布页说明合并并校验。 [v163 RGBA8888 预览版](https://github.com/EndiVee233/PvZ2-Unline-Aster/releases/tag/v1.7.5-v163-rgba-preview)
 
 ## 特性
 
