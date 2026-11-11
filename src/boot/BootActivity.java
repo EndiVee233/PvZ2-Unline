@@ -132,13 +132,12 @@ public class BootActivity extends Activity {
         int pad = (int) (24 * density);
         panel.setPadding(pad, pad, pad, pad);
 
-        TextView title = new TextView(this);
-        title.setText("正在进行首次解压");
-        title.setTextColor(0xFF9CCC65);
-        title.setTextSize(30);
-        title.setTypeface(tf);
-        title.setGravity(Gravity.CENTER);
-        panel.addView(title);
+        ImageView title = new ImageView(this);
+        title.setImageResource(0x7f020047); // drawable/splash_1080p_1
+        title.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        title.setContentDescription("正在进行第一次解压");
+        panel.addView(title, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, (int) (58 * density)));
 
         TextView sub = new TextView(this);
         sub.setText("首次启动需要释放约 2.6 GB 游戏资源，请勿关闭应用");
@@ -236,6 +235,7 @@ public class BootActivity extends Activity {
                     out.mkdirs();
                     continue;
                 }
+                if ("sdcardid.dat".equals(rel) && out.isFile()) continue;
                 File parent = out.getParentFile();
                 if (parent != null) parent.mkdirs();
                 FileOutputStream fos = new FileOutputStream(out);

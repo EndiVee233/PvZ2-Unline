@@ -10,7 +10,6 @@ import copy, hashlib, json, struct, sys, zlib
 sys.path[:0] = [str(Path(__file__).resolve().parents[1] / 'src/tools'),
                 'K:/pvz2-tools/pyvz2/OBBEdit/libraries']
 import rsbtool
-from pyvz2rton import RTONDecoder, JSONDecoder
 
 
 def u32(b, p):
@@ -95,6 +94,8 @@ class Bundle:
         return trie_read(b, u32(b, 0x4c), u32(b, 0x48), 1)
 
     def manifest(self):
+        from pyvz2rton import RTONDecoder
+
         for i in range(len(self.groups)):
             for name, info in self.files(i):
                 if name.startswith('PROPERTIES\\RESOURCES') and name.endswith('.RTON'):
@@ -108,6 +109,8 @@ class Bundle:
         raise ValueError('Missing resource manifest')
 
     def replace_manifest(self, i, name, manifest):
+        from pyvz2rton import JSONDecoder
+
         old = self.payloads[i]
         assert len(self.files(i)) == 1 and not u32(old, 0x30)
         raw = JSONDecoder().encode_root_object(StringIO(json.dumps(manifest)))

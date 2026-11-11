@@ -1,7 +1,7 @@
 """Build the offline star-coin purchase and training candidate."""
 from pathlib import Path
 from io import BytesIO
-import struct,zipfile,subprocess,shutil,hashlib,json,sys
+import struct,zipfile,subprocess,shutil,hashlib,json,os,sys
 from prepare_offline_economy import prepare
 from exchange_localization import add_exchange_localization
 from rebuild_bootstrap_dex import rebuild_bootstrap
@@ -62,10 +62,28 @@ if '--v144' in sys.argv:VERSION=144
 if '--v145' in sys.argv:VERSION=145
 if '--v146' in sys.argv:VERSION=146
 if '--v147' in sys.argv:VERSION=147
+if '--v148' in sys.argv:VERSION=148
+if '--v149' in sys.argv:VERSION=149
+if '--v150' in sys.argv:VERSION=150
+if '--v151' in sys.argv:VERSION=151
+if '--v152' in sys.argv:VERSION=152
+if '--v153' in sys.argv:VERSION=153
+if '--v154' in sys.argv:VERSION=154
+if '--v155' in sys.argv:VERSION=155
+if '--v156' in sys.argv:VERSION=156
+if '--v157' in sys.argv:VERSION=157
+if '--v158' in sys.argv:VERSION=158
+if '--v159' in sys.argv:VERSION=159
+if '--v160' in sys.argv:VERSION=160
+if '--v161' in sys.argv:VERSION=161
+if '--v162' in sys.argv:VERSION=162
+if '--v163' in sys.argv:VERSION=163
 OUT=ROOT/(f'work/pvp-v{VERSION}-test' if '--shop-clock-test' in sys.argv or '--silent-raid-test' in sys.argv else f'work/pvp-v{VERSION}')
 if '--output-dir' in sys.argv:OUT=Path(sys.argv[sys.argv.index('--output-dir')+1]).resolve()
 OUT.mkdir(parents=True,exist_ok=True)
-BASE=ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk'
+BASE=Path(os.environ.get('PVZ2_V36_BASE',str(ROOT/'work/pvp-v36/PvZ2-v36-defense-return-flash-fix.apk')))
+if not BASE.is_file() and 'PVZ2_V36_BASE' not in os.environ:
+ BASE=Path('D:/pvz2-build-inputs/PvZ2-v36-defense-return-flash-fix.zip')
 assert hashlib.file_digest(BASE.open('rb'),'sha256').hexdigest()=='a142d8e1aaeb702e704ac407e915928c4e0e3491b2885fa645ff13a1e561ccac'
 generate(OUT/'generated',expansion=VERSION>=93,rich=VERSION>=95)
 resource,strings,economy_record=prepare(BASE,OUT/'generated')
@@ -248,6 +266,10 @@ if VERSION>=108:
  if VERSION>=145:
   from unline_branding import patch_about
   editor_resource.write_bytes(patch_about(editor_resource.read_bytes(),credits=VERSION>=146))
+ if VERSION>=150:
+  from prepare_seasonal_activities import prepare as prepare_activities
+  editor_resource.write_bytes(prepare_activities(editor_resource.read_bytes(),retire=VERSION>=151,
+                                                standalone_endless=VERSION>=157))
  flags.append('-DPVP_PRESET_EDITOR')
 if VERSION>=110:flags.append('-DPVP_PRESET_NATIVE_PAGES')
 if VERSION>=113:flags.append('-DPVP_PRESET_STOCK_BOARD')
@@ -257,6 +279,8 @@ if VERSION>=122:flags.append('-DPVP_MUSIC')
 if VERSION>=140:flags.append('-DBRANCH_GATE_AUDIO')
 if VERSION>=141:flags.append('-DBRANCH_GATE_SPEND')
 if VERSION>=142:flags.append('-DSPEED_FEEDBACK')
+if VERSION>=157:flags.append('-DMAP_ENDLESS_BUTTON')
+if VERSION>=160:flags.append('-DOFFLINE_PENNY_DRAW')
 if VERSION>=143:flags.append('-DMENU_BACKGROUND_ASPECT')
 if VERSION>=144:flags.append('-DMENU_BACKGROUND_COVER')
 if VERSION>=128:flags.append('-DBOARD_CAMERA_BOUNDS')
@@ -271,6 +295,7 @@ objects=[OUT/'offline.o']
 if VERSION>=85:
  input_flags=['-DDESKTOP_PVP_SEEDS']
  if VERSION>=129:input_flags.append('-DDESKTOP_EXTENDED_INPUT')
+ if VERSION>=155:input_flags.append('-DDESKTOP_ENDLESS_INPUT')
  subprocess.run([compiler,*flags,*input_flags,'-c',str(ROOT/'src/desktop-input/shortcuts.cpp'),'-o',str(OUT/'desktop-input.o')],check=True)
  objects.append(OUT/'desktop-input.o')
 if VERSION>=88:
@@ -753,6 +778,269 @@ if VERSION>=65:
  target=custom_stub('push {r4,lr}\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlineResearchRemaining"]}\npop {{r4,pc}}')
  b[site:site+4]=bl(site,target);patches.append(dict(site=hex(site),symbol='offlineResearchRemaining',role='Use normal local skill button; preserve tutorial and other skill paths'))
 
+if VERSION==150:
+ # Reuse the original localtime/date comparison, replacing its two
+ # ServerTime calls only for the seasonal entry and campaign gates.
+ local_date_range=custom_stub('push {r4,r5,fp,lr}\nadd fp,sp,#12\nsub sp,sp,#8\nmov r4,r1\nmov r5,r2\nmov r0,#0\nbl #0x147824\nb #0x8c40b8')
+ for site,role in (
+   (0x8c41c4,'Spring Festival hub'),
+   (0x8c439c,'Spring Festival 财神'),
+   (0x8c4798,'second anniversary entry'),
+   (0xed5fec,'anniversary campaign availability'),
+ ):
+  assert bytes(b[site:site+4])==bl(site,0x8c409c)
+  b[site:site+4]=bl(site,local_date_range)
+  patches.append(dict(site=hex(site),role=role+' uses local calendar'))
+ # The first call in each pair takes no live argument. The second is
+ # time(NULL) via the original game's PLT. Keep the native save routines.
+ for site in (0xed5d60,0xed6084,0xed616c,0xed627c):
+  assert bytes(b[site:site+8])==bl(site,0xf754ac)+bl(site+4,0xf7530c)
+  b[site:site+8]=struct.pack('<I',0xe3a00000)+bl(site+4,0x147824)
+  patches.append(dict(site=hex(site),role='anniversary campaign uses local time for selection and saved progress'))
+
+if VERSION>=151:
+ # Spring and anniversary predicates return false even if the original
+ # activity files are loaded again. Retain the map's native widget lifecycle.
+ for site in (0x8c41b4,0x8c4788):
+  assert struct.unpack_from('<I',b,site)[0]==0xe92d4800
+  b[site:site+8]=struct.pack('<II',0xe3a00000,0xe12fff1e)
+  patches.append(dict(site=hex(site),role='retire limited-time map entry'))
+
+ # Only Danger Room's play interval uses the local calendar. The legacy
+ # ranking reward window continues to use its original availability check.
+ local_date_range=custom_stub('push {r4,r5,fp,lr}\nadd fp,sp,#12\nsub sp,sp,#8\nmov r4,r1\nmov r5,r2\nmov r0,#0\nbl #0x147824\nb #0x8c40b8')
+ site=0x8c4288
+ assert bytes(b[site:site+4])==bl(site,0x8c409c)
+ b[site:site+4]=bl(site,local_date_range)
+ patches.append(dict(site=hex(site),role='use the device date for Danger Room play availability'))
+ for site in (0xe025a0,0xe0e5f8,0xe0e6b0,0xe0ff14,0xe10594,0xe105dc,0xe106b4,0x8c7534):
+  assert bytes(b[site:site+8])==bl(site,0xf754ac)+bl(site+4,0xf7530c)
+  b[site:site+8]=struct.pack('<I',0xe3a00000)+bl(site+4,0x147824)
+  patches.append(dict(site=hex(site),role='use local time for Danger Room entry, attempts and progress'))
+ site=0x406330
+ assert bytes(b[site:site+4])==bl(site,0x4054e8)
+ b[site:site+4]=struct.pack('<I',0xe3a00001)
+ patches.append(dict(site=hex(site),role='reopen original Danger Room panel offline'))
+
+if VERSION>=152:
+ # Hide the leaderboard and its hit area. The original scroll controller
+ # still indexes its placeholder rows on focus changes.
+ def endless_patch(site, expected, replacement, role):
+  assert bytes(b[site:site+4])==expected,(hex(site),bytes(b[site:site+4]).hex())
+  b[site:site+4]=replacement
+  patches.append(dict(site=hex(site),role=role))
+
+ nop=struct.pack('<I',0xe1a00000)
+ for site,target in (
+   (0xe0a05c,0x9728e8), # Ranking scroll frame.
+   (0xe0a198,0x11694c8), # Leaderboard backing.
+   (0xe0a1b4,0x11694c8), # Leaderboard title.
+   (0xe0a218,0x11694c8), # My Rank artwork.
+   (0xe0a2f8,0x973270), # Title and high score in the ranking panel.
+   (0xe0a368,0x973270),
+ ):
+  endless_patch(site,bl(site,target),nop,'remove endless ranking UI')
+ site=0xe0c248
+ # At this point the dialog is still being constructed. Its scroll widget
+ # must be registered for teardown, but cannot notify the widget manager.
+ hide_ranking_scroll=custom_stub(
+  'mov ip,#0\nstrb ip,[r1,#0x4c]\nstrb ip,[r1,#0x4d]\nbx r3')
+ endless_patch(site,struct.pack('<I',0xe12fff33),bl(site,hide_ranking_scroll),
+               'hide the empty ranking scroll widget and its input area')
+
+ # The artwork and the two original buttons use the same horizontal shift.
+ # UI units here are the same 530-wide layout used by the original panel.
+ shift_reward_panel=custom_stub(
+  'push {r0-r3,ip,lr}\nadd sb,r8,r0\nldr r0,[r4]\nldr r0,[r0,#0x698]\n'
+  'ldr r1,shift_x\nbl #0x15deccc\nbl #0x15df0f8\nsub sb,sb,r0\n'
+  'pop {r0-r3,ip,pc}\nshift_x: .float 129.0')
+ endless_patch(0xe0a1e8,struct.pack('<I',0xe0889000),bl(0xe0a1e8,shift_reward_panel),
+               'center the retained reward artwork')
+ raise_reward_panel=custom_stub(
+  'push {r0-r3,ip,lr}\nadd r7,r7,r0\nldr r0,[r4]\nldr r0,[r0,#0x698]\n'
+  'ldr r1,shift_y\nbl #0x15deccc\nbl #0x15df0f8\nsub r7,r7,r0\n'
+  'pop {r0-r3,ip,pc}\nshift_y: .float 124.0')
+ endless_patch(0xe0a394,struct.pack('<I',0xe0877000),bl(0xe0a394,raise_reward_panel),
+               'move local rewards into the middle of the panel')
+ move_endless_buttons=custom_stub(
+  'push {r0-r5,r7,lr}\nldr r5,[r6]\nldr r5,[r5,#0x698]\n'
+  'mov r0,r5\nldr r1,shift_x\nbl #0x15deccc\nbl #0x15df0f8\n'
+  'ldr r1,[sp,#4]\nsub r1,r1,r0\nstr r1,[sp,#4]\n'
+  'mov r0,r5\nldr r1,shift_y\nbl #0x15deccc\nbl #0x15df0f8\n'
+  'ldr r2,[sp,#8]\nadd r2,r2,r0\nstr r2,[sp,#8]\n'
+  'pop {r0-r5,r7,lr}\nbx r7\nshift_x: .float 129.0\nshift_y: .float 55.0')
+ for site in (0xe0c46c,0xe0c58c):
+  endless_patch(site,struct.pack('<I',0xe12fff37),bl(site,move_endless_buttons),
+                'place score rewards and rules beneath the local reward preview')
+
+ # Reuse the green fill rectangle's origin, including its scaled inset.
+ # The flag drawing loop reuses registers, so use the original locals.
+ wave_head=custom_stub(
+  'push {r4-r8,lr}\nmov r4,r0\nmov r5,r1\nmov r0,r3\nbl #0x15df0f8\nmov r6,r0\n'
+  'ldr r0,[fp,#-0x60]\nmov r1,r0\nbl #0x15dea88\nmov r1,r0\n'
+  'ldr r0,[fp,#-0x64]\nbl #0x15dea84\nldr r1,[fp,#-0x74]\nbl #0x15dea84\n'
+  'bl #0x15df0f8\nmov r7,r0\nmov r0,r5\nbl #0x116fc60\n'
+  'sub r2,r7,r0,asr #1\nmov r0,r4\nmov r1,r5\nmov r3,r6\n'
+  'pop {r4-r8,lr}\nb #0x11694c8')
+ endless_patch(0x9bf594,bl(0x9bf594,0x1169cf8),bl(0x9bf594,wave_head),
+               'align the zombie head with the wave meter fill edge')
+
+ if VERSION<155:
+  # The score animation still used a 4:3 horizontal origin. Its vertical
+  # position is native and independent of the screen width.
+  result_center=custom_stub(
+   'ldr r0,[r7]\nldr r0,[r0,#0x524]\nmov r0,r0,asr #1\nb #0x15dec20')
+  endless_patch(0xcd6ce0,bl(0xcd6ce0,0x15dec20),bl(0xcd6ce0,result_center),
+                'center the animated settlement panel within the viewport')
+  # Align the awarded score label and counter in one row inside the panel.
+  # Tail call needs only a return address, so preserve the draw function's
+  # three stack arguments and use the original link register.
+  gained_label=custom_stub(
+   'push {lr}\nldr ip,[sb]\nldr lr,[r2,#8]\nldr ip,[ip,#0x524]\n'
+   'sub ip,ip,lr,lsl #1\nmov ip,ip,asr #1\nstr ip,[r2]\npop {lr}\nb #0x973270')
+  endless_patch(0xcd2568,bl(0xcd2568,0x973270),bl(0xcd2568,gained_label),
+                'position awarded-score caption to the left of its counter')
+  endless_patch(0xcd24f8,struct.pack('<I',0xe28118b9),struct.pack('<I',0xe281189f),
+                'move the awarded-score caption inside the settlement panel')
+  gained_counter=custom_stub(
+   'push {r0,r3,ip,lr}\nldr r0,[r8]\nldr r0,[r0,#0x698]\n'
+   'ldr r1,row_y\nbl #0x15deccc\nbl #0x15df0f8\nbl #0x15dec20\n'
+   'mov r4,r0\nldr r0,[r7]\nldr r0,[r0,#0x524]\nmov r0,r0,asr #1\n'
+   'bl #0x15dec20\nmov r1,r0\nmov r2,r4\nldr r4,[fp,#-0x1dc]\n'
+   'pop {r0,r3,ip,pc}\nrow_y: .float 318.0')
+  endless_patch(0xcd79f8,struct.pack('<I',0xe1a01009),bl(0xcd79f8,gained_counter),
+                'align awarded-score counter with the caption inside the panel')
+
+if VERSION>=155:
+ # Reuse Start's resume/attempt checks without constructing the ranking dialog.
+ start_endless=custom_stub('mov r0,#0\nmov r1,#0\nb #0xe08ce8')
+ site=0xa395a4
+ endless_patch(site,bl(site,0x402b50),bl(site,start_endless),'launch Endless from the world map')
+ # The tutorial branch also releases the old dialog controls if present.
+ # Its tutorial update still applies when there is no dialog.
+ finish_entry_tutorial=custom_stub(
+  'cmp r5,#0\nbne #0xe08f08\nmov r1,#0x13\nb #0x725b38')
+ site=0xe08e38
+ conditional_link=struct.unpack('<I',bl(site,finish_entry_tutorial))[0]&0x0fffffff
+ endless_patch(site,struct.pack('<I',0x0a000032),struct.pack('<I',conditional_link),
+               'complete the entry tutorial without an Endless dialog')
+
+ # Track the last acknowledged phase on each result widget. The native
+ # callbacks still prepare each phase and credit the native rewards.
+ result_ctor=custom_stub(
+  'push {r4,lr}\nmov r4,r0\nbl #0xcd5088\nmov ip,#0\nstr ip,[r4,#0x118]\npop {r4,pc}')
+ endless_patch(0x4032c4,struct.pack('<I',0xe3a00f46),struct.pack('<I',0xe3a00e12),
+               'reserve per-result acknowledgement state')
+ endless_patch(0x4032d0,bl(0x4032d0,0xcd5088),bl(0x4032d0,result_ctor),
+               'initialize per-result acknowledgement state')
+ result_update=custom_stub(
+  'push {r4,lr}\nmov r4,r0\nbl #0x13152bc\n'
+  'ldr r2,[r4,#0x100]\ncmp r2,#0\nble done\n'
+  'ldr r1,[r4,#0xf4]\ncmp r1,#1\ncmpne r1,#6\ncmpne r1,#8\nbne done\n'
+  'ldr r2,[r4,#0x118]\ncmp r2,r1\nbeq done\nstr r1,[r4,#0x118]\n'
+  'mov r0,r4\nmov r1,#0\npop {r4,lr}\nb #0xcd93b0\ndone: pop {r4,pc}')
+ # Widget::Update uses an R_ARM_RELATIVE vtable entry.
+ result_update_slot=0x17f0e7c
+ endless_patch(result_update_slot,struct.pack('<I',0x13152bc),struct.pack('<I',result_update),
+               'automatically continue through native victory phases')
+ result_draw=custom_stub(
+  'ldr ip,[r0,#0x100]\ncmp ip,#0\nbxgt lr\n'
+  'str fp,[sp,#-4]!\nb #0xcd69a8')
+ result_draw_jump=struct.unpack('<I',bl(0xcd69a4,result_draw))[0]&0xfeffffff
+ endless_patch(0xcd69a4,struct.pack('<I',0xe52db004),struct.pack('<I',result_draw_jump),
+               'skip drawing the victory result widget')
+ # Let the score PopAnim play its completion callback offscreen. This
+ # preserves the native callback chain and the milestone reward logic.
+ hide_score_anim=custom_stub('mvn r0,#4096\nb #0x15dec20')
+ endless_patch(0xcd6ce0,bl(0xcd6ce0,0x15dec20),bl(0xcd6ce0,hide_score_anim),
+               'hide the victory score animation while advancing')
+
+if VERSION>=156:
+ # Start a local Endless run even when the old attempt allowance is empty.
+ # Preserve the other results, including the native availability check.
+ endless_local_attempt=custom_stub(
+  'push {r4,lr}\nbl #0xe0ff04\ncmp r0,#2\nmoveq r0,#0\npop {r4,pc}')
+ site=0xe08808
+ endless_patch(site,bl(site,0xe0ff04),bl(site,endless_local_attempt),
+               'allow offline Endless entry without a diamond purchase')
+
+if VERSION>=157:
+ # Use the original three-button drawer layout. It leaves out the Endless
+ # entry and the promotional bubble that was tied to that entry.
+ site=0xa366a4
+ endless_patch(site,bl(site,0x8c4250),struct.pack('<I',0xe3a00000),
+               'keep Endless and its countdown out of the challenge drawer')
+ # The old guide explicitly opened the drawer and highlighted its first slot.
+ site=0x9ef0e8
+ endless_patch(site,struct.pack('<I',0x1a00011c),nop,
+               'skip the guide for the former Endless drawer entry')
+
+ identify_endless=(
+  'push {r0-r4,lr}\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlineIsEndlessButton"]}\n'
+  'cmp r0,#0\npop {r0-r4,lr}\n')
+ # Keep the slot visible if the old BOSS event status is refreshed.
+ site=0xa33454
+ visibility=custom_stub(identify_endless+
+  'beq original\nmov r1,#1\nb #0x9766f4\n'
+  f'original: .word 0xe92d4870\nb #{site+4}')
+ jump=struct.unpack('<I',bl(site,visibility))[0]&0xfeffffff
+ endless_patch(site,struct.pack('<I',0xe92d4870),struct.pack('<I',jump),
+               'ignore the old BOSS schedule only for the Endless widget')
+ # The native mouse-release handler has already checked the hit region.
+ site=0xa33b64
+ launch=custom_stub(identify_endless+f'bne #{start_endless}\nb #0xa33550')
+ endless_patch(site,bl(site,0xa33550),bl(site,launch),
+               'launch or resume offline Endless from the standalone widget')
+ # The cold map path never executes the post-battle widget show routine.
+ # Synchronize the standalone slot while the native Challenge HUD draws.
+ site=0xa2f654
+ refresh=custom_stub(
+  'push {r0-r4,lr}\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlineRefreshEndlessMap"]}\n'
+  'pop {r0-r4,lr}\nb #0x97641c')
+ endless_patch(site,bl(site,0x97641c),bl(site,refresh),
+               'refresh the standalone Endless slot on the visible world map')
+
+if VERSION>=160:
+ # Eligibility and the badge use the same local countdown. Keep the existing
+ # profile field, free reward pool and reward animation.
+ for site,eligible in ((0x70f694,True),(0x70f7ac,False)):
+  asm=('push {r4,lr}\nmov r1,r0\n'+baseasm()+
+       f'bl #{symbols["offlinePennySecondsLeft"]}\n')
+  if eligible:
+   asm+='cmp r0,#0\nmoveq r0,#1\nmovne r0,#0\n'
+  else:
+   asm+='mov r1,#0\n'  # Countdown result is an ARM signed 64-bit value.
+  target=custom_stub(asm+'pop {r4,pc}')
+  assert bytes(b[site:site+4])==struct.pack('<I',0xe92d4870 if eligible else 0xe92d48f0)
+  redirect(site,target)
+ # Both native click routes store the timestamp via PlayerProfile's save
+ # setter. Give them the same time source used by the eligibility check.
+ local_time=custom_stub('mov r0,#0\nb #0x147824')
+ for first,second in ((0x9317e8,0x9317ec),(0xf77b28,0xf77b3c)):
+  endless_patch(first,bl(first,0xf754ac),nop,'skip server clock for Penny draw')
+  endless_patch(second,bl(second,0xf7530c),bl(second,local_time),
+                'save the free Penny draw time from the device clock')
+ # Keep the native free badge and timer. Skip the disconnected sprite and
+ # its server-time and range checks because the local result is bounded.
+ endless_patch(0x7fa0fc,bl(0x7fa0fc,0xf754ac),nop,'skip server clock in Penny badge')
+ endless_patch(0x7fa100,bl(0x7fa100,0xf7530c),nop,'use local countdown in Penny badge')
+ endless_patch(0x7fa12c,struct.pack('<I',0x1a00008f),struct.pack('<I',0xea000096),
+               'always render the local Penny countdown instead of the offline banner')
+
+if VERSION>=161:
+ # Invoke the existing Penny child action directly. Its only use of the
+ # drawer instance before dispatch is to reset an optional animation.
+ site=0xa392a8
+ without_drawer=custom_stub(
+  'cmp r7,#0\nbeq #0xa392c0\nldr r3,[r7,#0xc0]\nb #0xa392ac')
+ assert bytes(b[site:site+4])==struct.pack('<I',0xe59730c0)
+ redirect(site,without_drawer)
+ site=0xa32ad4
+ open_penny=custom_stub(
+  'mov r1,#1\nstrb r1,[r0,#0xf5]\nmov r0,#0\nmov r1,#11\nb #0xa39254')
+ endless_patch(site,bl(site,0xa322b4),bl(site,open_penny),
+               'open Penny directly on the map Treasure button release')
+
 if VERSION>=67:
  site=0x10129f0;assert bytes(b[site:site+4])==bl(site,0x100cc74)
  target=custom_stub('push {r0-r4,lr}\nmov r1,r2\n'+baseasm()+f'bl #{symbols["offlineDaveLabel"]}\npop {{r0-r4,lr}}\nb #0x100cc74')
@@ -907,7 +1195,7 @@ if VERSION==72:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pv
 if VERSION>=73:subprocess.run([sys.executable,str(ROOT/('scripts/check_offline_pvp_v101_focused.py' if VERSION>=101 else 'scripts/check_offline_pvp_v99_focused.py' if VERSION>=99 else 'scripts/check_offline_pvp_v98_focused.py' if VERSION>=98 else 'scripts/check_offline_pvp_v97_focused.py' if VERSION>=97 else 'scripts/check_offline_pvp_v96_focused.py' if VERSION>=96 else 'scripts/check_offline_pvp_v95_focused.py' if VERSION>=95 else 'scripts/check_offline_pvp_v94_focused.py' if VERSION>=94 else 'scripts/check_offline_pvp_v93_focused.py' if VERSION>=93 else 'scripts/check_offline_pvp_v91_focused.py' if VERSION>=91 else 'scripts/check_offline_pvp_v90_focused.py' if VERSION>=90 else 'scripts/check_offline_pvp_v82_focused.py' if VERSION>=82 else 'scripts/check_offline_pvp_v81_focused.py' if VERSION>=81 else 'scripts/check_offline_pvp_v80_focused.py' if VERSION>=80 else 'scripts/check_offline_pvp_v79_focused.py' if VERSION>=79 else 'scripts/check_offline_pvp_v78_focused.py' if VERSION>=78 else 'scripts/check_offline_pvp_v77_focused.py' if VERSION>=77 else 'scripts/check_offline_pvp_v76_focused.py' if VERSION==76 else 'scripts/check_offline_pvp_v75_arm.py' if VERSION>=75 else 'scripts/check_offline_pvp_v74_arm.py' if VERSION>=74 else 'scripts/check_offline_pvp_v73_arm.py')),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=83:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v83_drag.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=84:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v84_cursor.py'),str(OUT),*(['--legacy-regions-fixture'] if VERSION>=93 else [])],cwd=ROOT,check=True)
-if VERSION>=85:subprocess.run([sys.executable,str(ROOT/'scripts/check_input_v23_native.py'),str(OUT)],cwd=ROOT,check=True)
+if VERSION>=85:subprocess.run([sys.executable,str(ROOT/'scripts/check_input_v23_native.py'),str(OUT),*(['--endless-input'] if VERSION>=155 else [])],cwd=ROOT,check=True)
 if VERSION>=88:subprocess.run([sys.executable,str(ROOT/'scripts/check_resource_index_v88.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=89:subprocess.run([sys.executable,str(ROOT/'scripts/check_map_buffer_v89.py'),str(OUT)],cwd=ROOT,check=True)
 if VERSION>=92:subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_pvp_v92_visual.py'),str(OUT)],cwd=ROOT,check=True)

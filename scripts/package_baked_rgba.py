@@ -17,8 +17,8 @@ PREFIX = 'com.popcap.pvz2cthd/files/'
 PARTS = [f'assets/pvz2data.zip.{i:03d}' for i in range(1, 4)]
 
 
-def pack_resources(source, baked, archive):
-    with ZipFile(ResourceZip(source)) as original, ZipFile(archive, 'w', ZIP_DEFLATED, compresslevel=1) as output:
+def pack_resources(source, baked, archive, compression_level=1):
+    with ZipFile(ResourceZip(source)) as original, ZipFile(archive, 'w', ZIP_DEFLATED, compresslevel=compression_level) as output:
         for item in original.infolist():
             if not item.filename.startswith(PREFIX) or item.is_dir():
                 continue
@@ -86,11 +86,11 @@ def bootstrap(original, out, expanded, marker):
     }, ROOT / 'tools/apktool.jar')
 
 
-def package(source, baked, out, tools, reuse_archive):
+def package(source, baked, out, tools, reuse_archive, compression_level=1):
     out.mkdir(parents=True, exist_ok=True)
     inner = out / 'resources.zip'
     if not reuse_archive:
-        pack_resources(source, baked, inner)
+        pack_resources(source, baked, inner, compression_level)
     with ZipFile(inner) as archive:
         expanded = sum(item.file_size for item in archive.infolist())
         if reuse_archive and archive.testzip() is not None:
@@ -146,5 +146,7 @@ if __name__ == '__main__':
     parser.add_argument('output', type=Path)
     parser.add_argument('--build-tools', type=Path, default=Path('Y:/Android/Sdk/build-tools/34.0.0'))
     parser.add_argument('--reuse-archive', action='store_true')
+    parser.add_argument('--compression-level', type=int, choices=range(1, 10), default=1,
+                        help='DEFLATE level for a new resource ZIP (default: 1)')
     args = parser.parse_args()
-    package(args.apk, args.baked, args.output, args.build_tools, args.reuse_archive)
+    package(args.apk, args.baked, args.output, args.build_tools, args.reuse_archive, args.compression_level)

@@ -1,8 +1,13 @@
 package com.popcap.pvz2cthd;
 
 import android.app.Activity;
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.content.res.AssetFileDescriptor;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.media.AudioAttributes;
 import android.media.SoundPool;
 import android.util.Log;
@@ -23,7 +28,32 @@ final class SpeedFeedback {
     private static int stream;
     private static int pending = -1;
     private static float pendingGain;
-    private static View flash;
+    private static FlashView flash;
+    private static ViewGroup flashHost;
+    private static ValueAnimator flashAnimator;
+
+    private static final class FlashView extends View {
+        private final Paint paint = new Paint();
+
+        FlashView(Activity activity) {
+            super(activity);
+            setFocusable(false);
+            setFocusableInTouchMode(false);
+            setClickable(false);
+            setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            paint.setColor(Color.WHITE);
+            paint.setAlpha(89);
+        }
+
+        void setFlashAlpha(int alpha) {
+            paint.setAlpha(alpha);
+            invalidate();
+        }
+
+        @Override protected void onDraw(Canvas canvas) {
+            canvas.drawRect(0, 0, getWidth(), getHeight(), paint);
+        }
+    }
 
     static void preload(Activity activity) {
         if (pool != null || activity.isDestroyed()) return;
@@ -82,26 +112,45 @@ final class SpeedFeedback {
 
     private static void flash(Activity activity) {
         ViewGroup content = activity.findViewById(android.R.id.content);
-        if (content == null) return;
+        if (content == null || content.getWidth() <= 0 || content.getHeight() <= 0) return;
         clearFlash();
-        View view = new View(activity);
-        view.setBackgroundColor(Color.WHITE);
-        view.setAlpha(0.35f);
-        view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        content.addView(view, new ViewGroup.LayoutParams(
+        // Keep the visible child used by WSA's SurfaceView compositor, but
+        // animate paint opacity rather than View.alpha / a hardware layer.
+        FlashView effect = new FlashView(activity);
+        content.addView(effect, new ViewGroup.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        flash = view;
-        view.animate().alpha(0f).setDuration(150).withEndAction(() -> {
-            if (flash == view) clearFlash();
-        }).start();
+        flash = effect;
+        flashHost = content;
+        ValueAnimator fade = ValueAnimator.ofInt(89, 0);
+        flashAnimator = fade;
+        fade.setDuration(150);
+        fade.addUpdateListener(animation -> {
+            if (flash == effect) effect.setFlashAlpha((Integer) animation.getAnimatedValue());
+        });
+        fade.addListener(new AnimatorListenerAdapter() {
+            @Override public void onAnimationEnd(Animator animation) {
+                if (flash == effect) clearFlash();
+            }
+        });
+        fade.start();
+        // Clean up even if a compositor/animator callback is cancelled or lost.
+        content.postDelayed(() -> { if (flash == effect) clearFlash(); }, 250);
     }
 
     private static void clearFlash() {
-        View view = flash;
+        FlashView effect = flash;
+        ViewGroup host = flashHost;
+        ValueAnimator animation = flashAnimator;
         flash = null;
-        if (view == null) return;
-        view.animate().cancel();
-        if (view.getParent() instanceof ViewGroup) ((ViewGroup) view.getParent()).removeView(view);
+        flashHost = null;
+        flashAnimator = null;
+        if (animation != null) animation.cancel();
+        if (effect == null || host == null) return;
+        effect.setFlashAlpha(0);
+        host.removeView(effect);
+        host.requestLayout();
+        host.invalidate();
+        Log.i(TAG, "Speed flash cleared");
     }
 
     static void setForeground(boolean active) {

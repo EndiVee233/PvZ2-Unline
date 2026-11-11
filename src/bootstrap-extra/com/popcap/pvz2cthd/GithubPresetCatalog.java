@@ -13,7 +13,7 @@ import javax.net.ssl.HttpsURLConnection;
 import org.json.*;
 
 final class GithubPresetCatalog {
-    private static final String REPOSITORY = "EndiVee233/PvZ2-Unline";
+    private static final String REPOSITORY = "EndiVee233/PvZ2-Unline-Aster";
     private static final String DIRECTORY = "pvp-presets";
     private static final int MAX_FILES = 1000;
     private static final int MAX_INDEX_BYTES = 2 * 1024 * 1024;
@@ -220,7 +220,7 @@ final class GithubPresetCatalog {
         }
     }
 
-    private static final class Endpoint {
+    static final class Endpoint {
         final String host;
         final String[] edges;
         volatile String workingEdge;
@@ -256,7 +256,7 @@ final class GithubPresetCatalog {
             }
         }
 
-        private HttpsURLConnection edge(String address, String path) throws IOException {
+        HttpsURLConnection edge(String address, String path) throws IOException {
             HttpsURLConnection connection = (HttpsURLConnection)new URL("https", address, path).openConnection(Proxy.NO_PROXY);
             connection.setRequestProperty("Host", host);
             connection.setHostnameVerifier((ignored, session) ->

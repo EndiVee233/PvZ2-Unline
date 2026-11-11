@@ -41,6 +41,9 @@ for base in [0,0x20000000]:
  belt_packets=[0x6074000+i*0x200 for i in range(10)]
  belt_y={p:100+(9-i)*27 for i,p in enumerate(belt_packets)}
  active_belt=0
+ board_bank=0
+ ordinary_bank=bank
+ last_stand=0x6082000
  food_plant=0
  cursor=0x6080000
  put(belt,table)
@@ -62,7 +65,7 @@ for base in [0,0x20000000]:
   if a==0x6101000:uc.emu_stop();return
   if off==0x14ed0e0:put(a0,a1)
   elif off==0x14ebf58:pass
-  elif off==0x97714c:result=bank if string(get(a0))=='UISeedBank' else packet
+  elif off==0x97714c:result=ordinary_bank if string(get(a0))=='UISeedBank' else packet
   elif off==0x976720:result=0 if disabled else 1
   elif off==0x976478:
    index=pvp_packets.index(a1) if a1 in pvp_packets else -1
@@ -72,8 +75,8 @@ for base in [0,0x20000000]:
    if a0>=500 and a1!=550:result=0
    elif active_belt:result=next((p for p,y in belt_y.items() if y==a1),0)
    else:result=(0 if pvp_occluded else pvp_packets[index]) if a1==550 and 0<=index<16 else packet
-  elif off in [0x11d74b4,0x8ac6f4,0x27c56c,0x10290ac,0x102dc20,0x1030720,0x29a23c]:result=base+off
-  elif off==0x20bb34:result=active_belt
+  elif off in [0x11d74b4,0x8ac6f4,0x27c56c,0x10290ac,0x102dc20,0x1030720,0x29a23c,0x3f8538]:result=base+off
+  elif off==0x20bb34:result=active_belt or board_bank
   elif off==0x15dee64:result=0x3f800000
   elif off==0x203990:
    assert (a0,a1,a2)==(board,4,1) and string(get(a3))=='smallChestnut'
@@ -82,7 +85,9 @@ for base in [0,0x20000000]:
    assert a0==food_plant
    actions.append('plantfood')
   elif off==0x7fa754:result=pvp_manager
-  elif off==0x43af38:result=pvp_module if a0==pvp_module and a1==base+0x10290ac else 0
+  elif off==0x43af38:
+   if a0==pvp_module and a1==base+0x10290ac:result=pvp_module
+   elif a0==pvp_module and a1==base+0x3f8538:result=last_stand
   elif off==0x895f0c:
    assert a1==pvp_bank and 0<=a2<u.mem_read(pvp_bank+0x11d,1)[0]
    pvp_slot_reads.append(a2);put(a0,pvp_packets[a2]);put(a0+4,1)
@@ -166,6 +171,22 @@ for base in [0,0x20000000]:
   u.emu_start(base+entry,0,count=20000);assert preview_positions[-1]==(475,285)
   assert actions==[('down',150,550),'up']
   print('PVP home bank: eight keys, visible pages, merchant exclusion, type/bounds/UI guards and hover restoration passed',hex(base))
+  if '--endless-input' in sys.argv:
+   put(board+0x94c,0);put(board+0xc0,3)
+   u.mem_write(level,b'festival_dangerroom_level_endless\0')
+   board_bank=bank;ordinary_bank=0
+   put(last_stand+0x34,4)
+   assert run(8)==[('down',150,250),'up']
+   assert run(9)==[]
+   put(packet+0x10c,2);assert run(8)==[];put(packet+0x10c,0)
+   overlay=True;assert run(8)==[];overlay=False
+   u.mem_write(board+0x8d5,b'\x01');assert run(8)==[];u.mem_write(board+0x8d5,b'\0')
+   put(last_stand+0x34,6);assert run(8)==[]
+   put(board+0xc0,5);assert run(8)==[('down',150,250),'up']
+   put(board+0xc4,0);put(board+0xc0,4)
+   u.mem_write(level,b'arena_plant_test\0')
+   board_bank=0;ordinary_bank=bank
+   print('Endless prep, battle and native input guards passed',hex(base))
   if '--extended-input' in sys.argv:
    put(board+0xc4,0);put(board+0x94c,0);put(board+0x2c,0);put(board+0x30,0)
    active_belt=belt;put(belt+0x48,children);put(belt+0x4c,children+80)

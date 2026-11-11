@@ -6,13 +6,14 @@ import io
 import json
 import subprocess
 import sys
+import os
 import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
 STORE = ROOT / 'work/private-save-backups'
 ACTIVE = STORE / 'ACTIVE.json'
-ADB = 'K:/pvz2-tools/platform-tools/adb.exe'
-PACKAGE = 'com.popcap.pvz2cthd.reconstruction'
+ADB = os.environ.get('PVZ2_ADB', 'Y:/Android/Sdk/platform-tools/adb.exe')
+PACKAGE = os.environ.get('PVZ2_PACKAGE', 'com.pvz2unline.aster')
 PATHS = ['files/userdata', 'files/userdataNo_Backup', 'shared_prefs', 'databases']
 EXTERNAL_FILES = f'/sdcard/Android/data/{PACKAGE}/files'
 LEVEL_DIR = 'pvp_level'

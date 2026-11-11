@@ -108,13 +108,14 @@ extern "C" U offlinePresetValidate(const U* data,U size){
  return 1;
 }
 extern "C" void offlinePresetSettingsReady(U b,P ui){
- static const U labels[3][20]={
+ static const U labels[][20]={
   {0x8054,0x7f51,0x83b7,0x53d6,'P','V','P',0x5173,0x5361,0},
   {'P','V','P',0x6a21,0x5f0f,0x9884,0x8bbe,0x9635,0x5bb9,0},
-  {0x4fee,0x6539,'P','V','P',0x6a21,0x5f0f,0x9884,0x8bbe,0x9635,0x5bb9,0}};
+  {0x4fee,0x6539,'P','V','P',0x6a21,0x5f0f,0x9884,0x8bbe,0x9635,0x5bb9,0},
+  {0x68c0,0x67e5,0x66f4,0x65b0,0}};
  P scroll=at<P>(ui,0xbc);if(!scroll)return;
  P arrow=call<P>(b,0x1dd8f0,reinterpret_cast<P>(b+0x1848a98));if(!arrow)return;
- for(U i=0;i<3;++i){P title=nullptr;char allocator=0;
+ for(U i=0;i<sizeof(labels)/sizeof(labels[0]);++i){P title=nullptr;char allocator=0;
   call<void>(b,0x14eb451,&title,labels[i],&allocator);
   P row=call<P>(b,0x8e4898,ui,1001+i,&title,arrow);
   call<void>(b,0x8e5924,scroll,row);release(b,title,true);
@@ -123,6 +124,7 @@ extern "C" void offlinePresetSettingsReady(U b,P ui){
 extern "C" U offlinePresetSettingsClick(U b,P ui,U id){
 #ifdef PVP_PRESET_NATIVE_PAGES
  if(id<=1){if(editorSettings==ui){editorSettings=nullptr;editorPage=0;}return 0;}
+ if(id==1004){if(!presetEditing)editorEvent=19;return 1;}
  if(id>=1001&&id<=1003){
   if(presetEditing||at<P>(ui,0xc0)||at<U>(ui,0xd4))return 1;
   editorSettings=ui;editorPage=id-1000;

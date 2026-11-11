@@ -10,6 +10,17 @@
 
 **全量 RGBA8888 预览版。** v163 的 19 个 RSB 中，773 张实际引用的图集已在构建时转为 RGBA8888。APK 约 2.87 GB，首次解包后的资源约 13.30 GB。已在 WSA 核对覆盖安装、资源迁移和启动画面，各世界及 PvP 尚待逐项验收。下载两段后按发布页说明合并并校验。 [v163 RGBA8888 预览版](https://github.com/EndiVee233/PvZ2-Unline-Aster/releases/tag/v1.7.5-v163-rgba-preview)
 
+## 当前源码状态
+
+本次更新发布源码；安装包下载仍使用上方已有发布页。当前 Aster 应用 ID 为 `com.pvz2unline.aster`。
+
+- **ARM32：推荐。** 用户已在 WSA 验收玩家选择记忆：WSA USER 与全一 TEST 往返切换、冷启动后保留上次选择；Tab 后快捷键及加速白闪/音效也已验收。
+- **ARM64：不推荐，优先使用 ARM32。** 通过 ARM64 桥接运行共享的 ARM32 引擎；共用修改同步，当前候选版本未做 ARM64 验收，性能及实体设备兼容性未确认。仅在收到 ARM64 专属 issue 后排查。
+- 后续二进制发布分别提供 ARM32、ARM64 包并独立标注验收状态。源码仓库不包含原版资源、原生游戏库、存档和签名密钥。
+- 未完成：四种 PVP 技能的高清贴图/动画比例仍待修复；战斗回放未实现；戴夫刷新周期、商铺原版阵容/产出数值仍待考据。已有商铺产出与静默袭击使用已约定的离线规则。
+
+本轮变更与验收范围见 [Aster 源码更新说明](docs/recovery/aster-arm32-profile-memory.md)。
+
 ## 特性
 
 - **程序名** 植物大战僵尸2-Unline
@@ -89,6 +100,8 @@ ASTC/ETC1/RGBA4444 纹理需要由 libRestart.so 解码成 RGBA8888，再由 GL 
   ```
 
 ## 致谢
+
+- [phys-winner/arm64-bridge-a7](https://github.com/phys-winner/arm64-bridge-a7)：实验性 ARM64 桥接基础；相关适配源码按文件中的 GPL-3.0-or-later 标识提供。
 
 - [DreamMoonCai/Pvz2Tool](https://github.com/DreamMoonCai/Pvz2Tool)：启动器与资源处理思路
 - [google/astc-codec](https://github.com/google/astc-codec)：ASTC 解码（Apache-2.0）

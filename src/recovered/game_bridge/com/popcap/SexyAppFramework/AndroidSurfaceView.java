@@ -61,6 +61,7 @@ public class AndroidSurfaceView extends GLSurfaceView {
         this.mbIsInitialized = false;
         setFocusable(true);
         setFocusableInTouchMode(true);
+        if (android.os.Build.VERSION.SDK_INT >= 26) setDefaultFocusHighlightEnabled(false);
         this.mOrigAppWidth = 0;
         this.mOrigAppHeight = 0;
         this.mGestureDetector = new GestureDetector(InContext, this.mUIEventManager);
@@ -145,6 +146,9 @@ public class AndroidSurfaceView extends GLSurfaceView {
 
     @Override // android.view.View, android.view.KeyEvent.Callback
     public boolean onKeyDown(int InKeyCode, KeyEvent InEvent) {
+        // Keep game keyboard focus out of the offscreen IME helper. Real text
+        // fields and dialogs receive their own key events and retain Tab.
+        if (InKeyCode == KeyEvent.KEYCODE_TAB) return true;
         if (DEBUG) {
             Log.i("Surface", "onKeyDown.");
         }
@@ -156,6 +160,7 @@ public class AndroidSurfaceView extends GLSurfaceView {
 
     @Override // android.view.View, android.view.KeyEvent.Callback
     public boolean onKeyUp(int InKeyCode, KeyEvent InEvent) {
+        if (InKeyCode == KeyEvent.KEYCODE_TAB) return true;
         if (DEBUG) {
             Log.i("Surface", "onKeyUp.");
         }

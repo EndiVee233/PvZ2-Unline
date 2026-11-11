@@ -198,3 +198,76 @@ and hard/legend difficulties remain unverified. The observation/validation scrip
 expect private snapshots from an existing isolated test install; they are not a
 fresh-install automated gameplay suite. See
 `docs/recovery/离线挑战模式恢复结果.md` for hashes and exact test boundaries.
+
+## Android package IDs
+
+After producing an Aster or Iris APK with the legacy package ID, run this
+release packaging step from the Aster checkout. Keep the original signing key.
+
+```powershell
+python scripts/rename_unline_apk.py aster <built-aster.apk> <output-aster.apk> <sdk-build-tools>
+python scripts/rename_unline_apk.py iris <built-iris.apk> <output-iris.apk> <sdk-build-tools>
+```
+
+The resulting IDs are `com.pvz2unline.aster` and `com.pvz2unline.iris`.
+Android keeps the old installations and their saves in separate sandboxes.
+
+## Experimental Aster ARM64 game wrapper
+
+Future GitHub releases must include separate ARM32 and ARM64 APKs, labeled
+with their architecture and independent acceptance status. Common changes
+must be carried into both packages. WSA gameplay acceptance uses ARM32.
+ARM64 is maintained conservatively: do not run proactive ARM64 tests/rechecks;
+investigate it only for an issue explicitly affecting ARM64. Release descriptions
+must say **ARM64 is not recommended; prefer ARM32**, with outstanding ARM64
+issues/unverified behavior listed. A passing ARM32 run does not validate ARM64.
+Do not replace the Iris installation used by another session.
+
+To apply the shared Java desktop-focus/speed-flash fixes while retaining the
+existing ARM32 native libraries:
+
+```powershell
+python scripts/build_aster_feedback_arm32.py <renamed-aster-v163.apk> <android-sdk> <output-dir>
+```
+
+This produces `PvZ2-Unline-Aster-ARM32.apk` with the same application ID and
+signing key. `validation.json` records the unchanged native-library hashes.
+
+To add native last-player memory as well, append
+`--profile-memory-ndk <android-ndk>`. This applies the two checked engine hooks
+and records the changed `libSrc.so` hash separately from the other libraries.
+Use that resulting ARM32 APK as the ARM64 builder input, so its guest engine
+contains the identical persistence fix. Run the shared ARM32 patch checks with
+`python scripts/check_profile_memory.py <output-dir>/profile-memory`.
+
+This preserves the renamed Aster Java/resources and executes its six
+ARM32 native libraries through the ARM64 bridge. The current ARM32 candidate
+has passed user acceptance on WSA. The synchronized ARM64 candidate is not
+acceptance-tested and is not recommended; performance and physical-device
+compatibility remain unverified. Do not proactively test ARM64 without a
+reported ARM64-specific issue.
+
+Initialize the submodules of [arm64-bridge-a7](https://github.com/phys-winner/arm64-bridge-a7)
+in a separate checkout. Obtain the Apache-2.0 [google/astc-codec](https://github.com/google/astc-codec)
+source and use JDK 17+, Android SDK API 34/Build Tools 34.0.0, CMake 3.22.1,
+and an Android NDK. Third-party sources and original game binaries are local
+build inputs, not bundled in this repository.
+
+```powershell
+python scripts/build_aster_arm64_game.py <renamed-aster-v163.apk> <a7-checkout/arm64_bridge> <android-sdk> <android-ndk> <output-dir> --astc-source <google-astc-codec-checkout>
+```
+
+The result is `PvZ2-Unline-Aster-ARM64-experimental.apk`, using
+`com.pvz2unline.aster` and the existing signing key. Installing it replaces the
+Aster executable in place; it is not an isolated diagnostic. Back up saves
+first with `scripts/wsa_save_snapshot.py backup`, preserve any pending baseline,
+and restore/verify them after tests. Do not install over an active user test.
+The snapshot tool accepts `PVZ2_ADB` and `PVZ2_PACKAGE` overrides; its defaults
+are the current SDK path and `com.pvz2unline.aster`. `ADB_SERVER_SOCKET` can select
+an isolated local ADB server without interrupting other development sessions.
+
+The game builder defaults to the lean runtime profile: cycle-count sampling,
+animated-resource tracing and repeated JNI/file-operation logs are disabled.
+Bridge/JNI failure reports remain enabled. Add `--diagnostics` to rebuild with
+the slower investigation profile. The profile does not change the A32 game
+engine or resource payloads.

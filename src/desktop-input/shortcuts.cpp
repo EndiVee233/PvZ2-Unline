@@ -65,9 +65,10 @@ static P selectedPacket(U b,P board){
  if(!cursor||at<U>(cursor,0)!=b+0x179b940||at<unsigned char>(cursor,0x1d))return nullptr;
  return resolve(b,reinterpret_cast<Weak*>(cursor+0x28));
 }
-static P seedShortcut(U b,P board,int slot,int step){
- P belt=cast(b,call<P>(b,0x20bb34,board),0x29a23c);
- P bank=belt?belt:widget(b,"UISeedBank");
+static P seedShortcut(U b,P board,int slot,int step,bool useBoardBank=false){
+ P boardBank=call<P>(b,0x20bb34,board);
+ P belt=cast(b,boardBank,0x29a23c);
+ P bank=belt||useBoardBank?boardBank:widget(b,"UISeedBank");
  if(!enabled(b,bank))return nullptr;
  U begin=at<U>(bank,0x48),end=at<U>(bank,0x4c);
  int limit=at<signed char>(bank,0x11d);
@@ -153,16 +154,29 @@ extern "C" __attribute__((section(".text.entry"))) void desktopInput(U b,P drive
  P app=at<P>(driver,0x44);if(!app)return;P board=at<P>(app,0x6bc);if(!board)return;
  if(mode==5){collect(b,app,board,event,false);return;}
  int key=event->x;
+ bool canPlay=playable(board);
+ bool useBoardBank=false;
+#ifdef DESKTOP_ENDLESS_INPUT
+ const char *level=at<const char*>(board,0xc4);
+ useBoardBank=equal(level,"festival_dangerroom_level_endless")
+             ||equal(level,"FESTIVAL_DANGERROOM_LEVEL_ENDLESS");
+ if(useBoardBank&&!canPlay&&!at<unsigned char>(board,0x8d5)){
+  P modules=at<P>(board,0x938);
+  P lastStand=modules?call<P>(b,0x43af38,modules,call<P>(b,0x3f8538)):nullptr;
+  // Native Last Stand state 4 enables lawn editing and Start Battle.
+  canPlay=lastStand&&at<U>(lastStand,0x34)==4;
+ }
+#endif
  // Pause must pass through ordinary input routing, including tutorial locks.
  if(key==62){
   if(at<unsigned char>(board,0x8d5)){
    if(at<U>(app,0x1378)&&!modal(app)){
     call<void>(b,0x4021b0,app);virt<void>(board,0x58,0);
    }
-  }else if(playable(board)&&!modal(app))click(b,app,board,widget(b,"UIPauseButton"),event);
+  }else if(canPlay&&!modal(app))click(b,app,board,widget(b,"UIPauseButton"),event);
   return;
  }
- if(!playable(board)||modal(app))return;
+ if(!canPlay||modal(app))return;
 #ifdef DESKTOP_EXTENDED_INPUT
  if(key==101){plantfoodShortcut(b,driver,app,board,event);return;}
 #endif
@@ -173,7 +187,7 @@ extern "C" __attribute__((section(".text.entry"))) void desktopInput(U b,P drive
  if(key>=8&&key<=11)slot=key-8;
  if(key==45)slot=4;if(key==51)slot=5;if(key==33)slot=6;if(key==46)slot=7;
 #ifdef DESKTOP_EXTENDED_INPUT
- if(key==54||key==52)target=seedShortcut(b,board,-1,key==54?-1:1);
+ if(key==54||key==52)target=seedShortcut(b,board,-1,key==54?-1:1,useBoardBank);
  else
 #endif
  if(slot>=0){
@@ -182,7 +196,7 @@ extern "C" __attribute__((section(".text.entry"))) void desktopInput(U b,P drive
   else {
 #endif
 #ifdef DESKTOP_EXTENDED_INPUT
-  target=seedShortcut(b,board,slot,0);
+  target=seedShortcut(b,board,slot,0,useBoardBank);
 #else
   P bank=widget(b,"UISeedBank");if(!enabled(b,bank))return;
   U n=(at<U>(bank,0x4c)-at<U>(bank,0x48))/8;

@@ -117,6 +117,7 @@ public final class PresetEditor {
             GithubPresetCatalog.reloadLocal(a,options(a).getBoolean("network_enabled",false));
             message("关卡已保存到 pvp_level，可在「本机关卡」打开或导出。");
             break;
+        case 19:ReleaseUpdater.check(a);break;
         case 20:newPreset=null;break;
         case 31:case 32:
             options(a).edit().putBoolean("network_enabled",event==31).apply();
@@ -214,6 +215,7 @@ public final class PresetEditor {
         }catch(Exception x){pendingExport=null;message("系统导出窗口不可用，关卡仍可从「本机关卡」打开。");}
     }
     public static boolean onActivityResult(Activity a,int request,int result,Intent intent){
+        if(ReleaseUpdater.onActivityResult(a,request))return true;
         if(request!=OPEN&&request!=SAVE)return false;
         try{init(a);if(result!=Activity.RESULT_OK||intent==null||intent.getData()==null){if(request==SAVE)pendingExport=null;return true;}
             Uri uri=intent.getData();if(request==OPEN){prepareImport(a.getContentResolver().openInputStream(uri),null);}

@@ -48,6 +48,46 @@ static U neighborAction(U b,P panel,U button);
 static void bytes(P d,const unsigned char*s,U n){for(U i=0;i<n;++i)d[i]=s[i];}
 static void narrow(U b,P dst,const char*src){char a=0;call<void>(b,0x14ed0e1,dst,src,&a);}
 static void release(U b,P value,bool wide=false){if(value){char a=0;call<void>(b,wide?0x14ea239:0x14ebf59,value-12,&a);}}
+#ifdef OFFLINE_PENNY_DRAW
+extern "C" U offlinePennySecondsLeft(U b,P player){
+ P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);
+ P config=app?call<P>(b,0x406608,app):nullptr;
+ // This is the same refresh interval used by the original Penny countdown.
+ U hours=config?at<U>(config,0x14):24;
+ if(!hours||hours>168)hours=24;
+ U interval=hours*3600;
+ I now=call<I>(b,0x147824,static_cast<P>(nullptr));
+ if(!player||now<=0)return interval;
+ I last=at<I>(player,0x5a4);
+ if(last<=0)return 0;
+ U elapsed=now>last?static_cast<U>(now-last):0;
+ return elapsed<interval?interval-elapsed:0;
+}
+#endif
+#ifdef MAP_ENDLESS_BUTTON
+static P endlessMapButton(U b){
+ // The iPhone layout already uses this native HUD slot for the Endless icon.
+ P name=nullptr;
+ narrow(b,reinterpret_cast<P>(&name),"UIWorldMapDailyAchievementButton");
+ P endless=call<P>(b,0x97714c,&name);
+ release(b,name);
+ return endless;
+}
+extern "C" bool offlineIsEndlessButton(U b,P widget){
+ return widget==endlessMapButton(b);
+}
+extern "C" void offlineRefreshEndlessMap(U b,P challenge){
+ // The native Challenge icon is already visible here on the first map.
+ // Look up the sibling periodically so no scene-owned pointer is retained.
+ static U frames;
+ if(++frames%15!=1||!call<bool>(b,0x976720,challenge))return;
+ P endless=endlessMapButton(b);
+ if(!endless)return;
+ U& flags=at<U>(endless,0x54);
+ flags=(flags&~4u)|(at<U>(challenge,0x54)&4u);
+ if(!(flags&1))call<void>(b,0x9766f4,endless,1);
+}
+#endif
 #ifdef ADVENTURE_OPENING_TUTORIAL
 extern "C" bool adventureOpeningTutorial(U b){
  P player=profile(b);

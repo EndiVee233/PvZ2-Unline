@@ -6,10 +6,11 @@ from io import BytesIO
 from PIL import Image
 from prepare_offline_pvp_seagull_hd import Bundle, replace_section, section
 
-NAME = 'PvZ2-Unline'
-CHINESE_NAME = '植物大战僵尸2-Unline'
+NAME = 'PvZ2-Unline:Aster'
+APK_NAME = 'PvZ2-Unline-Aster'
+CHINESE_NAME = NAME
 BASE_VERSION = '1.7.5'
-VERSION_NAME = f'{BASE_VERSION}-Unline'
+VERSION_NAME = f'{BASE_VERSION}-Unline-Aster'
 SETTINGS_FOOTER = f'{NAME} {BASE_VERSION}'
 
 
@@ -30,7 +31,19 @@ def launcher_icons(apk, artwork):
     return replacements
 
 
-def patch_manifest(binary):
+def black_talkweb_splashes(apk):
+    paths = ('res/drawable-hdpi-v4/tw_logo_l.jpg', 'res/drawable-hdpi-v4/tw_logo_p.jpg')
+    replacements = {}
+    for path in paths:
+        with Image.open(BytesIO(apk.read(path))) as previous:
+            image = Image.new('RGB', previous.size, (0, 0, 0))
+        output = BytesIO()
+        image.save(output, format='JPEG', optimize=True)
+        replacements[path] = output.getvalue()
+    return replacements
+
+
+def patch_manifest(binary, *, build=None):
     # This manifest uses an unstyled UTF-16 AXML string pool. Preserve the
     # indices (including the resource map) and rewrite only the target labels.
     pool = 8
@@ -43,18 +56,29 @@ def patch_manifest(binary):
         strings.append(binary[offset + 2:offset + 2 + length * 2].decode('utf-16le'))
     name_index = strings.index('PvZ2 源码恢复验证')
     strings[name_index] = CHINESE_NAME
-    strings[strings.index('1.7.5-offline-reconstruction')] = VERSION_NAME
+    strings[strings.index('1.7.5-offline-reconstruction')] = (
+        VERSION_NAME if build is None else f'{VERSION_NAME}-v{build}')
 
-    offsets = bytearray()
-    encoded = bytearray()
-    for value in strings:
-        raw = value.encode('utf-16le')
-        offsets += struct.pack('<I', len(encoded))
-        encoded += struct.pack('<H', len(raw) // 2) + raw + b'\0\0'
-    encoded += bytes((-len(encoded)) % 4)
-    assert header + len(offsets) == start
-    new_pool = struct.pack('<HH6I', kind, header, start + len(encoded), count, 0, 0, start, 0)
+    android_ns = 'http://schemas.android.com/apk/res/android'
     tail = bytearray(binary[pool + size:])
+    # Append strings so the existing resource map keeps its attribute IDs.
+    def string_id(value):
+        if value not in strings:
+            strings.append(value)
+        return strings.index(value)
+
+    def element(tag, values):
+        tag = strings.index(tag)
+        attributes = bytearray()
+        for key, kind, value in values:
+            raw = value if kind == 3 else 0xffffffff
+            attributes += struct.pack('<IIIHBBI', strings.index(android_ns), strings.index(key), raw, 8, 0, kind, value)
+        return (struct.pack('<HHIII', 0x0102, 16, 36 + len(attributes), 0, 0xffffffff)
+                + struct.pack('<II6H', 0xffffffff, tag, 20, 20, len(values), 0, 0, 0)
+                + attributes + struct.pack('<HHIIII', 0x0103, 16, 24, 0, 0xffffffff, 0xffffffff)
+                + struct.pack('<I', tag))
+
+    insertions = []
 
     activities = {
         'com.popcap.pvz2cthd.BootActivity',
@@ -68,13 +92,29 @@ def patch_manifest(binary):
         if chunk == 0x0102:  # start element
             ext = pos + node_header
             tag, first, stride, attributes = struct.unpack_from('<IHHH', tail, ext + 4)
-            if strings[tag] == 'activity':
+            if strings[tag] in ('manifest', 'application', 'activity'):
                 attrs = {}
                 for index in range(attributes):
                     at = ext + first + stride * index
                     namespace, key = struct.unpack_from('<II', tail, at)
-                    if namespace != 0xffffffff and strings[namespace] == 'http://schemas.android.com/apk/res/android':
+                    if namespace != 0xffffffff and strings[namespace] == android_ns:
                         attrs[strings[key]] = at
+                if build is not None and strings[tag] == 'manifest':
+                    version_code = attrs['versionCode']
+                    assert tail[version_code + 15] == 0x10
+                    struct.pack_into('<II', tail, version_code + 8, 0xffffffff, 0x10000008)
+                    struct.pack_into('<I', tail, version_code + 16, 1000 + build)
+                if build is not None and strings[tag] == 'application':
+                    permissions = b''.join(element('uses-permission', [('name', 3, string_id(permission))])
+                        for permission in ('android.permission.REQUEST_INSTALL_PACKAGES',
+                                           'android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION')
+                        if permission not in strings)
+                    receiver = element('receiver', [
+                        ('name', 3, string_id('com.popcap.pvz2cthd.ReleaseUpdater')), ('exported', 0x12, 0)])
+                    insertions.extend(((pos, permissions), (pos + length, receiver)))
+                if strings[tag] != 'activity':
+                    pos += length
+                    continue
                 activity_name = attrs.get('name')
                 if activity_name is not None:
                     name = strings[struct.unpack_from('<I', tail, activity_name + 16)[0]]
@@ -85,6 +125,17 @@ def patch_manifest(binary):
                         changed.add(name)
         pos += length
     assert changed == activities
+    for at, data in reversed(insertions):
+        tail[at:at] = data
+    offsets = bytearray()
+    encoded = bytearray()
+    for value in strings:
+        raw = value.encode('utf-16le')
+        offsets += struct.pack('<I', len(encoded))
+        encoded += struct.pack('<H', len(raw) // 2) + raw + b'\0\0'
+    encoded += bytes((-len(encoded)) % 4)
+    start = header + len(offsets)
+    new_pool = struct.pack('<HH6I', kind, header, start + len(encoded), len(strings), 0, 0, start, 0)
     result = bytearray(binary[:pool]) + new_pool + offsets + encoded + tail
     struct.pack_into('<I', result, 4, len(result))
     return bytes(result)
