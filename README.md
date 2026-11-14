@@ -6,7 +6,9 @@
 
 ## 介绍
 一个面向 Windows Subsystem for Android / 普通 Android 的单文件直装版
+
 基于PvZ2中文版（音画修复）1.7.5构建的版本
+
 优化了WSA的操作体验 
 
 ## 致谢
