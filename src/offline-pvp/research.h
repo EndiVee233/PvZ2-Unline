@@ -1,5 +1,6 @@
 // Persist real SkillInfo grades, leaving effect properties with the engine.
 #include "research_presets.h"
+#include "research_cards.h"
 static U researchTimer[0x218/4],researchPromptUser,researchPromptIndex,researchPromptDue;
 struct ResearchView {P ui,button;U index,level,mode,second;};
 static ResearchView researchView;
@@ -21,6 +22,9 @@ static bool ensureResearch(U b,P m){
 }
 static void applyResearch(U b,P m){
  const Economy&s=economyRuntime.state;if(!s.researchInitialized||!regular(b))return;
+#ifdef PVP_WEEKLY_RULES
+ skillAidGrade=s.researchLevels[0];skillFogGrade=s.researchLevels[1];
+#endif
  for(U i=0;i<4;++i){
   P key=nullptr;narrow(b,reinterpret_cast<P>(&key),RESEARCH_SPECS[i].name);P info=call<P>(b,0x1046764,m,&key);
   U entry[5]={reinterpret_cast<U>(key),s.researchLevels[i],1,info?at<U>(info,12):0,1};call<P>(b,0x1048dcc,m,entry);release(b,key);
@@ -45,7 +49,8 @@ extern "C" void offlineResearchTick(U b,P ui){
  const Economy&s=economyRuntime.state;U level=s.researchLevels[index];
  U mode=s.researchIndex==index+1?1:s.researchIndex||s.evolutionIndex||s.upgradeKind?2:0;
  bool rebuild=researchView.ui==ui&&researchView.index==index&&(researchView.level!=level||researchView.mode!=mode);
- bool levelChanged=rebuild&&researchView.level!=level;
+ bool selectedCardChanged=syncResearchCardGrades(b,ui,manager(b));
+ bool levelChanged=(rebuild&&researchView.level!=level)||selectedCardChanged;
  if(levelChanged)call<void>(b,0x1084a38,ui,at<U>(ui,0xc0));
  else if(rebuild)call<void>(b,0x10849c0,ui);
  P button=at<P>(ui,0xac);U now=realNow(b);

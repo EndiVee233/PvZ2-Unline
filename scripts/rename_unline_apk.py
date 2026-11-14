@@ -128,6 +128,12 @@ def build(variant, source, destination, tools, key=None):
                 for name, count in [('libSrc.so', 1), ('libRestart.so', 4)]:
                     path = 'lib/armeabi/' + name
                     replacements[path] = replace_aster_paths(base.read(path), old_bytes, new_bytes, count)
+                    if name == 'libSrc.so':
+                        # The compiler folded prefix length into ARM instructions.
+                        # NUL-padding the shorter package name alone truncates all
+                        # per-player .eco/.def names to the same prefix.
+                        from prepare_aster_save_paths import patch
+                        replacements[path], _ = patch(replacements[path])
             else:
                 # The OBB filename is an asset identifier and keeps its original name.
                 path = 'lib/armeabi-v7a/libPVZ2.so'

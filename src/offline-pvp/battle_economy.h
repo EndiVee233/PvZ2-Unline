@@ -14,13 +14,21 @@ static bool beginBattleFee(U b,P m,const NpcPreset&n,bool live){
 #endif
  Economy next=economyRuntime.state;
  if(next.battleOpen){log(b,"battle-payment-already-open",next.battleOpen,next.battleNpc);return false;}
- if(!next.coins){economyNotice(b,"[PVP_ERROR_PVPCOIN_NOT_ENOUCH]");return false;}
+ U fee=1;
+#ifdef PVP_WEEKLY_RULES
+ if(isNeighborAttack(n.id)){prepareNeighborAttackDay(b,next);fee=neighborAttackFee(next.neighborAttacks);}
+#endif
+ if(next.coins<fee){economyNotice(b,"[PVP_ERROR_PVPCOIN_NOT_ENOUCH]");return false;}
  if(next.battleSerial==0xffffffffu){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return false;}
 #ifdef PVP_SILENT_RAIDS
  if(!markRevengeStarted(b,next,n.id))return false;
 #endif
- --next.coins;++next.battleSerial;next.battleOpen=next.battleSerial;
- next.battleNpc=n.id;next.battleStage=live?2:1;next.battleFee=1;++next.sequence;
+ next.coins-=fee;++next.battleSerial;next.battleOpen=next.battleSerial;
+ next.battleNpc=n.id;next.battleStage=live?2:1;next.battleFee=fee;
+#ifdef PVP_WEEKLY_RULES
+ if(live)countNeighborAttack(b,next);
+#endif
+ ++next.sequence;
  if(!saveEconomy(b,next)){economyNotice(b,"[V38_PVP_SAVE_ERROR]");return false;}
  economyRuntime.state=next;paidBattleUser=owner(b);paidBattleSerial=next.battleOpen;
  call<void>(b,0x1042a5c,m,next.coins);log(b,"battle-fee-paid",next.battleOpen,next.coins);return true;
@@ -31,6 +39,9 @@ static void markPaidBattleStarted(U b){
 #endif
  if(!paidBattleMatches(b,economyRuntime.state)||economyRuntime.state.battleStage!=1)return;
  Economy next=economyRuntime.state;next.battleStage=2;++next.sequence;
+#ifdef PVP_WEEKLY_RULES
+ countNeighborAttack(b,next);
+#endif
  if(saveEconomy(b,next)){economyRuntime.state=next;log(b,"paid-battle-started",next.battleOpen);}
  else log(b,"paid-battle-start-save-failed",next.battleOpen);
 }

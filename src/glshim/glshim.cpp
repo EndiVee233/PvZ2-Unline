@@ -13,6 +13,26 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <time.h>
+#ifdef PVZ2_DECODE_DIAGNOSTICS
+#include <signal.h>
+#include <ucontext.h>
+static struct sigaction previous_decode_segv;
+static void decode_fault(int signal, siginfo_t *info, void *context) {
+    auto &r = static_cast<ucontext_t *>(context)->uc_mcontext;
+    __android_log_print(ANDROID_LOG_ERROR, "AsterDecodeFault",
+        "signal=%d address=%p PC=%08lx LR=%08lx SP=%08lx CPSR=%08lx "
+        "r0=%08lx r1=%08lx r2=%08lx r3=%08lx r4=%08lx r5=%08lx r6=%08lx "
+        "r7=%08lx r8=%08lx r9=%08lx r10=%08lx fp=%08lx ip=%08lx",
+        signal, info ? info->si_addr : nullptr, r.arm_pc, r.arm_lr, r.arm_sp, r.arm_cpsr,
+        r.arm_r0, r.arm_r1, r.arm_r2, r.arm_r3, r.arm_r4, r.arm_r5, r.arm_r6,
+        r.arm_r7, r.arm_r8, r.arm_r9, r.arm_r10, r.arm_fp, r.arm_ip);
+    if (previous_decode_segv.sa_flags & SA_SIGINFO)
+        previous_decode_segv.sa_sigaction(signal, info, context);
+    else if (previous_decode_segv.sa_handler != SIG_DFL && previous_decode_segv.sa_handler != SIG_IGN)
+        previous_decode_segv.sa_handler(signal);
+    else { ::signal(signal, SIG_DFL); raise(signal); }
+}
+#endif
 #include <GLES2/gl2.h>
 #include <astc-codec/astc-codec.h>
 
@@ -327,6 +347,10 @@ static void cache_write_rgba(const char *path, int w, int h, const std::vector<A
 
 static void decode_one_strip(AstcStripCtx *ctx, size_t i) {
     AstcStrip &s = (*ctx->strips)[i];
+#ifdef PVZ2_DECODE_DIAGNOSTICS
+    LOGI("demand strip width=%d y=%d h=%d off=%zu bytes=%zu fp=%d",
+         ctx->width, s.y, s.h, s.off, s.size, int(ctx->fp));
+#endif
     size_t outsz = (size_t)ctx->width * s.h * 4;
     s.out = (uint8_t *)malloc(outsz);
     s.ok = s.out && astc_codec::ASTCDecompressToRGBA(
@@ -539,6 +563,13 @@ __attribute__((constructor)) static void init_shim() {
     patch_got(mi, "glTexSubImage2D", (void *)glTexSubImage2D);
     patch_got(mi, "glCompressedTexImage2D", (void *)glCompressedTexImage2D);
     start_texture_prefetch();
+#ifdef PVZ2_DECODE_DIAGNOSTICS
+    struct sigaction diagnostic{};
+    diagnostic.sa_sigaction = decode_fault;
+    diagnostic.sa_flags = SA_SIGINFO;
+    sigemptyset(&diagnostic.sa_mask);
+    sigaction(SIGSEGV, &diagnostic, &previous_decode_segv);
+#endif
     LOGI("done patching");
 }
 

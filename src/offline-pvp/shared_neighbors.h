@@ -38,7 +38,7 @@ static U setSharedCatalog(U b,const U* data,U size){
 static U cupDistance(U a,U b){return a>b?a-b:b-a;}
 static void pickSharedNeighbor(const NeighborRoster& roster,NeighborEncounter& out,U id,U seed,U sampled,U exclude){
  U player=economyRuntime.state.cups;
- if(player>100)player=100;
+ if(player>500)player=500;
  U radius=cupDistance(player,sampled);
  if(radius<10)radius=10;
  const NeighborEncounter* ordinary=nullptr;

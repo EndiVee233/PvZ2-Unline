@@ -78,6 +78,13 @@ if '--v160' in sys.argv:VERSION=160
 if '--v161' in sys.argv:VERSION=161
 if '--v162' in sys.argv:VERSION=162
 if '--v163' in sys.argv:VERSION=163
+if '--v166' in sys.argv:VERSION=166
+if '--v167' in sys.argv:VERSION=167
+if '--v168' in sys.argv:VERSION=168
+if '--v169' in sys.argv:VERSION=169
+if '--v170' in sys.argv:VERSION=170
+if '--v171' in sys.argv:VERSION=171
+if '--v172' in sys.argv:VERSION=172
 OUT=ROOT/(f'work/pvp-v{VERSION}-test' if '--shop-clock-test' in sys.argv or '--silent-raid-test' in sys.argv else f'work/pvp-v{VERSION}')
 if '--output-dir' in sys.argv:OUT=Path(sys.argv[sys.argv.index('--output-dir')+1]).resolve()
 OUT.mkdir(parents=True,exist_ok=True)
@@ -205,6 +212,7 @@ if VERSION>=93:
   strings[f'V93_REGION_{zone}_REQUIRED']=f'请先将基地升至{level}级，星币容量需达到{capacity}，才能解锁此地区。'
 if VERSION>=99:strings.update(V99_REVENGE_USED='这条战报已经发起过复仇。',V99_REVENGE_EXPIRED='这条战报已过期，请返回地图。',V99_TEST_ARMED='袭击验收已安排：30秒后出现一次FBI袭击，以及已占领商铺的失守。不会自动进入草坪。',V99_TEST_ALREADY='本轮袭击验收已经安排，不会重复触发。')
 if VERSION>=101:strings['V101_SALE_CHANGED']='部队数量已变化，请重新选择要出售的僵尸。'
+if VERSION>=169:strings['V169_DAVE_WAIT']='邪恶戴夫会在每周二、四、六刷新，请下次再来。'
 b,localization=add_exchange_localization(b,strings)
 e=ELFFile(BytesIO(b));index,tail=[(i,s) for i,s in enumerate(e.iter_segments()) if s['p_type']=='PT_LOAD'][-1]
 old=len(b);assert tail['p_offset']+tail['p_filesz']==old
@@ -212,6 +220,8 @@ while len(b)%4:b.append(0)
 entry=tail['p_vaddr']+len(b)-tail['p_offset']
 compiler='Y:/Android/Sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/windows-x86_64/bin/clang++.exe'
 flags=['--target=armv7a-linux-androideabi21','-marm','-Os','-fPIC','-ffreestanding','-fno-builtin','-fno-stack-protector','-fno-exceptions','-fno-rtti','-fno-unwind-tables','-fno-asynchronous-unwind-tables','-I'+str(OUT/'generated')]
+if VERSION>=169:flags.append('-DPVP_WEEKLY_RULES')
+if VERSION>=171:flags.append('-DPVP_VISITOR_MAP_FIX')
 if VERSION>=57:flags.append('-DPVP_RECT_SKILLS')
 if VERSION>=60:flags.append('-DPVP_BATTLE_ECONOMY')
 if VERSION>=62:flags.append('-DPVP_LAB_ROSTER')
@@ -259,6 +269,9 @@ if VERSION>=108:
   from prepare_opening_tutorial_resources import prepare as prepare_opening_resources
   editor_resource=OUT/'generated/dynamic-preset-editor.rsb.smf'
   editor_resource.write_bytes(prepare_opening_resources(editor_resource.read_bytes(),egypt2_reward=VERSION>=139))
+  if VERSION>=167:
+   from prepare_opening_tutorial_resources import prepare_chain
+   editor_resource.write_bytes(prepare_chain(editor_resource.read_bytes()))
  if VERSION>=144:
   from prepare_menu_background import prepare as prepare_title_atlas
   encoder=Path('K:/pvz2-tools/astcenc-5.7.1/bin/astcenc-avx2.exe')
@@ -292,6 +305,9 @@ subprocess.run([compiler,*flags,'-c',str(ROOT/'src/offline-pvp/offline.cpp'),'-o
 # A flat payload has no dynamic relocation table. Absolute pointer constants
 # would work at base zero in analysis and crash after Android relocates the SO.
 objects=[OUT/'offline.o']
+if VERSION>=169:
+ subprocess.run([compiler,*flags,'-c',str(ROOT/'src/profile-memory/selection.cpp'),'-o',str(OUT/'selection.o')],check=True)
+ objects.append(OUT/'selection.o')
 if VERSION>=85:
  input_flags=['-DDESKTOP_PVP_SEEDS']
  if VERSION>=129:input_flags.append('-DDESKTOP_EXTENDED_INPUT')
@@ -354,6 +370,12 @@ def custom_stub(asm):
  c=bytearray(Ks(KS_ARCH_ARM,KS_MODE_ARM).asm(asm,addr=va)[0]);p=c.index(struct.pack('<I',0x11223344));struct.pack_into('<I',c,p,va+p);b.extend(c);return va
 def redirect(site,target):
  before=bytes(b[site:site+4]);struct.pack_into('<I',b,site,0xea000000|(((target-site-8)//4)&0xffffff));patches.append(dict(site=hex(site),before=before.hex(),after=bytes(b[site:site+4]).hex()))
+if VERSION>=169:
+ assert bytes(b[0x7aaa70:0x7aaa74])==struct.pack('<I',0xeaffffec)
+ assert bytes(b[0x7aaa74:0x7aaa78])==bytes.fromhex('f0482de9')
+ save=custom_stub('push {r0-r4,lr}\nmov r1,r5\n'+baseasm()+f'bl #{symbols["rememberPlayer"]}\npop {{r0-r4,lr}}\nb #0x7aaa28')
+ restore=custom_stub('push {r0,r4,r5,lr}\nmov r1,r0\n'+baseasm()+f'bl #{symbols["restorePlayer"]}\nmov r1,r0\npop {{r0,r4,r5,lr}}\ncmp r1,#0\nbeq fallback\nmov r0,#1\nbx lr\nfallback: push {{r4,r5,r6,r7,fp,lr}}\nb #0x7aaa78')
+ redirect(0x7aaa70,save);redirect(0x7aaa74,restore)
 if VERSION>=130:
  # IntroCinema has just marked intro1 complete. Divert before the China
  # build selects egypt_level_1 and commits egypt1 as the current level.
@@ -765,6 +787,14 @@ if VERSION>=64:
  target=custom_stub('push {r4,lr}\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlineSkillName"]}\npop {{r4,pc}}')
  b[site:site+4]=bl(site,target);patches.append(dict(site=hex(site),symbol='offlineSkillName',role='Guard only empty skill-page title selection'))
 
+if VERSION>=166:
+ # The skill thumbnail already draws its static image. Its optional PopAnim
+ # may be unresolved after cold start; leave the subsequent PopState intact.
+ site=0x1082ae4;assert bytes(b[site:site+4])==bl(site,0x11699c4)
+ target=custom_stub('cmp r1,#0\nbxeq lr\nb #0x11699c4')
+ b[site:site+4]=bl(site,target)
+ patches.append(dict(site=hex(site),role='Skip absent optional lab preview only; preserve Graphics PopState'))
+
 if VERSION>=65:
  site=0x108531c;first=struct.unpack_from('<I',b,site)[0];assert first==0xe92d4810
  target=custom_stub('push {r0-r4,lr}\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlineResearchClick"]}\ncmp r0,#0\npop {{r0-r4,lr}}\nbne research_handled\n.word {first}\nb #{site+4}\nresearch_handled: bx lr')
@@ -1153,6 +1183,20 @@ if VERSION>=57:
  target=custom_stub('push {r4,lr}\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlineSkillScopeRect"]}\npop {{r4,pc}}')
  range_call(0x207298,target,0x1167128,'offlineSkillScopeRect')
 
+if VERSION>=172:
+ # Native constructor default and live scout update both format the price.
+ # ARENA_PVP_BTN belongs to the separate change-opponent button.
+ for site in (0x109f308,0x10a7ffc):
+  assert bytes(b[site:site+4])==bl(site,0xd06a04)
+  target=custom_stub('push {r4,lr}\nsub sp,sp,#8\nstr r3,[sp]\nmov r3,r2\nmov r2,r1\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlineAttackPreviewFormat"]}\nadd sp,sp,#8\npop {{r4,pc}}')
+  b[site:site+4]=bl(site,target);patches.append(dict(site=hex(site),symbol='offlineAttackPreviewFormat'))
+ # Scout activation later calls the currency-aware price setter; its old
+ # manager getter would otherwise overwrite the formatted text with one.
+ for site in (0x108ff10,0x1090248):
+  assert bytes(b[site:site+4])==bl(site,0x10449b8)
+  target=custom_stub('push {r4,lr}\nmov r1,r0\n'+baseasm()+f'bl #{symbols["offlineAttackPreviewCost"]}\npop {{r4,pc}}')
+  b[site:site+4]=bl(site,target);patches.append(dict(site=hex(site),symbol='offlineAttackPreviewCost'))
+
 site=0x1021f4c;word=struct.unpack_from('<I',b,site)[0];assert word>>24==0xea
 delta=word&0xffffff
 if delta&0x800000:delta-=1<<24
@@ -1172,7 +1216,14 @@ headers.append([1,rw_offset,0x1b00000,0x1b00000,runtime_bytes,runtime_bytes,6,40
 for i,h in enumerate(headers):struct.pack_into('<8I',b,e['e_phoff']+i*32,*h)
 b.extend(bytes(rw_offset-len(b)));b.extend(bytes(runtime_bytes))
 assert struct.unpack_from('<I',b,28)[0]==52 and struct.unpack_from('<H',b,44)[0]==8
+if VERSION>=169:
+ from prepare_aster_pvp_gold import patch_native as preserve_gold_hud
+ b=bytearray(preserve_gold_hud(bytes(b)))
 (OUT/'libSrc.so').write_bytes(b)
+(OUT/'native-build.json').write_text(json.dumps(dict(version=VERSION,entry=entry,runtime_bytes=runtime_bytes,flags=flags,patches=patches,symbols=symbols),indent=2)+'\n')
+if VERSION>=169:
+ from build_aster_preset_bridge import build as build_shared_bridge
+ build_shared_bridge(OUT,OUT/'bridge',Path('Y:/Android/Sdk'))
 if '--compile-only' in sys.argv:raise SystemExit(0)
 subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_economy_arm.py'),str(OUT)],cwd=ROOT,check=True)
 subprocess.run([sys.executable,str(ROOT/'scripts/check_offline_redeem_arm.py'),str(OUT)],cwd=ROOT,check=True)

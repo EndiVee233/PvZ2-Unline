@@ -11,7 +11,7 @@ static U neighborProtectionUntil(U b,const NpcPreset&n){
  const auto&r=economyRuntime;
  const NpcPreset*local=npc(n.id);
  if(!local||local->evil||!r.loaded||r.blocked||r.user!=owner(b))return 0;
- U until=r.state.neighborProtectedUntil[local-NPCS];
+ U until=r.state.neighborProtectedUntil[neighborProtectionIndex(local)];
  return until>realNow(b)?until:0;
 }
 static bool rejectProtectedNeighbor(U b,const NpcPreset&n){
@@ -24,9 +24,9 @@ static void beginProtectionOnReturn(U b){
  U id=continueProtectedNeighbor;
  continueProtectedNeighbor=0;
  const NpcPreset*n=npc(id);
- if(!n||!economyRuntime.loaded||economyRuntime.user!=owner(b)||!economyRuntime.state.neighborProtectedUntil[n-NPCS])return;
+ if(!n||!economyRuntime.loaded||economyRuntime.user!=owner(b)||!economyRuntime.state.neighborProtectedUntil[neighborProtectionIndex(n)])return;
  Economy next=economyRuntime.state;
- U&until=next.neighborProtectedUntil[n-NPCS];
+ U&until=next.neighborProtectedUntil[neighborProtectionIndex(n)];
  U deadline=neighborProtectionDeadline(b);
  if(until!=deadline){
   until=deadline;
@@ -34,7 +34,7 @@ static void beginProtectionOnReturn(U b){
   if(saveEconomy(b,next))economyRuntime.state=next;
   else log(b,"neighbor-protection-return-save-failed",id);
  }
- U savedDeadline=economyRuntime.state.neighborProtectedUntil[n-NPCS];
+ U savedDeadline=economyRuntime.state.neighborProtectedUntil[neighborProtectionIndex(n)];
  P m=manager(b),first=at<P>(m,0x128),end=at<P>(m,0x12c);
  if(first&&end>=first&&U(end-first)<=64*256&&U(end-first)%64==0){
   for(P row=first;row<end;row+=64){

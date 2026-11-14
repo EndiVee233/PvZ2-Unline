@@ -2,7 +2,9 @@
 // user's explicit probability rules and never create/finish a Board.
 #include "silent_raid_policy.h"
 #include "frozen_encounters.h"
-#ifdef PVP_NEIGHBOR_PROTECTION
+#ifdef PVP_WEEKLY_RULES
+static_assert(sizeof(Economy)==V17_ECONOMY_SIZE+24,"v18 economy save layout");
+#elif defined(PVP_NEIGHBOR_PROTECTION)
 static_assert(sizeof(Economy)==V16_ECONOMY_SIZE+4+4*NPC_COUNT,"v17 economy save layout");
 #else
 static_assert(sizeof(Economy)==V16_ECONOMY_SIZE,"silent raid save layout");

@@ -33,7 +33,7 @@ static bool validEncounter(const NeighborEncounter&e,U expected,bool legacy=fals
   for(U ch:e.title)if((ch&&ch<32)||(ch>=127&&ch<=159)||(ch>=0xd800&&ch<=0xdfff)||ch>0x10ffff)return false;
  }
 #endif
- if((!shared&&e.kind>7)||e.count<(shared?1u:5u)||e.count>45||e.kind==1&&e.cups!=999||e.kind!=1&&e.cups>(shared?99999u:230u)||e.kind==2&&e.cups<60||e.kind==3&&e.cups<40)return false;
+ if((!shared&&e.kind>7)||e.count<(shared?1u:5u)||e.count>45||e.kind==1&&e.cups!=999||e.kind!=1&&e.cups>(shared?99999u:550u)||e.kind==2&&e.cups<60||e.kind==3&&e.cups<40)return false;
  U spent=0;bool varied=false;
  for(U i=0;i<e.count;++i){const auto&q=e.plants[i];const auto*p=neighborPlant(q.type);
 #ifdef PVP_UNIQUE_NEIGHBORS
@@ -128,7 +128,7 @@ static void migrateNeighborRoster(NeighborRoster&r){
 #endif
 #ifdef PVP_CUP_MATCHING
 static U matchedNeighborCups(U playerCups,U seed){
- const U center=playerCups<100?playerCups:100;
+ const U center=playerCups<500?playerCups:500;
  U rng=neighborMix(seed^0xb27159afu);
  const U roll=neighborRandom(rng)%100;
  const U radius=roll<75?10:roll<95?25:50;
@@ -194,8 +194,14 @@ static bool ensureNeighborRoster(U b,P m){
  if(ok){*neighborRoster=*next;log(b,"neighbors-generated",next->sequence,NEIGHBOR_SLOT_COUNT);}else economyNotice(b,"[V38_PVP_SAVE_ERROR]");
  call<void>(b,0x147950,next);return ok;
 }
+#ifdef PVP_VISITOR_MAP_FIX
+#include "vacant_neighbor.h"
+#endif
 static const NeighborEncounter* encounter(U b,U id){
  if(!ensureNeighborRoster(b,manager(b)))return nullptr;
+#ifdef PVP_VISITOR_MAP_FIX
+ if(id==VACANT_HOME.id)return vacantNeighbor(b);
+#endif
  return findEncounter(*neighborRoster,id);
 }
 static void projectDynamicNeighbor(U b,P m,const NpcPreset&n){
@@ -231,11 +237,23 @@ static U neighborAction(U b,P panel,U button){
  if(panel!=neighborPanel||neighborPanelUser!=owner(b))return 1;
  const NpcPreset*n=nullptr;
  for(U i=0;i<NPC_COUNT;++i)if(!NPCS[i].evil&&NPCS[i].zone==at<U>(panel,0xac)&&NPCS[i].position==at<U>(panel,0xa8)){n=NPCS+i;break;}
+#ifdef PVP_VISITOR_MAP_FIX
+ if(!n&&at<U>(panel,0xac)==1&&at<U>(panel,0xa8)==1)n=&VACANT_HOME;
+#endif
  if(!n||!ensureNeighborRoster(b,manager(b))||!regionOpen(n->zone))return 1;
 #ifdef PVP_NEIGHBOR_PROTECTION
  if(rejectProtectedNeighbor(b,*n))return 1;
 #endif
  P map=at<P>(panel,0xc0);if(!map)return 1;
+#ifdef PVP_VISITOR_MAP_FIX
+ if(n==&VACANT_HOME){
+  if(replaceVacantNeighbor(b)){
+   projectDynamicNeighbor(b,manager(b),*n);neighborPanel=nullptr;
+   call<void>(b,0x100a864,map);call<void>(b,0x1019668,map,5,1,1);
+  }else economyNotice(b,"[V38_PVP_SAVE_ERROR]");
+  return 1;
+ }
+#endif
  auto*next=reinterpret_cast<NeighborRoster*>(call<P>(b,0x147938,sizeof(NeighborRoster)));if(!next)return 1;*next=*neighborRoster;
  auto*entry=findEncounter(*next,n->id);const auto*old=findEncounter(*neighborRoster,n->id);
  U excludeShared=0;

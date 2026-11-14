@@ -1,6 +1,12 @@
 # 离线 PvP 恢复进度
 
-## 当前正式版 v106
+## 当前正式版 Aster v172
+
+[下载 ARM32 / ARM64](https://github.com/EndiVee233/PvZ2-Unline-Aster/releases/tag/v1.7.5-v172-aster-dual-arch) · [发布说明](aster-v172-release.md)
+
+ARM32 侦察费用显示已实机核对，迷雾 IV 覆盖 5 行×4 列获用户验收通过。ARM64 同步构建，未运行；不推荐 ARM64，优先使用 ARM32。下文保留旧版本当时的验收范围，当前状态以 v172 发布说明为准。
+
+## 历史正式版 v106
 
 [下载 v106 APK](https://github.com/EndiVee233/PvZ2-Unline/releases/tag/v1.7.5-v106) · [发布说明与待办](pvp-v106-release.md)
 

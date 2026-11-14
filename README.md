@@ -4,22 +4,23 @@
 
 一个面向 Windows Subsystem for Android / 普通 Android 的单文件直装版
 
-**当前正式版为 PvZ2-Unline:Aster v163（ARM32）。** 同页提供 ARM64 实验包；**不推荐 ARM64，优先使用 ARM32**。应用图标使用 `PVP.png`，开始界面使用等比铺满窗口的新版背景。
+**当前正式版为 PvZ2-Unline:Aster v172（ARM32）。** 同页提供 ARM64 实验包；**不推荐 ARM64，优先使用 ARM32**。本版修复 PVP 存档与研究界面，更新邻居进攻费用、戴夫刷新及血包／迷雾范围。
 
-[下载 ARM32 / ARM64](https://github.com/EndiVee233/PvZ2-Unline-Aster/releases/tag/v1.7.5-v163-aster-dual-arch) · [v147 历史版](https://github.com/EndiVee233/PvZ2-Unline-Aster/releases/tag/v1.7.5-v147) · [离线 PvP 功能与待办](docs/recovery/pvp-v123-release.md) · [分项验收记录](docs/recovery/README.md)
+[下载 ARM32 / ARM64](https://github.com/EndiVee233/PvZ2-Unline-Aster/releases/tag/v1.7.5-v172-aster-dual-arch) · [v172 发布说明](docs/recovery/aster-v172-release.md) · [离线 PvP 功能与待办](docs/recovery/pvp-v123-release.md) · [分项验收记录](docs/recovery/README.md)
 
 **全量 RGBA8888 预览版。** v163 的 19 个 RSB 中，773 张实际引用的图集已在构建时转为 RGBA8888。APK 约 2.87 GB，首次解包后的资源约 13.30 GB。已在 WSA 核对覆盖安装、资源迁移和启动画面，各世界及 PvP 尚待逐项验收。下载两段后按发布页说明合并并校验。 [v163 RGBA8888 预览版](https://github.com/EndiVee233/PvZ2-Unline-Aster/releases/tag/v1.7.5-v163-rgba-preview)
 
 ## 当前源码状态
 
-源码及两种架构安装包已发布。当前 Aster 应用 ID 为 `com.pvz2unline.aster`；两包不能同时安装。两份 APK 沿用已构建的 v163 内部版本，下载后可按发布页的 SHA-256 校验。
+源码及两种架构安装包已发布。当前 Aster 应用 ID 为 `com.pvz2unline.aster`；两包不能同时安装。两份 APK 内部版本均为 v172（versionCode 1172），下载后可按发布页的 SHA-256 校验。
 
 - **ARM32：推荐。** 用户已在 WSA 验收玩家选择记忆：WSA USER 与全一 TEST 往返切换、冷启动后保留上次选择；Tab 后快捷键及加速白闪/音效也已验收。
+- v172 的侦察页实际费用显示已实机核对，迷雾 IV 覆盖 5 行×4 列获用户验收通过。血包／迷雾 I～IV 按行×列为 3×3、4×3、4×4、5×4。
 - **ARM64：不推荐，优先使用 ARM32。** 通过 ARM64 桥接运行共享的 ARM32 引擎；共用修改同步，当前候选版本未做 ARM64 验收，性能及实体设备兼容性未确认。仅在收到 ARM64 专属 issue 后排查。
 - 后续二进制发布分别提供 ARM32、ARM64 包并独立标注验收状态。源码仓库不包含原版资源、原生游戏库、存档和签名密钥。
-- 未完成：四种 PVP 技能的高清贴图/动画比例仍待修复；战斗回放未实现；戴夫刷新周期、商铺原版阵容/产出数值仍待考据。已有商铺产出与静默袭击使用已约定的离线规则。
+- 未完成：四种 PVP 技能的高清贴图/动画比例仍待复查；战斗回放未实现；商铺原版阵容/产出数值仍待考据。戴夫按已确认的每周二、四、六规则刷新；商铺产出与静默袭击使用已约定的离线规则。
 
-本轮变更与验收范围见 [Aster 源码更新说明](docs/recovery/aster-arm32-profile-memory.md)。
+本轮变更与验收范围见 [v172 发布说明](docs/recovery/aster-v172-release.md)；此前的输入与玩家记忆记录见 [Aster 源码更新说明](docs/recovery/aster-arm32-profile-memory.md)。
 
 ## 特性
 
@@ -35,10 +36,10 @@
 
 ## 下载安装
 
-到 [正式版发布页](https://github.com/EndiVee233/PvZ2-Unline-Aster/releases/tag/v1.7.5-v163-aster-dual-arch) 下载推荐的 `PvZ2-Unline-Aster-ARM32.apk` 后覆盖安装。ARM64 附件名称包含 `ARM64-experimental`，未验收且不推荐。当前游戏内更新器未适配双架构附件命名，请手动下载。
+到 [正式版发布页](https://github.com/EndiVee233/PvZ2-Unline-Aster/releases/tag/v1.7.5-v172-aster-dual-arch) 下载推荐的 `PvZ2-Unline-Aster-v172-ARM32.apk` 后覆盖安装。`PvZ2-Unline-Aster-v172-ARM64.apk` 为未验收的实验包，不推荐使用。当前游戏内更新器未适配双架构附件命名，请手动下载。
 
 ```bat
-adb install -r PvZ2-Unline-Aster-ARM32.apk
+adb install --no-incremental -r PvZ2-Unline-Aster-v172-ARM32.apk
 ```
 
 首次启动会请求存储权限，请允许；否则无法写入 `Android/data`。

@@ -22,7 +22,11 @@ def branch(site, target, link=False):
 def patch(native, ndk, output):
     output.mkdir(parents=True, exist_ok=True)
     source_hash = hashlib.sha256(native).hexdigest()
-    if source_hash != '7f9c297e3fa973fa9940fb4e0ea75621c0424fa77325457f6aa036226fb2a690':
+    if source_hash not in (
+        '7f9c297e3fa973fa9940fb4e0ea75621c0424fa77325457f6aa036226fb2a690',
+        # Same v163 engine with the package-rename path lengths corrected.
+        'ee2d0892353d7e94985eed22fa72efa41e22dcdbff40d2fbb16e9bb096641205',
+    ):
         raise ValueError('Unexpected Aster engine baseline')
     elf = ELFFile(BytesIO(native))
     loads = [(i, s) for i, s in enumerate(elf.iter_segments()) if s['p_type'] == 'PT_LOAD']

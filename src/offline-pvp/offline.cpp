@@ -33,7 +33,21 @@ static P profile(U b){return call<P>(b,0x7a98dc,call<P>(b,0x1df738));}
 static U owner(U b){return at<U>(call<P>(b,0x1df738),0x74);}
 static void scene(U b,U s){P g=at<P>(reinterpret_cast<P>(b),0x1835eec);call<void>(b,0x352498,g,s,0,1);}
 static bool regular(U b){P p=profile(b);return p&&at<U>(p,0x75c)>=9;}
-static const NpcPreset* npc(U id){for(U i=0;i<NPC_COUNT;++i)if(NPCS[i].id==id)return NPCS+i;return nullptr;}
+#ifdef PVP_VISITOR_MAP_FIX
+static const NpcPreset VACANT_HOME={0x70000012,1,1,1,0,0,{},{{}}};
+#endif
+static const NpcPreset* npc(U id){
+#ifdef PVP_VISITOR_MAP_FIX
+ if(id==VACANT_HOME.id)return &VACANT_HOME;
+#endif
+ for(U i=0;i<NPC_COUNT;++i)if(NPCS[i].id==id)return NPCS+i;return nullptr;
+}
+static U neighborProtectionIndex(const NpcPreset*n){
+#ifdef PVP_VISITOR_MAP_FIX
+ if(n==&VACANT_HOME){for(U i=0;i<NPC_COUNT;++i)if(NPCS[i].evil)return i;}
+#endif
+ return U(n-NPCS);
+}
 #ifdef PVP_RANDOM_NEIGHBORS
 #include "neighbor_generator.h"
 #ifdef PVP_GITHUB_PRESETS
@@ -176,6 +190,9 @@ static bool researchFinishPrompt;
 static void expireNeighborLabels(U b,P m);
 #endif
 #include "economy.h"
+#ifdef PVP_WEEKLY_RULES
+#include "pvp_calendar.h"
+#endif
 #ifdef PVP_NEIGHBOR_PROTECTION
 #include "neighbor_protection.h"
 #endif
@@ -225,6 +242,9 @@ static void projectBusinessOwners(U b,P m){
 #endif
 #ifdef PVP_RANDOM_NEIGHBORS
 #include "neighbor_roster.h"
+#ifdef PVP_WEEKLY_RULES
+#include "dave_schedule.h"
+#endif
 #endif
 #ifdef PVP_BUSINESS_REPLACE
 #include "business_replace.h"
@@ -278,6 +298,10 @@ static void neighbors(U b,P m){
 #ifdef PVP_RANDOM_NEIGHBORS
  if(!ensureNeighborRoster(b,m))return;
 #endif
+#ifdef PVP_WEEKLY_RULES
+ if(!ensureDaveSchedule(b,m))return;
+ removeScheduledDaveRecords(b,m);
+#endif
 #ifdef PVP_REGIONS
  removeLockedNeighbors(b,m);
 #endif
@@ -285,6 +309,10 @@ static void neighbors(U b,P m){
  removeLocalBusinessRecords(b,m);
 #endif
  for(U i=0;i<NPC_COUNT;++i){const NpcPreset& n=NPCS[i];
+#ifdef PVP_WEEKLY_RULES
+  if(!n.evil&&economyRuntime.state.daveActive&&n.id==economyRuntime.state.daveTarget)continue;
+  if(n.evil&&!economyRuntime.state.daveActive)continue;
+#endif
 #ifdef PVP_REGIONS
   if(!regionOpen(n.zone))continue;
 #endif
@@ -302,6 +330,11 @@ static void neighbors(U b,P m){
    special[11]=economyRuntime.state.daveWins;
    special[12]=DAVE_ROUND_COUNT;
 #endif
+#ifdef PVP_WEEKLY_RULES
+   const NpcPreset*victim=npc(economyRuntime.state.daveTarget);if(!victim)continue;
+   special[7]=victim->zone;special[8]=victim->position;
+   if(special[11]>=DAVE_ROUND_COUNT)special[11]=DAVE_ROUND_COUNT-1;
+#endif
    char alloc=0;call<void>(b,0x14eb451,reinterpret_cast<P>(special)+8,n.name,&alloc);
    call<void>(b,0x104678c,m,special);release(b,reinterpret_cast<P>(special[2]),true);
    continue;
@@ -315,6 +348,9 @@ static void neighbors(U b,P m){
   call<void>(b,0x1046a04,m,record);
   release(b,reinterpret_cast<P>(record[4]),true);
  }
+#ifdef PVP_VISITOR_MAP_FIX
+ residentialNeighbor(b,m,VACANT_HOME);
+#endif
  starter(b,m,"pvp_change",0,false);
  starter(b,m,"pvpskill_zombiefood",0,true);
  starter(b,m,"pvpskill_aid",0,true);
@@ -338,7 +374,11 @@ static bool valid(const Store&s,U id){
  return true;
 }
 static void path(U id,char*out,bool temp=false){
+#ifdef PVP_WEEKLY_RULES
+ const char*prefix="/data/data/com.pvz2unline.aster/files/userdata/offline-pvp-";
+#else
  const char*prefix="/data/data/com.popcap.pvz2cthd.reconstruction/files/userdata/offline-pvp-";
+#endif
  U n=0;while(prefix[n]){out[n]=prefix[n];++n;}const char*digits="0123456789abcdef";
  for(I i=7;i>=0;--i)out[n++]=digits[(id>>(i*4))&15];
  const char*s=temp?".def.tmp":".def";while(*s)out[n++]=*s++;out[n]=0;
@@ -404,7 +444,13 @@ static bool localDaveAllowed(U b,P m,const NpcPreset&n){
 #ifdef PVP_DAVE_ROUNDS
  if(n.evil){
   if(!ensureEconomy(b,m))return false;
+#ifdef PVP_WEEKLY_RULES
+  // The map refreshes the schedule. Keep an already opened preview/battle
+  // bound to that visitor if midnight passes while the board is active.
+  if(!economyRuntime.state.daveActive){economyNotice(b,"[V169_DAVE_WAIT]");return false;}
+#else
   if(economyRuntime.state.daveWins>=DAVE_ROUND_COUNT){economyNotice(b,"[V66_DAVE_FINISHED]");return false;}
+#endif
  }
 #endif
  return true;
@@ -415,9 +461,16 @@ static bool localDaveAllowed(U b,P m,const NpcPreset&n){
 // notifications. Project the accepted local values at the actual title call.
 extern "C" void offlineDaveLabel(U b,P record){
  if(!record||!regular(b))return;const NpcPreset*n=npc(at<U>(record,0));
- if(!n||!n->evil||at<U>(record,0x24)!=4||at<U>(record,0x1c)!=n->zone||at<U>(record,0x20)!=n->position)return;
+ if(!n||!n->evil||at<U>(record,0x24)!=4)return;
  if(!ensureEconomy(b,manager(b)))return;
  U wins=economyRuntime.state.daveWins;
+#ifdef PVP_WEEKLY_RULES
+ const NpcPreset*victim=npc(economyRuntime.state.daveTarget);
+ if(!economyRuntime.state.daveActive||!victim||at<U>(record,0x1c)!=victim->zone||at<U>(record,0x20)!=victim->position)return;
+ if(wins>=DAVE_ROUND_COUNT)wins=DAVE_ROUND_COUNT-1;
+#else
+ if(at<U>(record,0x1c)!=n->zone||at<U>(record,0x20)!=n->position)return;
+#endif
  if(at<U>(record,0x2c)!=wins||at<U>(record,0x30)!=DAVE_ROUND_COUNT){
   log(b,"dave-label-previous",at<U>(record,0x2c),at<U>(record,0x30));
   at<U>(record,0x2c)=wins;at<U>(record,0x30)=DAVE_ROUND_COUNT;log(b,"dave-label-local",wins,DAVE_ROUND_COUNT);
@@ -427,7 +480,7 @@ extern "C" void offlineDaveLabel(U b,P record){
 static bool preset(U b,P m,const NpcPreset&n){
  const U (*plants)[3]=n.plants;U count=n.count;
 #ifdef PVP_DAVE_ROUNDS
- if(n.evil){arenaDaveRound=economyRuntime.state.daveWins;const DaveRound&r=DAVE_ROUNDS[arenaDaveRound<DAVE_ROUND_COUNT?arenaDaveRound:DAVE_ROUND_COUNT-1];plants=r.plants;count=r.count;log(b,"dave-round-prepared",arenaDaveRound+1,count);}
+ if(n.evil){arenaDaveRound=economyRuntime.state.daveWins;if(arenaDaveRound>=DAVE_ROUND_COUNT)arenaDaveRound=DAVE_ROUND_COUNT-1;const DaveRound&r=DAVE_ROUNDS[arenaDaveRound];plants=r.plants;count=r.count;log(b,"dave-round-prepared",arenaDaveRound+1,count);}
 #endif
  Store s{};s.user=owner(b);s.positions=count;
 #ifdef PVP_RANDOM_NEIGHBORS
@@ -487,6 +540,9 @@ static bool localArenaIdentity(U b){
 }
 #ifdef PVP_BATTLE_ECONOMY
 #include "battle_economy.h"
+#ifdef PVP_VISITOR_MAP_FIX
+#include "preview_fee.h"
+#endif
 #endif
 static P arenaModule(U b){
  P app=at<P>(at<P>(reinterpret_cast<P>(b),0x1821674),0);P board=at<P>(app,0x6bc);
@@ -505,6 +561,9 @@ extern "C" void offlineBankReady(U b,P module){
 extern "C" void offlineMapArmyPrepare(U b,P map){
  P m=manager(b);if(!regular(b)||!ensureEconomy(b,m))return;
  settleTraining(b,m);applyEconomy(b,m);
+#ifdef PVP_VISITOR_MAP_FIX
+ neighbors(b,m);
+#endif
 }
 extern "C" void offlineMapArmyReady(U b,P map){
  if(!regular(b)||!at<P>(map,0x2d4))return;
@@ -816,7 +875,11 @@ extern "C" void offlineAttack(U b,P m,U id,U reason,U unused){
 #ifndef PVP_RESIDENT_NEIGHBORS
  selected->evil&&
 #endif
+#ifdef PVP_WEEKLY_RULES
+ scheduledHouseSelected(*selected,m))n=selected;}
+#else
  selected->zone==at<U>(m,0xfc)&&selected->position==at<U>(m,0xf8))n=selected;}
+#endif
  if(n&&regular(b)){
 #ifdef PVP_SILENT_RAIDS
   P revengeLive=arenaModule(b);
@@ -961,13 +1024,18 @@ static bool persistBattleArmy(U b,P m,bool daveVictory=false,U stars=0){
  }
  if(daveVictory){
 #ifdef PVP_DAVE_ROUNDS
-  if(arenaDaveRound>=DAVE_ROUND_COUNT||next.daveWins!=arenaDaveRound){log(b,"dave-result-stale",arenaDaveRound,next.daveWins);return false;}
+  U expectedRound=next.daveWins<DAVE_ROUND_COUNT?next.daveWins:DAVE_ROUND_COUNT-1;
+  if(arenaDaveRound>=DAVE_ROUND_COUNT||expectedRound!=arenaDaveRound){log(b,"dave-result-stale",arenaDaveRound,next.daveWins);return false;}
+#ifdef PVP_WEEKLY_RULES
+  if(!next.daveActive)return false;
+  next.daveActive=0;next.daveReplacement=1;
+#endif
 #ifdef PVP_DAVE_REFERENCE
   U reward=DAVE_ROUNDS[arenaDaveRound].medals;
   if(next.medals>2000000000u-reward)return false;
   next.medals+=reward;
 #endif
-  ++next.daveWins;
+  if(next.daveWins<DAVE_ROUND_COUNT)++next.daveWins;
 #else
   next.daveWins=1;
 #endif
@@ -999,7 +1067,7 @@ static bool persistBattleArmy(U b,P m,bool daveVictory=false,U stars=0){
  if(n&&!n->evil&&stars){
   U cups=starCups(stars);
   next.cups+=cups>2000000000u-next.cups?2000000000u-next.cups:cups;
-  next.neighborProtectedUntil[n-NPCS]=neighborProtectionDeadline(b);
+  next.neighborProtectedUntil[neighborProtectionIndex(n)]=neighborProtectionDeadline(b);
  }
 #endif
 #ifdef PVP_HISTORY

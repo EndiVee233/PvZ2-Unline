@@ -7,6 +7,7 @@ import json
 import subprocess
 import sys
 import os
+import re
 import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -136,10 +137,59 @@ def restore():
         call('shell', 'rm', '-f', remote)
     if 'pvp_level' in metadata:
         restore_levels(folder, levels, level_state)
+    # An explicitly prepared decoder probe may temporarily hide one generated
+    # cache entry. Restore it with the save baseline; never accept arbitrary
+    # paths from a test record as shell operands.
+    probe = folder / 'decode-cache-probe.json'
+    if probe.is_file():
+        record = json.loads(probe.read_text(encoding='utf8'))
+        original, held = record['original'], record['held']
+        if not re.fullmatch(r'cache/glcache/[0-9a-f]{16}\.rgba', original) or held != original + '.v165-held':
+            raise ValueError('Unexpected generated texture cache probe path')
+        call('shell', 'run-as', PACKAGE, 'mv', held, original)
+        probe.rename(folder / 'decode-cache-probe-restored.json')
     state.update(status='restored', verified_files=len(restored), restored_at=stamp())
     ACTIVE.write_text(json.dumps(state, indent=2), encoding='utf8')
     (folder / 'restore-verification.json').write_text(json.dumps(state, indent=2), encoding='utf8')
     print(json.dumps(dict(restored=True, verified_files=len(restored), game_stopped=True)))
+
+
+def retain():
+    """Finish a batch without rollback only on the user's explicit request.
+
+    Retain the old baseline and capture the actual played state as a second
+    recovery point. No player save or external level is replaced or removed.
+    The next backup must therefore start from the newly retained game state.
+    """
+    state = json.loads(ACTIVE.read_text(encoding='utf8'))
+    if state.get('status') != 'pending_restore':
+        raise ValueError('No pending test batch to retain')
+    folder = Path(state['snapshot']).resolve()
+    if not folder.is_relative_to(STORE.resolve()):
+        raise ValueError('Snapshot outside private backup directory')
+    metadata = json.loads((folder / 'manifest.json').read_text(encoding='utf8'))
+    if metadata['package'] != PACKAGE or metadata['paths'] != PATHS:
+        raise ValueError('Snapshot package or directory mismatch')
+    if (folder / 'decode-cache-probe.json').exists():
+        raise ValueError('Restore the explicitly held generated cache before retaining')
+    stop()
+    current = capture()
+    files = inspect_archive(current)
+    levels = capture_levels()
+    (folder / 'retained-state.tar').write_bytes(current)
+    detail = dict(user_requested_no_rollback=True, package=PACKAGE,
+                  sha256=hashlib.sha256(current).hexdigest(), files=files,
+                  retained_at=stamp(), pvp_level=None)
+    if levels is not None:
+        (folder / 'retained-levels.tar').write_bytes(levels)
+        detail['pvp_level'] = dict(sha256=hashlib.sha256(levels).hexdigest(),
+                                   files=inspect_archive(levels, [LEVEL_DIR]))
+    (folder / 'retained-by-user.json').write_text(json.dumps(detail, indent=2), encoding='utf8')
+    state.update(status='retained_by_user', retained_at=detail['retained_at'],
+                 reason='Explicit user instruction: preserve actual WSA USER play, no rollback')
+    ACTIVE.write_text(json.dumps(state, indent=2), encoding='utf8')
+    print(json.dumps(dict(retained=True, rollback_performed=False, captured_files=len(files),
+                         original_baseline_preserved=True, game_stopped=True)))
 
 
 def restore_levels(folder, levels, level_state):
@@ -166,6 +216,6 @@ def restore_levels(folder, levels, level_state):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2 or sys.argv[1] not in ('backup', 'restore'):
-        raise SystemExit('Usage: python scripts/wsa_save_snapshot.py backup|restore')
-    {'backup': backup, 'restore': restore}[sys.argv[1]]()
+    if len(sys.argv) != 2 or sys.argv[1] not in ('backup', 'restore', 'retain'):
+        raise SystemExit('Usage: python scripts/wsa_save_snapshot.py backup|restore|retain')
+    {'backup': backup, 'restore': restore, 'retain': retain}[sys.argv[1]]()

@@ -15,6 +15,7 @@ def main():
     parser.add_argument('--cache-root', default='/data/data/com.popcap.pvz2cthd/cache')
     parser.add_argument('--prefetch-index', type=Path, help='Generated prefetch_index.inc for this resource release')
     parser.add_argument('--test', action='store_true', help='Also build the Android differential test executable')
+    parser.add_argument('--diagnostics', action='store_true', help='Capture original ARM decode fault context before the legacy crash handler')
     args = parser.parse_args()
     source = Path(__file__).resolve().parent
     toolchain = args.ndk.resolve() / 'toolchains/llvm/prebuilt/windows-x86_64/bin'
@@ -35,6 +36,8 @@ def main():
     common = [str(compiler), '--target=armv7a-linux-androideabi21', '-std=c++17',
               '-O2', '-fPIC', '-mthumb', '-fno-exceptions', '-fno-rtti',
               '-I' + str(codec), '-I' + str(codec / 'include')]
+    if args.diagnostics:
+        common.append('-DPVZ2_DECODE_DIAGNOSTICS')
     objects = []
     def emit(command, destination):
         # Pipe artifacts through Python: this Windows NDK can emit to stdout
@@ -48,6 +51,9 @@ def main():
         emit([*common, '-c', str(src)], obj)
         objects.append(str(obj))
     definition = '-DPVZ2_GL_CACHE_ROOT=' + json.dumps(args.cache_root)
+    if args.cache_root.startswith('/data/data/'):
+        package = args.cache_root[len('/data/data/'):].split('/')[0]
+        common.append('-DPVZ2_GL_RESOURCE_ROOT=' + json.dumps('/sdcard/Android/data/' + package + '/files'))
     link = ['-static-libstdc++', '-Wl,--no-undefined', '-llog', '-landroid', '-ldl', '-lz']
     output = args.output / 'libRestart.so'
     shim_object = args.output / 'glshim.o'

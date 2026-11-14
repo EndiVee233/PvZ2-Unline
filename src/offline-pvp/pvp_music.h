@@ -30,17 +30,7 @@ static P pvpMusicApp(U b){
  P holder=at<P>(reinterpret_cast<P>(b),0x1821674);
  return holder?at<P>(holder,0):nullptr;
 }
-static U pvpMusicTrack(U b){
- P game=at<P>(reinterpret_cast<P>(b),0x1835eec);
- if(!game)return 0;
- U current=at<U>(game,0x984);
- if(current==25||current==28||current==29)return 1; // Garden map, PvP lobby, lab.
- if(current!=6)return 0;
- P app=pvpMusicApp(b);
- P board=app?at<P>(app,0x6bc):nullptr;
- if(board&&sameText(at<P>(board,0xc4),"arena_battle_test"))return 2;
- return at<U>(game,0xa24)==6&&sameText(at<P>(game,0xa40),"arena_battle_test")?2:0;
-}
+#include "pvp_music_track.h"
 static U pvpMusicGain(U b,P app){
  // SexyAppBase stores its configured music volume as an aligned double.
  // The stock mixer setter receives float bits in r1 (soft-float ABI).

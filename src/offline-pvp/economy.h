@@ -53,6 +53,9 @@ struct Economy {U magic,version,user,coins,home,sequence,checksum,reserved;Local
 #ifdef PVP_NEIGHBOR_PROTECTION
  U cups,neighborProtectedUntil[NPC_COUNT];
 #endif
+#ifdef PVP_WEEKLY_RULES
+ U neighborAttackDay,neighborAttacks,daveRefreshDay,daveTarget,daveActive,daveReplacement;
+#endif
 };
 static constexpr U LEGACY_ECONOMY_SIZE=32+12*TRAIN_COUNT;
 static constexpr U V2_ECONOMY_SIZE=LEGACY_ECONOMY_SIZE+44;
@@ -77,7 +80,8 @@ struct EconomyRuntime {U user,lastTick;bool loaded,blocked,busy,loadedFromDisk;P
 static EconomyRuntime economyRuntime;
 static bool same(const char*a,const char*b){while(*a&&*a==*b){++a;++b;}return *a==*b;}
 static constexpr U V16_ECONOMY_SIZE=2840;
-static U checkEconomy(const Economy&s){const unsigned char*p=reinterpret_cast<const unsigned char*>(&s);U h=2166136261u;for(U i=0;i<(s.version==1?LEGACY_ECONOMY_SIZE:s.version==2?V2_ECONOMY_SIZE:s.version==3?V3_ECONOMY_SIZE:s.version==4?V4_ECONOMY_SIZE:s.version==5?V5_ECONOMY_SIZE:s.version==6?V6_ECONOMY_SIZE:s.version==7?V7_ECONOMY_SIZE:s.version==8?V8_ECONOMY_SIZE:s.version==9?V9_ECONOMY_SIZE:s.version==10?V10_ECONOMY_SIZE:s.version==11?V11_ECONOMY_SIZE:s.version==12?V12_ECONOMY_SIZE:s.version==13?V13_ECONOMY_SIZE:s.version==14||s.version==15?V14_ECONOMY_SIZE:s.version==16?V16_ECONOMY_SIZE:sizeof(s));++i)if(i<24||i>=28)h=(h^p[i])*16777619u;return h;}
+static constexpr U V17_ECONOMY_SIZE=V16_ECONOMY_SIZE+4+4*NPC_COUNT;
+static U checkEconomy(const Economy&s){const unsigned char*p=reinterpret_cast<const unsigned char*>(&s);U h=2166136261u;for(U i=0;i<(s.version==1?LEGACY_ECONOMY_SIZE:s.version==2?V2_ECONOMY_SIZE:s.version==3?V3_ECONOMY_SIZE:s.version==4?V4_ECONOMY_SIZE:s.version==5?V5_ECONOMY_SIZE:s.version==6?V6_ECONOMY_SIZE:s.version==7?V7_ECONOMY_SIZE:s.version==8?V8_ECONOMY_SIZE:s.version==9?V9_ECONOMY_SIZE:s.version==10?V10_ECONOMY_SIZE:s.version==11?V11_ECONOMY_SIZE:s.version==12?V12_ECONOMY_SIZE:s.version==13?V13_ECONOMY_SIZE:s.version==14||s.version==15?V14_ECONOMY_SIZE:s.version==16?V16_ECONOMY_SIZE:s.version==17?V17_ECONOMY_SIZE:sizeof(s));++i)if(i<24||i>=28)h=(h^p[i])*16777619u;return h;}
 static bool validEconomy(const Economy&s,U user){
  bool version=s.version==1||s.version==2;
 #ifdef PVP_BATTLE_ECONOMY
@@ -88,7 +92,11 @@ static bool validEconomy(const Economy&s,U user){
 #ifdef PVP_BUSINESS_BATTLE
  target=target||businessId(s.battleNpc);
 #endif
- if(s.battleOpen!=s.battleSerial||s.battleOpen<=s.battleSettled||!target||s.battleStage<1||s.battleStage>2||s.battleFee!=1)return false;}
+ if(s.battleOpen!=s.battleSerial||s.battleOpen<=s.battleSettled||!target||s.battleStage<1||s.battleStage>2||(s.battleFee!=1
+#ifdef PVP_WEEKLY_RULES
+ &&(s.version<18||(s.battleFee!=10&&s.battleFee!=20&&s.battleFee!=50&&s.battleFee!=100))
+#endif
+ ))return false;}
   else if(s.battleNpc||s.battleStage||s.battleFee||s.battleSettled!=s.battleSerial)return false;
  }
 #endif
@@ -174,6 +182,15 @@ static bool validEconomy(const Economy&s,U user){
  version=version||s.version==17;
  if(s.version>=17&&s.cups>2000000000u)return false;
 #endif
+#ifdef PVP_WEEKLY_RULES
+ version=version||s.version==18;
+ if(s.version>=18){
+  const NpcPreset* victim=npc(s.daveTarget);
+  if(s.neighborAttacks>15||s.daveActive>1||s.daveReplacement>1||s.daveActive&&s.daveReplacement)return false;
+  if(s.daveTarget&&(!victim||victim->evil)||!s.daveTarget&&(s.daveActive||s.daveReplacement))return false;
+  if(!s.daveRefreshDay&&(s.daveTarget||s.daveActive||s.daveReplacement)||s.daveRefreshDay>65535)return false;
+ }
+#endif
  if(s.version>=13){
   if(s.historyCount>10)return false;
   for(U i=0;i<s.historyCount;++i){const auto& h=s.history[i];
@@ -196,7 +213,11 @@ static bool validEconomy(const Economy&s,U user){
  return used<=(s.initialized?campCapacity(s.campLevel):40);
 }
 static void economyPath(U id,char*out,bool tmp){
+#ifdef PVP_WEEKLY_RULES
+ const char*prefix="/data/data/com.pvz2unline.aster/files/userdata/offline-pvp-";U n=0;
+#else
  const char*prefix="/data/data/com.popcap.pvz2cthd.reconstruction/files/userdata/offline-pvp-";U n=0;
+#endif
  while(prefix[n]){out[n]=prefix[n];++n;}const char*digits="0123456789abcdef";
  for(I i=7;i>=0;--i)out[n++]=digits[(id>>(i*4))&15];const char*s=tmp?".eco.tmp":".eco";while(*s)out[n++]=*s++;out[n]=0;
 }
@@ -246,6 +267,9 @@ static bool saveEconomy(U b,Economy&s){
 #endif
 #ifdef PVP_NEIGHBOR_PROTECTION
  s.version=17;
+#endif
+#ifdef PVP_WEEKLY_RULES
+ s.version=18;
 #endif
  s.checksum=checkEconomy(s);if(!validEconomy(s,s.user))return false;
  char dst[160],tmp[160];economyPath(s.user,dst,false);economyPath(s.user,tmp,true);
@@ -302,7 +326,10 @@ static I loadEconomy(U b,Economy&s){
  length=length||(s.version==16&&done==V16_ECONOMY_SIZE);
 #endif
 #ifdef PVP_NEIGHBOR_PROTECTION
- length=length||(s.version==17&&done==sizeof(s));
+ length=length||(s.version==17&&done==V17_ECONOMY_SIZE);
+#endif
+#ifdef PVP_WEEKLY_RULES
+ length=length||(s.version==18&&done==sizeof(s));
 #endif
  return length&&extra==0&&validEconomy(s,owner(b))?1:-1;
 }
@@ -353,6 +380,9 @@ static void applyEconomy(U b,P m){
 static bool ensureEconomy(U b,P m,bool entering=false){
  if(!regular(b)&&!entering)return false;EconomyRuntime&r=economyRuntime;U user=owner(b);
  if(!r.loaded||r.user!=user){r.loaded=true;r.user=user;r.lastTick=0;r.camp=nullptr;r.blocked=false;r.state=Economy{};
+#ifdef PVP_WEEKLY_RULES
+  skillAidGrade=skillFogGrade=1;
+#endif
   I found=loadEconomy(b,r.state);
   r.loadedFromDisk=found==1;
   if(found<0){r.blocked=true;log(b,"economy-invalid");return false;}

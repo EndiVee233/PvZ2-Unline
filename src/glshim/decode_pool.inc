@@ -1,4 +1,7 @@
 // CPU-only process-lifetime workers. No worker calls OpenGL.
+#ifndef PVZ2_GL_RESOURCE_ROOT
+#define PVZ2_GL_RESOURCE_ROOT "/sdcard/Android/data/com.popcap.pvz2cthd.reconstruction/files"
+#endif
 #include <algorithm>
 #include <condition_variable>
 #include <deque>
@@ -157,7 +160,7 @@ static void prefetch_next() {
         r.stopped = true; LOGI("background cache paused: insufficient free space"); return;
     }
     char path[512];
-    snprintf(path, sizeof(path), "/sdcard/Android/data/com.popcap.pvz2cthd.reconstruction/files/%s", t.file);
+    snprintf(path, sizeof(path), PVZ2_GL_RESOURCE_ROOT "/%s", t.file);
     FILE *file = fopen(path, "rb");
     if (!file || fstat(fileno(file), &st) || (uint64_t)st.st_size != t.fileSize) {
         if (file) fclose(file); queue_prefetch_next(); return;
@@ -204,6 +207,10 @@ static void prefetch_next() {
     for (size_t i=0;i<state->strips.size();++i) {
         decode_pool().submit(false,t.hash,[state,i]{
             auto &s=state->strips[i];size_t bytes=(size_t)state->width*s.h*4;
+#ifdef PVZ2_DECODE_DIAGNOSTICS
+            LOGI("prefetch hash=%016llx width=%d height=%d y=%d h=%d bytes=%zu fp=%d",
+                 (unsigned long long)state->hash,state->width,state->height,s.y,s.h,s.size,int(state->footprint));
+#endif
             s.out=(uint8_t *)malloc(bytes);
             s.ok=s.out && astc_codec::ASTCDecompressToRGBA(state->source+s.off,s.size,
                  state->width,s.h,state->footprint,s.out,bytes,(size_t)state->width*4);
